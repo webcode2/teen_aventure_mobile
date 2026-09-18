@@ -1,0 +1,187 @@
+================================================================================
+                                   ASK HUB
+                     PRODUCT REQUIREMENTS DOCUMENT - PART 2
+                   SPIRITUAL GROWTH & CONTENT HUB (APP 2)
+================================================================================
+                           Version 1.0 | Release Draft
+                         Prepared for Client Alignment
+================================================================================
+
+1. Product Overview & Architectural Context
+
+ASK Hub is an ecosystem for digital discipleship serving children, teens, families, 
+and churches. Under the modular architecture, the system is separated into two 
+interconnected applications/modules:
+
+- App 1 (ASK Hub Discipleship & Class Engine): Handles Authentication, Family 
+  Isolation, Church & Class Management, Teen Quests (Weekly Lessons, Objective 
+  Quizzes, Cross Scrambles), Class Leaderboards with Role-Aware Privacy Blurring, 
+  Together Mode, Predefined Nudges, Safeguarding Reports, and Admin Management.
+  
+- App 2 (ASK Hub Spiritual Growth & Content Hub - PRD 2): Dedicated companion app 
+  and standalone module providing personal and family spiritual growth experiences:
+  1. Scripture Marinade
+  2. Prayers of a Lifetime
+  3. Devotionals & Daily Studies
+  4. Bible in a Year (BIY) Quest & Quizzes
+  5. Life & Living Prayers
+  6. Bible Reading Tracker
+
+Both applications share the central user identity system (Parents, Guardians, Children, 
+Teens, Teachers, Leads, Pastors, App Managers), unified scoring ledger, streaks, and 
+family jars while providing focused mobile app views and administrative dashboard tools.
+
+
+================================================================================
+2. Shared User Roles & Access Architecture
+
+All user roles remain consistent across both App 1 and App 2:
+
+Role                   Primary Responsibility in App 2
+--------------------------------------------------------------------------------
+Parent / Guardian      Manage family profiles, initiate family devotional sessions, 
+                       view private family reflections, and track family progress.
+
+Child                  Participate in Scripture Marinade, Prayer steps, BIY, 
+                       and Bible Reading under parent-mediated PIN authentication.
+
+Teenager               Access spiritual growth content via independent or parent-
+                       managed login; track personal reading and reflections.
+
+Teacher / Chaperone    View aggregate class engagement metrics without violating 
+                       family reflection privacy.
+
+Children's Church Lead Access church-level content schedules and devotional metrics.
+
+Pastor / Nominee       High-level oversight of spiritual growth engagement across 
+                       church families.
+
+App Manager            Manage global content library (Scripture steps, Prayers, 
+                       Devotionals, BIY weeks, Life prayers) via Admin Dashboard.
+
+
+================================================================================
+3. Scoped Features (PRD 2)
+
+--------------------------------------------------------------------------------
+3.1 Scripture Marinade (`scriptureMarinadeRoutes`)
+--------------------------------------------------------------------------------
+- Description: Interactive multi-step Scripture meditation, memorization, and 
+  reflection experience.
+- Capabilities:
+  * Serve sequential marinade steps with scripture text, reflection prompts, 
+    and audio guide indicators.
+  * Mobile App: Smooth step navigation, audio controls, and memory aids.
+  * Scoring: Awards standard activity points upon step completion into the ScoreLedger.
+
+--------------------------------------------------------------------------------
+3.2 Prayers of a Lifetime (`prayerRoutes`)
+--------------------------------------------------------------------------------
+- Description: Guided prayer journeys for children and teens, including foundational 
+  faith milestones.
+- Capabilities:
+  * Guided prayer steps with structured reflection.
+  * Dedicated Salvation Step milestone experience.
+  * Mobile App: Interactive prayer cards with step-by-step progress.
+  * Scoring: Standard prayer step (28 pts) and Salvation step (10 pts).
+
+--------------------------------------------------------------------------------
+3.3 Devotionals & Daily Studies (`devotionalRoutes`)
+--------------------------------------------------------------------------------
+- Description: Day-by-day devotional readings tailored to age bands.
+- Capabilities:
+  * Daily Bible study fetching by day number or list.
+  * Private Family Reflection: Parents and children can record private devotional 
+    notes and reflections.
+  * Privacy Safeguard: Reflections are strictly family-isolated (`request.familyId`) 
+    and invisible to teachers, pastors, or external users.
+  * Mobile App: Calendar/day selector, rich text reading view, and private journal.
+  * Scoring: Completed devotional awards standard points (78 pts).
+
+--------------------------------------------------------------------------------
+3.4 Bible in a Year (BIY) Quest (`biyRoutes`)
+--------------------------------------------------------------------------------
+- Description: Structured 52-week Bible reading program with video lessons and 
+  standalone weekly quizzes.
+- Capabilities:
+  * Serve BIY weekly reading plans, Scripture references, video embeds/links, 
+    and structured JSON quiz payloads.
+  * Weekly Scoring Limit: Maximum weekly cap of 78 points per child to prevent 
+    gaming or artificial point accumulation.
+  * Mobile App: Video player integration, weekly progress tracking, and interactive 
+    standalone BIY quiz.
+  * Admin Dashboard: Manage 52-week curriculum content, video URLs, and quiz items.
+
+--------------------------------------------------------------------------------
+3.5 Life & Living Prayers (`lifePrayerRoutes`)
+--------------------------------------------------------------------------------
+- Description: Practical prayer library categorized for daily life scenarios.
+- Capabilities:
+  * Categorized prayer repository: Morning, Evening, Anytime, Hard Times, Gratitude.
+  * Features: Favoriting prayers, custom category filtering, and audio stream links.
+  * Mobile App: Quick-access prayer cards, audio player controls, and favorites list.
+
+--------------------------------------------------------------------------------
+3.6 Bible Reading Tracker (`bibleReadingRoutes`)
+--------------------------------------------------------------------------------
+- Description: Personal Bible reading log tracking Old and New Testament chapter progress.
+- Capabilities:
+  * Complete chapter logging per child/teen user.
+  * Overview API (`/api/hub/bible-reading/books`): Book-by-book total chapters 
+    versus completed chapters breakdown (e.g. Genesis 50/50, Matthew 12/28).
+  * Mobile App: Visual progress bars per Bible book, chapter grid toggles, and total 
+    Bible reading percentage display.
+
+
+================================================================================
+4. Cross-App Integration & Impact
+
+4.1 Unified Score & Ledger Integration
+- All spiritual growth activities completed in App 2 generate immutable entries 
+  in the shared `ScoreLedger` with appropriate `ActivityType` values 
+  (`SCRIPTURE_MARINADE`, `PRAYER_STEP`, `DEVOTIONAL`, `BIY_QUIZ`, `BIBLE_READING`).
+- Shared points directly contribute to:
+  * The child's unified ASK Score.
+  * Daily and weekly streaks.
+  * Family Jar contributions and Group Jar aggregates.
+
+4.2 Mobile Application Impact
+- Navigation: The mobile app presents a dedicated "Spiritual Growth Hub" tab 
+  housing Scripture Marinade, Prayers, Devotionals, BIY, Life Prayers, and 
+  Bible Reading Tracker.
+- Independent Teen & Child Mode: Seamless switching between Teen Quests (App 1) 
+  and Personal Growth Hub (App 2).
+
+4.3 Admin Dashboard Impact
+- Content Management System (CMS): Dedicated management interfaces for:
+  * Authoring and editing Devotionals.
+  * Managing BIY 52-week plans and quizzes.
+  * Curating Scripture Marinade steps and Life Prayers.
+- Analytics & Engagement Metrics: App Managers can view aggregate completion 
+  rates across devotionals, BIY weeks, and Bible reading chapters.
+
+
+================================================================================
+5. Technical Data Model & Route Mapping (App 2)
+
+Prisma Models Involved:
+- `Devotional`, `DevotionalReflection`
+- `ScriptureStep`, `PrayerStep`
+- `BiyWeek`
+- `LifePrayer`
+- `BibleProgress`
+- `ScoreLedger` (shared ledger)
+
+API Endpoints (Prefix: `/api/hub`):
+- `GET /api/hub/scripture-marinade/steps`
+- `GET /api/hub/prayers/steps`
+- `GET /api/hub/devotionals`, `GET /api/hub/devotionals?day=:day`
+- `POST /api/hub/devotionals/:id/reflect` (Family private)
+- `GET /api/hub/biy/weeks`, `GET /api/hub/biy/weeks/:weekNumber`
+- `GET /api/hub/life-prayers?category=:category`
+- `POST /api/hub/bible-reading/complete`, `GET /api/hub/bible-reading/progress`
+- `GET /api/hub/bible-reading/books`
+
+================================================================================
+                                 END OF PRD 2
+================================================================================

@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/mobile",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "Flutter Chrome",
+            "type": "dart",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/mobile",
+            "program": "lib/main.dart",
+            "deviceId": "chrome",
+            "flutterMode": "debug",
+            "toolArgs": ["--web-port=7357"]
+        }
+    ]
+}

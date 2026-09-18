@@ -1,0 +1,44 @@
+{
+  "runId": "askhub-figma-2026-08-30",
+  "phase": "screens-composed",
+  "fileKey": "04TO0j4X2HPiMUjEPg6RjW",
+  "fileUrl": "https://www.figma.com/design/04TO0j4X2HPiMUjEPg6RjW",
+  "entities": {
+    "collections": {
+      "Primitives": "VariableCollectionId:1:2",
+      "Color": "VariableCollectionId:1:23",
+      "Spacing": "VariableCollectionId:1:24"
+    },
+    "pages": {
+      "Components": "0:1",
+      "Screens": "1:73",
+      "Reference": "1:74"
+    },
+    "components": {
+      "Button": "1:79",
+      "ToolTile": "1:80",
+      "ProgressBar": "1:86",
+      "QuizOption": "1:96",
+      "NavItem": "1:97",
+      "BottomNav": "1:101",
+      "QuestProgressCard": "1:122",
+      "StreakBar": "1:133",
+      "TodaysQuestCard": "1:137",
+      "FeedbackCorrect": "1:143"
+    },
+    "screens": {
+      "Home": "1:151",
+      "Quiz": "1:238"
+    }
+  },
+  "completedSteps": [
+    "file-created",
+    "tokens",
+    "text-styles",
+    "pages",
+    "components",
+    "home-screen",
+    "quiz-screen"
+  ],
+  "notes": "Starter plan: 1 variable mode, 3 pages max, MCP rate limit hit before screenshot/upload finish."
+}
