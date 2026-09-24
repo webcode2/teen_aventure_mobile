@@ -1,13 +1,17 @@
+import { useNavigate } from 'react-router';
 import { getUser, setToken } from './api';
-import { navigate, type Tab } from './route';
+import type { Tab } from './route';
 import { MenuIcon } from './nav-icons';
 
 const TAB_TITLES: Record<Tab, string> = {
   dashboard: 'Dashboard',
   people: 'People',
   churches: 'Churches',
+  groups: 'Groups',
   notifications: 'Notifications',
-  quests: 'Teen Quest',
+  weeks: 'Published weeks',
+  quests: 'Quest',
+  puzzles: 'Puzzle Studio',
   scoring: 'Quest points',
   reports: 'Safeguarding',
   consent: 'Consent',
@@ -54,18 +58,18 @@ export function TopNav({
   isMobile?: boolean;
   onToggleSidebar?: () => void;
 }) {
+  const navigate = useNavigate();
   const user = getUser();
   const name = user?.name || 'App Manager';
-  const email = user?.email || 'Signed in';
   const role = user?.role?.replace(/_/g, ' ') || 'Manager';
 
   return (
-    <header className="top-nav">
-      <div className="top-nav-start">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-border bg-surface/90 backdrop-blur-md px-6 py-3.5 transition-all">
+      <div className="flex items-center gap-3 min-w-0">
         {onToggleSidebar ? (
           <button
             type="button"
-            className="top-nav-icon-btn top-nav-menu"
+            className="p-2 rounded-xl text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer border border-border/50"
             aria-label={isMobile ? (mobileNavOpen ? 'Close menu' : 'Open menu') : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             title={isMobile ? (mobileNavOpen ? 'Close menu' : 'Open menu') : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
             aria-expanded={isMobile ? mobileNavOpen : !sidebarCollapsed}
@@ -75,48 +79,59 @@ export function TopNav({
           </button>
         ) : null}
         <div>
-          <p className="top-nav-kicker">Teen Bible Adventures</p>
-          <h2 className="top-nav-title">{TAB_TITLES[tab]}</h2>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Teen Bible Adventures</p>
+          <h2 className="text-lg font-bold text-navy tracking-tight truncate leading-tight">{TAB_TITLES[tab]}</h2>
         </div>
       </div>
 
-      <div className="top-nav-search" role="search">
+      <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border bg-cream text-muted focus-within:ring-2 focus-within:ring-teal/30 focus-within:border-teal transition-all w-72" role="search">
         <SearchIcon />
-        <input type="search" placeholder="Search people, churches, reports…" aria-label="Search dashboard" />
+        <input
+          type="search"
+          placeholder="Search people, churches, reports…"
+          aria-label="Search dashboard"
+          className="bg-transparent border-none outline-none text-xs text-navy placeholder:text-muted/70 w-full"
+        />
       </div>
 
-      <div className="top-nav-actions">
+      <div className="flex items-center gap-2.5 shrink-0">
         <button
           type="button"
-          className="top-nav-icon-btn"
+          className="relative p-2 rounded-xl text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer border border-border/50"
           aria-label={`Notifications${alertCount ? `, ${alertCount} alerts` : ''}`}
           title="Notifications"
-          onClick={() => navigate({ kind: 'app', tab: 'notifications' })}
+          onClick={() => navigate('/app/dashboard/notifications')}
         >
           <BellIcon />
-          {alertCount > 0 ? <span className="top-nav-badge">{alertCount > 9 ? '9+' : alertCount}</span> : null}
+          {alertCount > 0 ? (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-orange text-[9px] font-bold text-white shadow-xs">
+              {alertCount > 9 ? '9+' : alertCount}
+            </span>
+          ) : null}
         </button>
 
         <button
           type="button"
-          className="btn ghost top-nav-quick"
-          onClick={() => navigate({ kind: 'app', tab: 'quests' })}
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-teal/30 bg-teal-tint/50 text-teal hover:bg-teal hover:text-white font-semibold text-xs transition-colors cursor-pointer"
+          onClick={() => navigate('/app/dashboard/quests')}
         >
-          + New quest week
+          + New quest
         </button>
 
-        <div className="top-nav-profile">
-          <div className="top-nav-avatar" aria-hidden>{initials(user?.name, user?.email)}</div>
-          <div className="top-nav-who">
-            <strong>{name}</strong>
-            <span>{role}</span>
+        <div className="flex items-center gap-2.5 pl-2 border-l border-border">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-gold ring-2 ring-white shadow-xs" aria-hidden>
+            {initials(user?.name, user?.email)}
+          </div>
+          <div className="hidden lg:flex flex-col text-left">
+            <strong className="text-xs font-semibold text-navy leading-none">{name}</strong>
+            <span className="text-[10px] text-muted capitalize leading-tight mt-0.5">{role}</span>
           </div>
           <button
             type="button"
-            className="btn secondary top-nav-signout"
+            className="px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-2 text-xs font-medium text-navy transition-colors cursor-pointer"
             onClick={() => {
               setToken(null);
-              navigate({ kind: 'auth', view: 'login' });
+              navigate('/app/login');
             }}
           >
             Sign out

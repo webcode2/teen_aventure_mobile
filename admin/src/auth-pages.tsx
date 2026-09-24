@@ -1,19 +1,26 @@
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { forgotPassword, login, resetPassword } from './api';
-import { navigate } from './route';
+import { safeStaffNext } from './path-helpers';
 import { Alert, APP_NAME, Brand, DASHBOARD_TITLE, Field } from './ui';
 
 function AuthPanel() {
   return (
-    <aside className="auth-panel">
-      <div>
-        <p className="eyebrow">{APP_NAME} · Admin</p>
-        <h1>Steward the content families actually open.</h1>
-        <p>Publish Teen Quest weeks, quizzes, and safeguarding workflows from one desk — the same system the Flutter app reads live.</p>
+    <aside className="bg-navy text-cream p-8 md:p-12 flex flex-col justify-between min-h-[260px] lg:min-h-screen relative overflow-hidden">
+      <div className="flex flex-col gap-3 max-w-md relative z-10">
+        <p className="text-[11px] font-bold tracking-widest uppercase text-gold">{APP_NAME} &bull; Admin</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-cream leading-tight">
+          Steward the content families actually open.
+        </h1>
+        <p className="text-xs sm:text-sm text-cream/75 leading-relaxed max-w-sm mt-1">
+          Publish Teen Quest weeks, quizzes, and safeguarding workflows from one desk — the same system the Flutter app reads live.
+        </p>
       </div>
-      <div className="auth-marks">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-cream/60 mt-8 pt-6 border-t border-white/10 relative z-10">
         <span>Token sign-in</span>
+        <span className="text-cream/30">&bull;</span>
         <span>Reset by email</span>
+        <span className="text-cream/30">&bull;</span>
         <span>Dashboard roles</span>
       </div>
     </aside>
@@ -21,6 +28,8 @@ function AuthPanel() {
 }
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,7 +41,7 @@ export function LoginPage() {
     setError('');
     try {
       await login(email, password);
-      navigate({ kind: 'app', tab: 'dashboard' });
+      navigate(safeStaffNext(searchParams.get('next')));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -41,27 +50,72 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-shell">
+    <div className="min-h-screen min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[minmax(300px,38%)_1fr] bg-cream">
       <AuthPanel />
-      <div className="auth-form-wrap">
-        <form className="auth-card" onSubmit={submit}>
-          <Brand size="lg" />
-          <h2>Sign in</h2>
-          <p className="visually-hidden">{DASHBOARD_TITLE}</p>
-          <p className="lede">Use your dashboard email. Sessions last 7 days.</p>
+      <div className="grid place-items-center p-6 md:p-12 bg-cream">
+        <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
+          <div className="mb-1">
+            <Brand size="lg" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-navy">Sign in</h2>
+            <p className="sr-only">{DASHBOARD_TITLE}</p>
+            <p className="text-xs text-muted mt-1">Use your dashboard email. Sessions last 7 days.</p>
+          </div>
           <Field label="Email">
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              required
+              className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
+            />
           </Field>
           <Field label="Password">
-            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
+            />
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
-          <button className="btn" style={{ width: '100%' }} disabled={busy}>
+          <button
+            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
+            disabled={busy}
+          >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
-          <div className="auth-links">
-            <button type="button" onClick={() => navigate({ kind: 'auth', view: 'forgot' })}>Forgot password</button>
-            <span className="muted">Editor, Super Editor, or Super Admin</span>
+          <div className="flex items-center justify-between gap-4 mt-2 text-xs">
+            <button
+              type="button"
+              className="text-muted hover:text-navy font-semibold transition-colors cursor-pointer bg-transparent border-none p-0"
+              onClick={() => navigate('/app/forgot')}
+            >
+              Forgot password
+            </button>
+            <span className="text-muted/80 text-[11px]">Editor, Super Editor, or Super Admin</span>
+          </div>
+          <div className="pt-3 mt-1 border-t border-border/60 flex flex-col gap-2 text-center text-xs">
+            <button
+              type="button"
+              onClick={() => navigate('/groups')}
+              className="w-full py-2 px-3 rounded-xl bg-teal-tint hover:bg-teal hover:text-white text-teal font-bold transition-all border border-teal/20 cursor-pointer text-xs"
+            >
+              ⛪ Church Pastor &amp; Operations Portal →
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-muted hover:text-navy font-medium transition-colors cursor-pointer text-[11px]"
+            >
+              ← View Public Discipleship Landing
+            </button>
           </div>
         </form>
       </div>
@@ -70,6 +124,7 @@ export function LoginPage() {
 }
 
 export function ForgotPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -91,23 +146,43 @@ export function ForgotPage() {
   }
 
   return (
-    <div className="auth-shell">
+    <div className="min-h-screen min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[minmax(300px,38%)_1fr] bg-cream">
       <AuthPanel />
-      <div className="auth-form-wrap">
-        <form className="auth-card" onSubmit={submit}>
-          <Brand size="lg" />
-          <h2>Reset password</h2>
-          <p className="lede">We’ll email a one-hour token link if this address is an App Manager.</p>
+      <div className="grid place-items-center p-6 md:p-12 bg-cream">
+        <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
+          <div className="mb-1">
+            <Brand size="lg" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-navy">Reset password</h2>
+            <p className="text-xs text-muted mt-1">We’ll email a one-hour token link if this address is an App Manager.</p>
+          </div>
           <Field label="Email">
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
+            />
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
           {message ? <Alert kind="ok">{message}</Alert> : null}
-          <button className="btn" style={{ width: '100%' }} disabled={busy}>
+          <button
+            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
+            disabled={busy}
+          >
             {busy ? 'Sending…' : 'Send reset link'}
           </button>
-          <div className="auth-links">
-            <button type="button" onClick={() => navigate({ kind: 'auth', view: 'login' })}>Back to sign in</button>
+          <div className="flex items-center justify-between gap-4 mt-2 text-xs">
+            <button
+              type="button"
+              className="text-muted hover:text-navy font-semibold transition-colors cursor-pointer bg-transparent border-none p-0"
+              onClick={() => navigate('/app/login')}
+            >
+              Back to sign in
+            </button>
           </div>
         </form>
       </div>
@@ -116,6 +191,7 @@ export function ForgotPage() {
 }
 
 export function ResetPage({ token }: { token: string }) {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -134,7 +210,7 @@ export function ResetPage({ token }: { token: string }) {
     try {
       const res = await resetPassword(token, password);
       setMessage(res.message);
-      setTimeout(() => navigate({ kind: 'auth', view: 'login' }), 900);
+      setTimeout(() => navigate('/app/login'), 900);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Reset failed');
     } finally {
@@ -143,27 +219,56 @@ export function ResetPage({ token }: { token: string }) {
   }
 
   return (
-    <div className="auth-shell">
+    <div className="min-h-screen min-h-[100dvh] grid grid-cols-1 lg:grid-cols-[minmax(300px,38%)_1fr] bg-cream">
       <AuthPanel />
-      <div className="auth-form-wrap">
-        <form className="auth-card" onSubmit={submit}>
-          <Brand size="lg" />
-          <h2>Choose a new password</h2>
-          <p className="lede">This token can be used once and expires in one hour.</p>
+      <div className="grid place-items-center p-6 md:p-12 bg-cream">
+        <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
+          <div className="mb-1">
+            <Brand size="lg" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-navy">Choose a new password</h2>
+            <p className="text-xs text-muted mt-1">This token can be used once and expires in one hour.</p>
+          </div>
           {!token ? <Alert kind="error">Missing reset token. Open the link from your email.</Alert> : null}
           <Field label="New password" hint="At least 8 characters">
-            <input type="password" placeholder="New password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
+            <input
+              type="password"
+              placeholder="New password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              required
+              className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
+            />
           </Field>
           <Field label="Confirm password">
-            <input type="password" placeholder="Confirm password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={8} required />
+            <input
+              type="password"
+              placeholder="Confirm password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              minLength={8}
+              required
+              className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
+            />
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
           {message ? <Alert kind="ok">{message}</Alert> : null}
-          <button className="btn" style={{ width: '100%' }} disabled={busy || !token}>
+          <button
+            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
+            disabled={busy || !token}
+          >
             {busy ? 'Updating…' : 'Update password'}
           </button>
-          <div className="auth-links">
-            <button type="button" onClick={() => navigate({ kind: 'auth', view: 'login' })}>Back to sign in</button>
+          <div className="flex items-center justify-between gap-4 mt-2 text-xs">
+            <button
+              type="button"
+              className="text-muted hover:text-navy font-semibold transition-colors cursor-pointer bg-transparent border-none p-0"
+              onClick={() => navigate('/app/login')}
+            >
+              Back to sign in
+            </button>
           </div>
         </form>
       </div>
