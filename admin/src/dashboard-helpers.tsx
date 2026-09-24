@@ -1,33 +1,39 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 export function getDashboardGreeting(name: string) {
   const hour = new Date().getHours();
-  const first = name.split(/\s+/)[0] || name;
+  let displayName = (name || '').trim();
+  if (!displayName || displayName.toLowerCase() === 'app manager' || displayName.toLowerCase() === 'app') {
+    displayName = 'Manager';
+  } else {
+    const first = displayName.split(/\s+/)[0];
+    displayName = first || displayName;
+  }
 
   if (hour < 12) {
     return {
-      headline: `Morning fire, ${first}!`,
-      subline: 'The app is awake — families are one tap away from today\'s Word. Make it count.',
+      headline: `Good morning, ${displayName}`,
+      subline: 'Real-time discipleship activity, family reach, and active youth quests.',
       emoji: '☀️',
     };
   }
   if (hour < 17) {
     return {
-      headline: `Hey ${first}, you're on a roll.`,
-      subline: 'Quests published here hit the Flutter app live. No lag, no drama — just discipleship.',
+      headline: `Welcome back, ${displayName}`,
+      subline: 'Quests published here sync live to the mobile app for youth discipleship.',
       emoji: '⚡',
     };
   }
   if (hour < 21) {
     return {
-      headline: `Evening shift, ${first}? Respect.`,
-      subline: 'Open reports need a human heart first. Everything else can wait five minutes.',
+      headline: `Good evening, ${displayName}`,
+      subline: 'Safeguarding status and weekly community pulse across your youth network.',
       emoji: '🌅',
     };
   }
   return {
-    headline: `Still grinding, ${first}? Legend.`,
-    subline: 'Midnight managers keep the kingdom running. Here\'s your pulse check.',
+    headline: `Late session, ${displayName}`,
+    subline: 'Operations desk pulse and background notifications delivery queue.',
     emoji: '🌙',
   };
 }
@@ -103,35 +109,266 @@ export function QuestIcon() {
 
 type ChartPoint = { label: string; value: number; color: string };
 
+function calculateScale(maxVal: number) {
+  if (maxVal <= 0) return { max: 10, ticks: [0, 2, 4, 6, 8, 10] };
+  if (maxVal <= 5) return { max: 5, ticks: [0, 1, 2, 3, 4, 5] };
+  if (maxVal <= 10) return { max: 10, ticks: [0, 2, 4, 6, 8, 10] };
+  if (maxVal <= 20) return { max: 20, ticks: [0, 5, 10, 15, 20] };
+  if (maxVal <= 50) return { max: 50, ticks: [0, 10, 20, 30, 40, 50] };
+
+  const rawStep = maxVal / 4;
+  const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const factor = rawStep / power;
+  let step = power;
+  if (factor > 5) step = 10 * power;
+  else if (factor > 2) step = 5 * power;
+  else if (factor > 1) step = 2 * power;
+
+  const max = Math.ceil(maxVal / step) * step;
+  const ticks: number[] = [];
+  for (let t = 0; t <= max; t += step) {
+    ticks.push(t);
+  }
+  return { max, ticks };
+}
+
 export function CommunityChart({ points }: { points: ChartPoint[] }) {
-  const max = Math.max(...points.map((p) => p.value), 1);
-  const width = 320;
-  const height = 140;
-  const pad = { top: 12, right: 8, bottom: 28, left: 8 };
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const rawMax = Math.max(...points.map((p) => p.value), 0);
+  const total = points.reduce((acc, p) => acc + p.value, 0);
+  const scale = calculateScale(rawMax);
+
+  const width = 540;
+  const height = 230;
+  const pad = { top: 28, right: 24, bottom: 44, left: 36 };
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
-  const gap = 12;
-  const barW = (innerW - gap * (points.length - 1)) / points.length;
+  const baselineY = pad.top + innerH;
+
+  const colW = innerW / points.length;
+  const barW = Math.min(48, Math.max(28, colW * 0.55));
 
   return (
-    <div className="chart-wrap">
-      <svg viewBox={`0 0 ${width} ${height}`} className="community-chart" role="img" aria-label="Community snapshot bar chart">
-        {points.map((point, i) => {
-          const barH = Math.max(8, (point.value / max) * innerH);
-          const x = pad.left + i * (barW + gap);
-          const y = pad.top + innerH - barH;
+    <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/60">
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-3xl font-extrabold text-navy tracking-tight tabular-nums">{total.toLocaleString()}</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Total community members</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {points.map((p) => (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cream border border-border text-xs font-medium text-navy"
+              key={p.label}
+            >
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+              <span>{p.label}</span>
+              <span className="text-muted font-semibold tabular-nums ml-0.5">({p.value})</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full h-auto overflow-visible select-none"
+        role="img"
+        aria-label="Community snapshot bar chart"
+      >
+        {/* Horizontal gridlines and Y-axis labels */}
+        {scale.ticks.map((tick) => {
+          const y = baselineY - (tick / scale.max) * innerH;
+          const isZero = tick === 0;
           return (
-            <g key={point.label}>
-              <rect x={x} y={y} width={barW} height={barH} rx="6" fill={point.color} opacity="0.88" />
-              <text x={x + barW / 2} y={height - 8} textAnchor="middle" className="chart-label">{point.label}</text>
-              <text x={x + barW / 2} y={y - 4} textAnchor="middle" className="chart-value">{point.value}</text>
+            <g key={tick}>
+              <line
+                x1={pad.left}
+                y1={y}
+                x2={pad.left + innerW}
+                y2={y}
+                stroke={isZero ? 'rgba(1, 31, 59, 0.28)' : 'rgba(1, 31, 59, 0.08)'}
+                strokeWidth={isZero ? 1.5 : 1}
+                strokeDasharray={isZero ? undefined : '3 3'}
+              />
+              <text
+                x={pad.left - 8}
+                y={y + 4}
+                textAnchor="end"
+                className="text-[10px] fill-muted font-medium tabular-nums"
+              >
+                {tick}
+              </text>
             </g>
           );
         })}
+
+        {/* Bar columns and tracks */}
+        {points.map((point, i) => {
+          const colCenterX = pad.left + i * colW + colW / 2;
+          const x = colCenterX - barW / 2;
+          const isHovered = hoveredIndex === i;
+
+          const barH = point.value > 0 ? Math.max(8, (point.value / scale.max) * innerH) : 0;
+          const barY = baselineY - barH;
+          const r = Math.min(6, barW / 2, barH / 2);
+
+          const barPath = point.value > 0
+            ? `M ${x} ${baselineY}
+               L ${x} ${barY + r}
+               A ${r} ${r} 0 0 1 ${x + r} ${barY}
+               L ${x + barW - r} ${barY}
+               A ${r} ${r} 0 0 1 ${x + barW} ${barY + r}
+               L ${x + barW} ${baselineY}
+               Z`
+            : null;
+
+          const pct = total > 0 ? `${Math.round((point.value / total) * 100)}%` : '0%';
+
+          return (
+            <g
+              key={point.label}
+              className="cursor-pointer transition-opacity"
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              tabIndex={0}
+              role="graphics-symbol"
+              aria-label={`${point.label}: ${point.value}`}
+            >
+              {/* Subtle background track */}
+              <rect
+                x={x}
+                y={pad.top}
+                width={barW}
+                height={innerH}
+                rx="6"
+                fill={isHovered ? 'rgba(1, 31, 59, 0.06)' : 'rgba(1, 31, 59, 0.025)'}
+              />
+
+              {/* Data bar */}
+              {barPath ? (
+                <path
+                  d={barPath}
+                  fill={point.color}
+                  opacity={isHovered ? 1 : 0.9}
+                  className="transition-opacity duration-150"
+                />
+              ) : (
+                <rect
+                  x={x}
+                  y={baselineY - 3}
+                  width={barW}
+                  height={3}
+                  rx="1.5"
+                  fill={point.color}
+                  opacity="0.35"
+                />
+              )}
+
+              {/* Value label */}
+              <text
+                x={colCenterX}
+                y={point.value > 0 ? barY - 8 : baselineY - 8}
+                textAnchor="middle"
+                className={`text-xs font-bold tabular-nums ${point.value === 0 ? 'fill-muted/50' : 'fill-navy'}`}
+              >
+                {point.value}
+              </text>
+
+              {/* Category label */}
+              <text
+                x={colCenterX}
+                y={baselineY + 18}
+                textAnchor="middle"
+                className="text-[11px] font-semibold fill-navy"
+              >
+                {point.label}
+              </text>
+
+              {/* Percentage sublabel */}
+              <text
+                x={colCenterX}
+                y={baselineY + 31}
+                textAnchor="middle"
+                className="text-[10px] font-medium fill-muted tabular-nums"
+              >
+                {pct}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Floating tooltip */}
+        {hoveredIndex !== null && (() => {
+          const p = points[hoveredIndex];
+          const colCenterX = pad.left + hoveredIndex * colW + colW / 2;
+          const pct = total > 0 ? `${Math.round((p.value / total) * 100)}%` : '0%';
+          const barH = p.value > 0 ? Math.max(8, (p.value / scale.max) * innerH) : 3;
+          const tipY = Math.max(8, baselineY - barH - 32);
+          const text = `${p.label}: ${p.value.toLocaleString()} (${pct})`;
+          const tipW = Math.max(110, text.length * 7.5);
+          const tipX = Math.min(Math.max(pad.left + tipW / 2, colCenterX), pad.left + innerW - tipW / 2);
+          return (
+            <g pointerEvents="none" className="transition-transform duration-100">
+              <rect
+                x={tipX - tipW / 2}
+                y={tipY}
+                width={tipW}
+                height="24"
+                rx="6"
+                fill="var(--navy)"
+                opacity="0.96"
+              />
+              <text
+                x={tipX}
+                y={tipY + 16}
+                textAnchor="middle"
+                fill="var(--cream)"
+                fontSize="11"
+                fontWeight="600"
+              >
+                {text}
+              </text>
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
 }
+
+const toneMap = {
+  teal: {
+    iconBg: 'bg-teal-tint text-teal ring-1 ring-teal/20',
+    badge: 'bg-teal-tint text-teal border-teal/30',
+    accent: 'text-teal',
+  },
+  forest: {
+    iconBg: 'bg-sage text-forest ring-1 ring-forest/20',
+    badge: 'bg-sage text-forest border-forest/30',
+    accent: 'text-forest',
+  },
+  gold: {
+    iconBg: 'bg-amber-50 text-amber-800 ring-1 ring-gold/30',
+    badge: 'bg-amber-50 text-amber-800 border-gold/40',
+    accent: 'text-gold',
+  },
+  navy: {
+    iconBg: 'bg-navy-tint text-navy ring-1 ring-navy/20',
+    badge: 'bg-navy-tint text-navy border-navy/30',
+    accent: 'text-navy',
+  },
+  orange: {
+    iconBg: 'bg-terracotta text-orange ring-1 ring-orange/20',
+    badge: 'bg-terracotta text-orange border-orange/30',
+    accent: 'text-orange',
+  },
+  warn: {
+    iconBg: 'bg-error-bg text-error ring-1 ring-error/20',
+    badge: 'bg-error-bg text-error border-error/30',
+    accent: 'text-error',
+  },
+};
 
 export function StatCard({
   label,
@@ -139,21 +376,43 @@ export function StatCard({
   icon,
   tone,
   hint,
+  badgeText,
 }: {
   label: string;
   value: number;
   icon: ReactNode;
   tone: 'teal' | 'forest' | 'gold' | 'navy' | 'orange' | 'warn';
   hint?: string;
+  badgeText?: string;
 }) {
+  const t = toneMap[tone] || toneMap.navy;
   return (
-    <div className={`stat-card tone-${tone}`}>
-      <div className="stat-card-icon">{icon}</div>
-      <div className="stat-card-body">
-        <div className="value">{value}</div>
-        <div className="label">{label}</div>
-        {hint ? <div className="stat-hint">{hint}</div> : null}
+    <div className="relative flex items-center justify-between gap-2.5 p-3 sm:px-3.5 sm:py-2.5 rounded-xl bg-surface border border-border/80 shadow-xs hover:shadow-card hover:border-border-dark transition-all duration-150 group min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className={`flex items-center justify-center h-9 w-9 shrink-0 rounded-lg ${t.iconBg} transition-transform group-hover:scale-105 duration-150`}>
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <span className="text-xl sm:text-2xl font-extrabold text-navy tracking-tight tabular-nums leading-none">
+              {(value ?? 0).toLocaleString()}
+            </span>
+            <span className="text-xs font-bold text-navy truncate" title={label}>
+              {label}
+            </span>
+          </div>
+          {hint ? (
+            <div className="text-[10px] sm:text-[11px] text-muted truncate mt-0.5" title={hint}>
+              {hint}
+            </div>
+          ) : null}
+        </div>
       </div>
+      {badgeText ? (
+        <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${t.badge}`}>
+          {badgeText}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -164,29 +423,64 @@ type StatItem = {
   icon: ReactNode;
   tone: 'teal' | 'forest' | 'gold' | 'navy' | 'orange' | 'warn';
   hint?: string;
+  badgeText?: string;
 };
 
 export function StatGroupCard({
   title,
+  subtitle,
   stats,
 }: {
   title: string;
+  subtitle?: string;
   stats: StatItem[];
 }) {
   return (
-    <div className="stat-group-card">
-      <h4 className="stat-group-title">{title}</h4>
-      <div className="stat-group-grid">
-        {stats.map((item) => (
-          <div key={item.label} className={`stat-group-item tone-${item.tone}`}>
-            <div className="stat-card-icon">{item.icon}</div>
-            <div className="stat-card-body">
-              <div className="value">{item.value}</div>
-              <div className="label">{item.label}</div>
-              {item.hint ? <div className="stat-hint">{item.hint}</div> : null}
+    <div className="bg-surface border border-border/80 rounded-xl p-3 sm:p-3.5 shadow-xs hover:border-border-dark transition-all duration-150 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-border/50">
+        <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted">{title}</h4>
+        {subtitle ? (
+          <span className="text-[10px] font-semibold text-text-2 bg-cream px-2 py-0.5 rounded-full border border-border/60">
+            {subtitle}
+          </span>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {stats.map((item) => {
+          const t = toneMap[item.tone] || toneMap.navy;
+          return (
+            <div
+              key={item.label}
+              className="flex items-center justify-between gap-2 p-2 rounded-lg border border-border/70 bg-cream hover:bg-surface hover:border-border-dark transition-all min-w-0"
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className={`flex items-center justify-center h-8 w-8 shrink-0 rounded-md ${t.iconBg}`}>
+                  {item.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5 min-w-0">
+                    <span className="text-lg font-extrabold text-navy tracking-tight tabular-nums leading-none">
+                      {item.value.toLocaleString()}
+                    </span>
+                    <span className="text-xs font-bold text-navy truncate" title={item.label}>
+                      {item.label}
+                    </span>
+                  </div>
+                  {item.hint ? (
+                    <div className="text-[10px] text-muted truncate mt-0.5" title={item.hint}>
+                      {item.hint}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {item.badgeText ? (
+                <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${t.badge}`}>
+                  {item.badgeText}
+                </span>
+              ) : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

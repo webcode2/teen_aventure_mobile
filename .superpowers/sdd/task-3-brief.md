@@ -1,58 +1,55 @@
-### Task 3: Teen-quest submit updates daily streak
+### Task 3: Wire `main.tsx` / `App.tsx`
 
 **Files:**
-- Modify: `backend/src/routes/teen-quest.routes.ts` (both submit handlers, after successful `scoreLedger.create`)
-- Test: `backend/tests/api.test.ts` inside `'teacher activates quiz for class, teen submits Objs & Cross Scramble'`
+- Modify: `admin/src/main.tsx`
+- Modify: `admin/src/App.tsx`
 
 **Interfaces:**
-- Consumes: `applyStreak` from `backend/src/lib/streak.ts`
-- Produces: unchanged HTTP bodies; side effect writes/updates `Streak` for `childId`
+- Consumes: `AppRoutes`, `LegacyHashRedirect`, `BrowserRouter`
+- Produces: App boots on History API paths
 
-- [ ] **Step 1: Add assertions to the existing submit test**
+- [ ] **Step 1: Replace `App.tsx`**
 
-After the scramble `expect(scramble.statusCode).toBe(201)` block, add:
+```tsx
+import { AppRoutes } from './router';
+import './studio/studio.css';
 
-```typescript
-    const tqScore = await app.inject({
-      method: 'GET',
-      url: `/api/engagement/score/${tqTeen1Id}`,
-      headers: { authorization: `Bearer ${tqTeen1Token}` },
-    });
-    expect(tqScore.statusCode).toBe(200);
-    expect(tqScore.json().askScore).toBeGreaterThanOrEqual(100);
-    expect(tqScore.json().streak).toBeGreaterThanOrEqual(1);
+export default function App() {
+  return <AppRoutes />;
+}
 ```
 
-Use the real teen id variable from that describe (`tqTeen1Id` — confirm the name at the top of the Teen Quest describe; it is the child id for Alex). If the score route is forbidden for that token, use the same child token the submit used.
+- [ ] **Step 2: Wrap with BrowserRouter in `main.tsx`**
 
-- [ ] **Step 2: Run that test — expect streak 0 / fail**
+```tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
+import './index.css';
+import App from './App';
+import { LegacyHashRedirect } from './guards';
 
-Run: `cd backend && npm test -- tests/api.test.ts -t "teacher activates quiz"`
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <LegacyHashRedirect />
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+);
+```
 
-Expected: FAIL on `streak >= 1` (ledger exists, streak row missing).
+No `basename` in v1 (paths match the design literally). If production later serves only under `/admin/`, set Vite `base: '/admin/'` and `basename="/admin"` together — out of scope unless deploy breaks.
 
-- [ ] **Step 3: Call `applyStreak` after both ledger creates**
-
-In `teen-quest.routes.ts`:
-
-- Add `import { applyStreak, localDay } from '../lib/streak.js';`
-- Delete the local `localDay` in that file.
-- After each successful `prisma.scoreLedger.create` in `submit-objs` and `submit-scramble`, `await applyStreak(childId);` before `return reply.status(201)...`
-
-Do not call `applyStreak` on the 409 duplicate path.
-
-- [ ] **Step 4: Re-run**
-
-Run: `cd backend && npm test -- tests/api.test.ts -t "teacher activates quiz"`
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit** (skip unless the user asked)
+- [ ] **Step 3: Smoke-check build types for new entry**
 
 ```bash
-git add backend/src/routes/teen-quest.routes.ts backend/tests/api.test.ts
-git commit -m "fix: apply daily streak when teen quest scores land"
+cd admin && npx tsc -b --pretty false 2>&1 | head -40
 ```
+
+Expected: errors only from remaining `navigate` imports in pages (Task 4–5). Entry/`router`/`guards` should be clean.
+
+- [ ] **Step 4: Commit** (only if user asked)
 
 ---
 

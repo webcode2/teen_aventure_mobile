@@ -1,0 +1,182 @@
+/* ——— Puzzle Studio — game-like grid ——— */
+.studio-board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6d7b8);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(1, 31, 59, 0.04);
+}
+
+.studio-board__hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted, #6b7c8a);
+  text-wrap: pretty;
+}
+
+.studio-board__hint strong {
+  color: var(--navy, #011f3b);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.studio-board__unplaced {
+  margin: 0;
+  font-size: 12px;
+  color: var(--orange, #e87524);
+  font-weight: 600;
+}
+
+.studio-canvas {
+  display: grid;
+  gap: 0;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  user-select: none;
+  touch-action: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.studio-canvas--play {
+  background: #f4f1ea;
+  border: 1px solid var(--border-dark, #d9c7a0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.studio-cell {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: transparent;
+  background: #ebe4d6;
+  border: 1px solid #d9c7a0;
+  transition: none;
+}
+
+.studio-cell.has-letter {
+  color: var(--navy, #011f3b);
+  background: #fff;
+  border-color: rgba(232, 117, 36, 0.45);
+  cursor: grab;
+}
+
+.studio-cell.has-letter:active {
+  cursor: grabbing;
+}
+
+.studio-cell.is-selected-word {
+  background: #fcfefc;
+  border-color: var(--orange, #e87524);
+  box-shadow: inset 0 0 0 1px rgba(232, 117, 36, 0.35);
+}
+
+.studio-cell.is-preview {
+  background: #fff4dc;
+  border-color: var(--gold, #f4b942);
+}
+
+.studio-cell.is-ghost {
+  background: #e6f6f6;
+  color: var(--teal, #159a9c);
+  border: 1px dashed var(--teal, #159a9c);
+  cursor: pointer;
+}
+
+.studio-cell.is-placeable {
+  cursor: crosshair;
+}
+
+.studio-cell.is-placeable:hover {
+  background: rgba(232, 117, 36, 0.12);
+  border-color: rgba(232, 117, 36, 0.35);
+}
+
+.studio-cell.is-writable {
+  cursor: text;
+}
+
+.studio-cell.is-writable:hover {
+  background: rgba(1, 31, 59, 0.04);
+  border-color: rgba(1, 31, 59, 0.12);
+}
+
+.studio-cell.is-cursor {
+  box-shadow: inset 0 0 0 2px var(--navy, #011f3b);
+  background: #fff4dc;
+}
+
+.studio-canvas--play:focus {
+  outline: 2px solid rgba(21, 154, 156, 0.45);
+  outline-offset: 3px;
+}
+
+.studio-canvas--play:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.studio-cell.is-locate {
+  outline: 2px solid var(--orange, #e87524);
+  outline-offset: -1px;
+  z-index: 1;
+}
+
+.studio-cell-num {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted, #6b7c8a);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.studio-word-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.studio-word-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border, #e6d7b8);
+  background: #fffdf7;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy, #011f3b);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.studio-word-chip:hover {
+  border-color: var(--teal, #159a9c);
+}
+
+.studio-word-chip.is-active {
+  border-color: var(--teal, #159a9c);
+  background: #e6f6f6;
+  color: var(--teal, #159a9c);
+  box-shadow: 0 0 0 1px var(--teal, #159a9c);
+}
+
+.studio-word-chip.is-unplaced {
+  border-style: dashed;
+  color: var(--muted, #6b7c8a);
+}

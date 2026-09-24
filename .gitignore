@@ -1,0 +1,90 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.p12
+*.keystore
+**/google-services.json
+**/GoogleService-Info.plist
+**/key.properties
+
+# Logs & temp
+*.log
+*.tmp
+*.temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Node (backend, admin)
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/coverage/
+*.local
+
+# Flutter / Dart (mobile and any nested packages)
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/.widget_preview/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/.gradle/
+**/.gradle-home/
+**/android/local.properties
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+app.*.symbols
+app.*.map.json
+
+# Built APKs / app bundles sitting in the tree
+*.apk
+*.aab
+*.ipa
+*.app
+
+# Misc local tooling
+.history/
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
+*.class
+*.pyc
+__pycache__/
+
+# Cursor / agent local state (keep rules if committed elsewhere)
+.cursor/projects/

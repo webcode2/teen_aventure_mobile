@@ -1,23 +1,57 @@
-### Task 4: Flutter models — family summary from ledger
+### Task 4: Shell + TopNav path navigation
 
 **Files:**
-- Modify: `mobile/lib/services/engagement_service.dart`
-- Test: `mobile/test/parent_home_dashboard_test.dart` is Task 5; this task is service types used there
+- Modify: `admin/src/shell.tsx`
+- Modify: `admin/src/top-nav.tsx`
 
 **Interfaces:**
-- Consumes: `GET /api/engagement/family` JSON from Task 2
-- Produces:
-  - `class FamilyChildScore { id/childId, name, askScore, streak }`
-  - `class FamilyActivity { id, childId, childName, activityType, refKey, points, createdAt }`
-  - `FamilySummary { familyAskScore, familyJar, children, streaks, recent }`
-  - `getFamilySummary()` demo: `familyJar == familyAskScore`, children scores sum to that total
-  - **Delete** `addJarEntry` — CONTROLLER OVERRIDE: keep `addJarEntry` until Task 5 so parent screens still compile. Add types and demo data only.
-  - Keep `getFamilyJar` unused by UI, or delete it if nothing imports it after Task 5
+- Consumes: `useNavigate` from `react-router`; existing `tab: Tab` prop from layout
+- Produces: Sidebar/top actions update the URL
 
-- [ ] **Step 1: Extend `FamilySummary` and related types** in `engagement_service.dart` as in the plan (FamilyChildScore, FamilyActivity, FamilySummary with children/recent). Copy `_parseDate` onto FamilyActivity instead of using FamilyJarEntry._parseDate if needed. Demo getFamilySummary: familyAskScore 42, familyJar 42, Sam 18 + Grace 24 using DemoAccount.samId.
+- [ ] **Step 1: Update `shell.tsx` sidebar click**
 
-- [ ] **Step 2: Do not delete addJarEntry in this task** (Task 5 removes it and callers).
+Replace `import { navigate, type Tab } from './route'` with:
 
-- [ ] **Step 3: Analyzer** `cd mobile && dart analyze lib/services/engagement_service.dart`
+```ts
+import { useNavigate } from 'react-router';
+import type { Tab } from './route';
+```
 
-- [ ] **Step 4: Commit** skip (not a git repo)
+Inside `Shell`, `const navigate = useNavigate();`
+
+Replace sidebar `onClick`:
+
+```ts
+onClick={() => {
+  closeMobileNav();
+  navigate(id === 'dashboard' ? '/app/dashboard' : `/app/dashboard/${id}`);
+}}
+```
+
+- [ ] **Step 2: Update `top-nav.tsx`**
+
+```ts
+import { useNavigate } from 'react-router';
+```
+
+```ts
+const navigate = useNavigate();
+// notifications:
+onClick={() => navigate('/app/dashboard/notifications')}
+// new quest:
+onClick={() => navigate('/app/dashboard/quests')}
+// sign out:
+onClick={() => {
+  setToken(null);
+  navigate('/app/login');
+}}
+```
+
+Remove `import { navigate } from './route'`.
+
+- [ ] **Step 3: Manual sanity** — `cd admin && npm run dev`, open `/app/login`, sign-in flow deferred until auth pages updated; sidebar works once authed via `setToken` in console if needed.
+
+- [ ] **Step 4: Commit** (only if user asked)
+
+---
+

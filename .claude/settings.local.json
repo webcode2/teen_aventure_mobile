@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Bash(which flutter *)",
+      "Bash(flutter --version)",
+      "Bash(dart --version)",
+      "Bash(find / -name \"flutter\" -type f 2>/dev/null | head -10)"
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "chain-types-shadows-v1",
+  "type": "CHAIN",
+  "title": "Types & Shadows",
+  "scripture": "Exodus 12; Numbers 21; Hebrews 9; John 1; Genesis 14; Exodus 16; Genesis 6",
+  "rewards": { "points": 50 },
+  "data": {
+    "steps": [
+      {
+        "id": "passover",
+        "answer": "PASSOVER",
+        "direction": "down",
+        "clue": "A lamb without blemish was chosen. Its blood was placed on the doorposts, and judgment passed over the homes marked by the blood. What is the Old Testament shadow?",
+        "ref": "Exodus 12:1–13; 1 Corinthians 5:7"
+      },
+      {
+        "id": "serpent",
+        "answer": "SERPENT",
+        "direction": "across",
+        "fromLetter": 3,
+        "clue": "Israel was bitten by fiery serpents. Moses lifted something up so that those who looked would live. What was lifted up?",
+        "ref": "Numbers 21:4–9; John 3:14–15"
+      },
+      {
+        "id": "tabernacle",
+        "answer": "TABERNACLE",
+        "direction": "down",
+        "fromLetter": 3,
+        "clue": "God told Israel to make a place where He would dwell among them. What was this earthly structure called?",
+        "ref": "Exodus 25:8–9; Hebrews 9:1–12"
+      },
+      {
+        "id": "lamb",
+        "answer": "LAMB",
+        "direction": "across",
+        "fromLetter": 9,
+        "clue": "When John saw Jesus, he used the name of this animal to identify Him.",
+        "ref": "Exodus 12:3–6; John 1:29"
+      },
+      {
+        "id": "melchizedek",
+        "answer": "MELCHIZEDEK",
+        "direction": "down",
+        "fromLetter": 1,
+        "clue": "A mysterious king-priest appeared to Abraham with bread and wine. Who was he?",
+        "ref": "Genesis 14:18–20; Hebrews 7:1–17"
+      },
+      {
+        "id": "manna",
+        "answer": "MANNA",
+        "direction": "across",
+        "fromLetter": 1,
+        "clue": "Israel was hungry in the wilderness, and God provided food from heaven. What was it called?",
+        "ref": "Exodus 16:4–15; John 6:30–35"
+      },
+      {
+        "id": "ark",
+        "answer": "ARK",
+        "direction": "down",
+        "fromLetter": 1,
+        "clue": "One family was preserved while judgment came upon the world. What was the means of preservation?",
+        "ref": "Genesis 6:13–22; 1 Peter 3:18–21"
+      }
+    ]
+  }
+}

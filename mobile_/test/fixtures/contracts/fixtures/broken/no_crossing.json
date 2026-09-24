@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "layout-no-crossing-v1",
+  "type": "LAYOUT",
+  "title": "Broken: no real crossing",
+  "scripture": "Test 1:1",
+  "rewards": {},
+  "data": {
+    "entries": [
+      {
+        "id": "a1",
+        "direction": "across",
+        "row": 0,
+        "col": 0,
+        "answer": "FAITH",
+        "clue": "Top word",
+        "ref": "Hebrews 11:1"
+      },
+      {
+        "id": "a2",
+        "direction": "across",
+        "row": 2,
+        "col": 0,
+        "answer": "GRACE",
+        "clue": "Disconnected word — shares no cells",
+        "ref": "Ephesians 2:8"
+      }
+    ]
+  }
+}

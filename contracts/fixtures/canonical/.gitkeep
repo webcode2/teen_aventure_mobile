@@ -1,0 +1,2 @@
+# Canonical CROSSWORD goldens — filled by `npm run golden` (Phase 2 compiler output).
+# Do not hand-edit; snapshots are asserted in tests.

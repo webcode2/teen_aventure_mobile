@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "chain-wilderness-v1",
+  "type": "CHAIN",
+  "title": "The Wilderness",
+  "scripture": "Exodus 16–17; Numbers 13–21",
+  "rewards": { "points": 50 },
+  "data": {
+    "steps": [
+      {
+        "id": "w1",
+        "answer": "MANNA",
+        "direction": "down",
+        "clue": "The food God provided for Israel in the wilderness.",
+        "ref": "Exodus 16:4–15"
+      },
+      {
+        "id": "w2",
+        "answer": "NUMBERS",
+        "direction": "across",
+        "fromLetter": 3,
+        "clue": "The book that records much of Israel’s wilderness journey.",
+        "ref": "Numbers 1:1"
+      },
+      {
+        "id": "w3",
+        "answer": "BRASS SERPENT",
+        "direction": "down",
+        "fromLetter": 4,
+        "clue": "What Moses made and lifted up after the people were bitten by fiery serpents.",
+        "ref": "Numbers 21:8–9"
+      },
+      {
+        "id": "w4",
+        "answer": "SINAI",
+        "direction": "across",
+        "fromLetter": 6,
+        "clue": "The mountain where Israel received God’s commandments.",
+        "ref": "Exodus 19:20"
+      },
+      {
+        "id": "w5",
+        "answer": "AARON",
+        "direction": "down",
+        "fromLetter": 4,
+        "clue": "Moses’ brother who became Israel’s first high priest.",
+        "ref": "Exodus 28:1"
+      },
+      {
+        "id": "w6",
+        "answer": "AMALEK",
+        "direction": "across",
+        "fromLetter": 2,
+        "clue": "The people Israel fought after leaving Egypt.",
+        "ref": "Exodus 17:8–13"
+      },
+      {
+        "id": "w7",
+        "answer": "KADESH",
+        "direction": "down",
+        "fromLetter": 6,
+        "clue": "The place from which Moses sent the twelve spies into Canaan.",
+        "ref": "Numbers 13:26"
+      },
+      {
+        "id": "w8",
+        "answer": "EDOM",
+        "direction": "across",
+        "fromLetter": 4,
+        "clue": "The nation descended from Esau that Israel encountered on the journey.",
+        "ref": "Numbers 20:14–21"
+      },
+      {
+        "id": "w9",
+        "answer": "DATHAN",
+        "direction": "down",
+        "fromLetter": 2,
+        "clue": "The man associated with Korah’s rebellion against Moses.",
+        "ref": "Numbers 16:1–3"
+      },
+      {
+        "id": "w10",
+        "answer": "TABERNACLE",
+        "direction": "across",
+        "fromLetter": 3,
+        "clue": "The movable sanctuary at the centre of Israel’s camp.",
+        "ref": "Exodus 25:8–9"
+      }
+    ]
+  }
+}

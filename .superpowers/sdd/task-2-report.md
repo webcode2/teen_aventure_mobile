@@ -1,3 +1,58 @@
+# Task 2 Report — Guards + Route Tree (TDD)
+
+## Status
+
+Complete. No commit was created.
+
+## Changes
+
+- Added `admin/src/guards.tsx` with `RequireStaff`, `RequireGuest`, and `LegacyHashRedirect`.
+- Added `admin/src/router.tsx` with the public landing route, guest auth routes, guarded dashboard layout and tab routes, pastor routes, and fallback redirect.
+- Added `admin/src/router.test.tsx` covering landing, staff-login redirection with `next`, authenticated People rendering inside `Shell`, invalid-tab redirection, and the pastor portal.
+- Kept `admin/src/shell.tsx` unchanged for this task because its existing `children` slot already renders `<Outlet />` correctly when supplied by `DashboardLayout`.
+- Used the stable exact pastor gateway matcher `Pastor Sign In`.
+
+## Required Behavior
+
+- `/` remains public regardless of staff token state.
+- `/app/dashboard` is the only dashboard overview route.
+- `dashboard` is explicitly rejected as a `:tab`; invalid tabs redirect to `/app/dashboard`.
+- `/groups` and `/groups/:churchId` render the pastor portal.
+- Unknown paths redirect to `/`.
+- Unauthenticated dashboard requests redirect to `/app/login?next=<encoded path and query>`.
+- Authenticated users visiting guest-only auth routes redirect to `/app/dashboard`.
+- Legacy hash mapping clears the browser hash before replacing the React Router location.
+
+## TDD Evidence
+
+### RED
+
+Command:
+
+`npm test -- src/router.test.tsx`
+
+Result: failed as expected because `./router` did not exist:
+
+`Error: Failed to resolve import "./router" from "src/router.test.tsx". Does the file exist?`
+
+### GREEN
+
+Command:
+
+`npm test -- src/router.test.tsx src/path-helpers.test.ts`
+
+Result: **2 test files passed, 8 tests passed**.
+
+## Additional Verification
+
+- `npm run lint -- src/guards.tsx src/router.tsx src/router.test.tsx`: passed.
+- IDE diagnostics for all three changed route files: no linter errors.
+- `npm run build`: the new route files type-check; the build remains blocked by the pre-existing Task 3 migration boundary in `src/App.tsx`, which still imports removed `parseHash` and `Route` exports from `route.ts`. Per scope, `App.tsx` was not wired or changed in Task 2.
+
+## Concerns
+
+- Full admin build cannot pass until Task 3 migrates `App.tsx` to the new router.
+- Existing page and `Shell` calls still use the temporary throwing `navigate()` stub as intentionally deferred to Tasks 4–5.
 # Task 2 Report: Family and Group Jar from the ledger
 
 ## Status

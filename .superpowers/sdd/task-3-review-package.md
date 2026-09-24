@@ -1,10 +1,28 @@
-# Review package Task 3
+# Task 3 review package
+## App.tsx
+```tsx
+import { AppRoutes } from './router';
+import './studio/studio.css';
 
-**Commits:** none
+export default function App() {
+  return <AppRoutes />;
+}
+```
+## main.tsx
+```tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
+import './index.css';
+import App from './App';
+import { LegacyHashRedirect } from './guards';
 
-## Diff
-
-- backend/src/routes/teen-quest.routes.ts: import applyStreak, localDay from ../lib/streak.js; localDay function removed; await applyStreak(childId) at lines 152 and 210 after successful scoreLedger.create (objs and scramble). 409 paths unchanged.
-- backend/tests/api.test.ts ~1442-1449: GET /api/engagement/score/${tqTeen1Id} with tqTeen1Token; expect askScore >= 100, streak >= 1.
-
-TDD: red on streak 0, then 63/63 pass.
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <LegacyHashRedirect />
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+);
+```

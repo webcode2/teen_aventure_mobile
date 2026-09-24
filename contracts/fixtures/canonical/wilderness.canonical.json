@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "id": "chain-wilderness-v1",
+  "type": "CROSSWORD",
+  "title": "The Wilderness",
+  "scripture": "Exodus 16–17; Numbers 13–21",
+  "rewards": {
+    "points": 50
+  },
+  "data": {
+    "grid": {
+      "rows": 17,
+      "cols": 22
+    },
+    "entries": [
+      {
+        "id": "w1",
+        "direction": "down",
+        "row": 0,
+        "col": 0,
+        "answer": "MANNA",
+        "clue": "The food God provided for Israel in the wilderness.",
+        "ref": "Exodus 16:4–15",
+        "number": 1
+      },
+      {
+        "id": "w2",
+        "direction": "across",
+        "row": 2,
+        "col": 0,
+        "answer": "NUMBERS",
+        "clue": "The book that records much of Israel’s wilderness journey.",
+        "ref": "Numbers 1:1",
+        "number": 2
+      },
+      {
+        "id": "w3",
+        "direction": "down",
+        "row": 2,
+        "col": 3,
+        "answer": "BRASSSERPENT",
+        "clue": "What Moses made and lifted up after the people were bitten by fiery serpents.",
+        "ref": "Numbers 21:8–9",
+        "number": 3
+      },
+      {
+        "id": "w4",
+        "direction": "across",
+        "row": 7,
+        "col": 3,
+        "answer": "SINAI",
+        "clue": "The mountain where Israel received God’s commandments.",
+        "ref": "Exodus 19:20",
+        "number": 4
+      },
+      {
+        "id": "w5",
+        "direction": "down",
+        "row": 7,
+        "col": 6,
+        "answer": "AARON",
+        "clue": "Moses’ brother who became Israel’s first high priest.",
+        "ref": "Exodus 28:1",
+        "number": 5
+      },
+      {
+        "id": "w6",
+        "direction": "across",
+        "row": 8,
+        "col": 6,
+        "answer": "AMALEK",
+        "clue": "The people Israel fought after leaving Egypt.",
+        "ref": "Exodus 17:8–13",
+        "number": 6
+      },
+      {
+        "id": "w7",
+        "direction": "down",
+        "row": 8,
+        "col": 11,
+        "answer": "KADESH",
+        "clue": "The place from which Moses sent the twelve spies into Canaan.",
+        "ref": "Numbers 13:26",
+        "number": 7
+      },
+      {
+        "id": "w8",
+        "direction": "across",
+        "row": 11,
+        "col": 11,
+        "answer": "EDOM",
+        "clue": "The nation descended from Esau that Israel encountered on the journey.",
+        "ref": "Numbers 20:14–21",
+        "number": 8
+      },
+      {
+        "id": "w9",
+        "direction": "down",
+        "row": 11,
+        "col": 12,
+        "answer": "DATHAN",
+        "clue": "The man associated with Korah’s rebellion against Moses.",
+        "ref": "Numbers 16:1–3",
+        "number": 9
+      },
+      {
+        "id": "w10",
+        "direction": "across",
+        "row": 13,
+        "col": 12,
+        "answer": "TABERNACLE",
+        "clue": "The movable sanctuary at the centre of Israel’s camp.",
+        "ref": "Exodus 25:8–9",
+        "number": 10
+      }
+    ],
+    "links": [
+      {
+        "fromEntryId": "w1",
+        "toEntryId": "w2",
+        "letterIndex": 3
+      },
+      {
+        "fromEntryId": "w2",
+        "toEntryId": "w3",
+        "letterIndex": 4
+      },
+      {
+        "fromEntryId": "w3",
+        "toEntryId": "w4",
+        "letterIndex": 6
+      },
+      {
+        "fromEntryId": "w4",
+        "toEntryId": "w5",
+        "letterIndex": 4
+      },
+      {
+        "fromEntryId": "w5",
+        "toEntryId": "w6",
+        "letterIndex": 2
+      },
+      {
+        "fromEntryId": "w6",
+        "toEntryId": "w7",
+        "letterIndex": 6
+      },
+      {
+        "fromEntryId": "w7",
+        "toEntryId": "w8",
+        "letterIndex": 4
+      },
+      {
+        "fromEntryId": "w8",
+        "toEntryId": "w9",
+        "letterIndex": 2
+      },
+      {
+        "fromEntryId": "w9",
+        "toEntryId": "w10",
+        "letterIndex": 3
+      }
+    ]
+  }
+}

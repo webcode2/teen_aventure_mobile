@@ -5,14 +5,15 @@
             "name": "Flutter",
             "type": "dart",
             "request": "launch",
-            "cwd": "${workspaceFolder}/mobile",
-            "program": "lib/main.dart"
+            "cwd": "${workspaceFolder}/mobile_",
+            "program": "lib/main.dart",
+            "flutterMode": "debug"
         },
         {
             "name": "Flutter Chrome",
             "type": "dart",
             "request": "launch",
-            "cwd": "${workspaceFolder}/mobile",
+            "cwd": "${workspaceFolder}/mobile_",
             "program": "lib/main.dart",
             "deviceId": "chrome",
             "flutterMode": "debug",

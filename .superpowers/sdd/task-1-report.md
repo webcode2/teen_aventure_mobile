@@ -1,73 +1,64 @@
-# Task 1 Report: Extract `applyStreak`
+# Task 1 Report: Install react-router + path helpers (TDD)
 
 ## Status
 
-**DONE_WITH_CONCERNS** — Code extract complete; existing API tests could not fully pass due to missing Postgres test database.
-
-## Summary
-
-Moved `localDay` and `applyStreak` from `backend/src/routes/engagement.routes.ts` into a new shared module `backend/src/lib/streak.ts`. Engagement routes now import both helpers from the lib. Behavior is unchanged (pure refactor).
-
-## TDD / Test Evidence
-
-This task is a refactor with no new test cases per the brief. Verification step:
-
-```bash
-cd backend && npm test -- tests/api.test.ts
-```
-
-**Result:** FAIL (exit code 1)
-
-- **14 passed | 42 failed | 7 skipped** (63 total)
-- Failures are environment-related, not caused by the streak extract:
-  - `PrismaClientKnownRequestError P1003`: `Database askhub_test does not exist`
-  - `PrismaClientKnownRequestError P2021`: `The table public.Child does not exist in the current database`
-  - Later suite tests returned **401** after DB connection dropped (`Server has closed the connection`, P1017)
-- Engagement suite tests that failed (e.g. "maintains the unified ASK Score and streaks") hit 500 from missing DB/tables before reaching streak logic.
-- Early auth/family tests (first ~14) passed while Postgres was still reachable.
-
-**Conclusion:** Refactor compiles cleanly (no linter errors). Regression verification blocked by test DB setup; recommend re-running after `askhub_test` exists and migrations are applied.
-
-## Files Changed
-
-| File | Action |
-|------|--------|
-| `backend/src/lib/streak.ts` | **Created** — exports `localDay`, `applyStreak` (verbatim copy from routes) |
-| `backend/src/routes/engagement.routes.ts` | **Modified** — added `import { applyStreak, localDay } from '../lib/streak.js'`, removed local function definitions (~25 lines) |
-
-## Implementation Details
-
-### `backend/src/lib/streak.ts`
-
-- Imports `prisma` from `./prisma.js`
-- `localDay(date = new Date())`: normalizes date to UTC midnight
-- `applyStreak(childId)`: creates/updates streak record (first day → current 1; same day → no-op; consecutive day → increment; gap → reset to 1)
-
-### `backend/src/routes/engagement.routes.ts`
-
-- Kept existing imports: `getActivityPoints`, `ACTIVITY_POINTS` re-export from `scoring.js`
-- All call sites unchanged:
-  - `localDay()` in submit, together complete
-  - `applyStreak(childId)` after ledger create (submit BIY path, submit default path, together complete loop)
-
-## Self-Review
-
-- [x] Matches task brief verbatim (no logic changes)
-- [x] Only `localDay` / `applyStreak` moved; scoring imports untouched
-- [x] No new dependencies
-- [x] No linter errors on changed files
-- [x] Exports suitable for reuse by later engagement-jars tasks
-- [ ] Full test PASS not confirmed (DB unavailable)
+**DONE**
 
 ## Commits
 
-None — workspace is not a git repository; commit step skipped per instructions.
+None (per user instruction).
+
+## Test summary
+
+`npm test -- src/path-helpers.test.ts` — **3 passed** (isDashboardTab, safeStaffNext, legacyHashToPath).
+
+## TDD Evidence
+
+### RED (Step 3)
+
+```
+ FAIL  src/path-helpers.test.ts [ src/path-helpers.test.ts ]
+Error: Failed to resolve import "./path-helpers" from "src/path-helpers.test.ts". Does the file exist?
+```
+
+### GREEN (Step 5)
+
+```
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+```
+
+## Changes
+
+| File | Action |
+|------|--------|
+| `admin/package.json` | Added `react-router@^8.4.0` via `npm install react-router@^8` |
+| `admin/package-lock.json` | Updated by npm |
+| `admin/src/path-helpers.ts` | Created — `DASHBOARD_TAB_IDS`, `isDashboardTab`, `safeStaffNext`, `legacyHashToPath` |
+| `admin/src/path-helpers.test.ts` | Created — verbatim from brief |
+| `admin/src/route.ts` | Slimmed to `TABS`, `Tab`, deprecated `navigate()` stub |
+
+## Removed from `route.ts` (intentional)
+
+- `AuthView`, `Route`, `parseHash`, `hashFor`, hash-based `navigate` implementation
+
+## Self-review
+
+- Helper logic matches brief verbatim; imports `TABS` / `Tab` from slim `route.ts`.
+- `legacyHashToPath` covers landing/auth/dashboard tabs, pastor/church → `/groups`, unknown tab → `/app/dashboard`, empty hash → `null`.
+- `safeStaffNext` rejects non-path, protocol-relative (`//`), and paths outside `/app/dashboard`.
+- `navigate` stub preserves import compatibility for call sites until Task 5; throws at runtime if invoked.
 
 ## Concerns
 
-1. **Test database missing:** `askhub_test` does not exist. Create DB + run Prisma migrations before relying on `tests/api.test.ts` for regression signal.
-2. **Flaky suite under partial DB:** Some tests passed then later failed as Postgres connection/schema state degraded mid-run.
+1. **`App.tsx` still imports `parseHash` and `Route`** — `tsc -b` / full admin build will fail until a later migration task restores or replaces those symbols. Focused helper tests are green; this is expected per task scope.
+2. **`navigate` stub** — existing pages still compile against the export but will throw if executed before Task 5 migrates call sites to `useNavigate`.
 
-## Next Steps (for parent plan)
+## Out of scope (not touched)
 
-Task 2+ can import `applyStreak` / `localDay` from `backend/src/lib/streak.js` without duplicating streak logic.
+- Flutter, backend, call-site migrations (Tasks 3–5).
+- Word Scramble / scrambleQuiz (permanent removal).
+
+## Report path
+
+`/home/bash/Desktop/ASKADONAI/ask_teens_app/.superpowers/sdd/task-1-report.md`

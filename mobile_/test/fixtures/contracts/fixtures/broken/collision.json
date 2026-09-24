@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "layout-collision-v1",
+  "type": "LAYOUT",
+  "title": "Broken: letter collision",
+  "scripture": "Test 1:1",
+  "rewards": {},
+  "data": {
+    "entries": [
+      {
+        "id": "a1",
+        "direction": "across",
+        "row": 0,
+        "col": 0,
+        "answer": "FAITH",
+        "clue": "Horizontal word",
+        "ref": "Hebrews 11:1"
+      },
+      {
+        "id": "d1",
+        "direction": "down",
+        "row": 0,
+        "col": 2,
+        "answer": "LOVE",
+        "clue": "Vertical word that collides at col 2 (I vs L)",
+        "ref": "1 Corinthians 13:13"
+      }
+    ]
+  }
+}

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saga Map · Candy Theme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#FCE4EC;color:#333;font-family:'Baloo 2','Trebuchet MS',sans-serif}
+  .wrap{max-width:540px;margin:0 auto;padding:26px 18px 70px}
+  .caption{padding:2px 6px 16px;text-align:center}
+  .caption h1{font-size:24px;font-weight:800;color:#E91E63;letter-spacing:.5px}
+  .caption p{margin-top:4px;font-size:14px;line-height:1.55;color:#880E4F;opacity:0.8}
+  .stage{border-radius:24px;overflow:hidden;box-shadow:0 30px 80px rgba(233,30,99,.25),0 4px 18px rgba(233,30,99,.15);background:#73D5E6; border: 4px solid #fff}
+  .stage svg{display:block;width:100%;height:auto}
+  .colophon{margin-top:24px;text-align:center;color:#D81B60;font-size:12.5px;font-weight:600}
+  
+  .rail{position:fixed;right:16px;top:50%;transform:translateY(-50%);width:4px;height:34vh;
+        background:rgba(233,30,99,.15);border-radius:2px}
+  .rail i{position:absolute;left:50%;top:0;width:12px;height:12px;border-radius:50%;background:#E91E63;
+          transform:translate(-50%,-50%);box-shadow:0 0 0 4px rgba(233,30,99,.2);transition:top .1s linear}
+  @media(max-width:880px){.rail{display:none}}
+  
+  .hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+        background:rgba(255,255,255,.95);border:2px solid #F8BBD0;color:#E91E63;font-size:14px;
+        font-weight:700;padding:10px 20px;border-radius:999px;box-shadow:0 10px 20px rgba(233,30,99,.15);
+        transition:opacity .5s,transform .5s}
+  .hint svg{animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(4px)}}
+  .hint.gone{opacity:0;transform:translateX(-50%) translateY(10px);pointer-events:none}
+  
+  .tools{position:fixed;right:18px;bottom:22px;display:flex;gap:9px;z-index:5}
+  .tools button{display:flex;align-items:center;gap:7px;background:#FFF;border:2px solid #F8BBD0;
+        color:#E91E63;font:700 14px 'Baloo 2',sans-serif;padding:10px 16px;border-radius:14px;
+        cursor:pointer;transition:.18s;box-shadow:0 8px 16px rgba(233,30,99,.12)}
+  .tools button:hover{background:#FCE4EC;transform:translateY(-3px);box-shadow:0 12px 20px rgba(233,30,99,.18)}
+  .tools button:active{transform:translateY(0)}
+  
+  .toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%) translateY(12px);background:#E91E63;
+        color:#FFF;font:700 14px 'Baloo 2',sans-serif;padding:10px 20px;
+        border-radius:12px;opacity:0;pointer-events:none;transition:.3s;box-shadow:0 10px 24px rgba(233,30,99,.3)}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="caption">
+      <h1>Saga Map Builder</h1>
+      <p>Scroll to view the procedural candy-themed level path.</p>
+    </header>
+    <main class="stage">
+      <!-- 
+        Map renders from bottom (start) to top (end).
+        Scroll begins at the bottom of the page.
+      -->
+      <svg id="world" viewBox="0 0 1000 12000" preserveAspectRatio="xMidYMin meet"></svg>
+    </main>
+    <footer class="colophon">
+      Export your vector map using the tools below.
+    </footer>
+  </div>
+
+  <div class="rail"><i id="railThumb"></i></div>
+
+  <div class="hint" id="hint">
+    Scroll Up To Explore
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </div>
+
+  <div class="tools">
+    <button id="btnPng" title="Export a 1080 × 12960 PNG">
+      PNG 1080
+    </button>
+    <button id="btnSvg" title="Export the vector source">
+      SVG
+    </button>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+
+/* ============ Settings & Palette ============ */
+const NS='http://www.w3.org/2000/svg';
+const W=1000, H=12000;
+let _s=123456789; // Fixed seed for procedural consistency
+const rnd=()=>{_s=_s+0x6D2B79F5|0;let t=Math.imul(_s^_s>>>15,1|_s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+const R=(a,b)=>a+(b-a)*rnd();
+const RI=(a,b)=>Math.floor(R(a,b+1));
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const f1=n=>(+n).toFixed(1);
+
+const C = {
+  skyBot: '#73D5E6', skyTop: '#4FB1D6',
+  grassBasics: ['#B8E986', '#A1E55A', '#89D945', '#71CE33', '#5EBB23'],
+  pathShadow: 'rgba(0,0,0,0.12)', pathBase: '#FFFFFF', pathStripe: '#FF4081',
+  nodeShadow: 'rgba(0,0,0,0.15)', nodeWhite: '#FFFFFF', 
+  nodeActive: '#E91E63', nodeLocked: '#F8BBD0', nodeText: '#FFFFFF',
+  candy1: '#FF5252', candy2: '#00E5FF', candy3: '#FFEA00', candy4: '#E040FB',
+  treeLight: '#86E266', treeDark: '#64C446', trunk: '#A06E44',
+  shadow: 'rgba(0,0,0,0.12)'
+};
+
+/* ============ Tiny SVG Toolkit ============ */
+const E=(t,a={},p)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);if(p)p.appendChild(n);return n;};
+const grp=(p,a={})=>E('g',a,p);
+const path=(p,d,a={})=>E('path',{d,...a},p);
+const circ=(p,cx,cy,r,a={})=>E('circle',{cx:f1(cx),cy:f1(cy),r:f1(r),...a},p);
+const ell=(p,cx,cy,rx,ry,a={})=>E('ellipse',{cx:f1(cx),cy:f1(cy),rx:f1(rx),ry:f1(ry),...a},p);
+const rrect=(p,x,y,w,h,rx,a={})=>E('rect',{x:f1(x),y:f1(y),width:f1(w),height:f1(h),rx:f1(rx),...a},p);
+const circSub=(cx,cy,r)=>`M${f1(cx-r)} ${f1(cy)}a${f1(r)} ${f1(r)} 0 1 0 ${f1(2*r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(-2*r)} 0`;
+
+function smoothPts(pts){
+  let d=`M${f1(pts[0][0])} ${f1(pts[0][1])}`;
+  for(let i=1;i<pts.length-1;i++){
+    const mx=(pts[i][0]+pts[i+1][0])/2, my=(pts[i][1]+pts[i+1][1])/2;
+    d+=`Q${f1(pts[i][0])} ${f1(pts[i][1])} ${f1(mx)} ${f1(my)}`;
+  }
+  d+=`L${f1(pts[pts.length-1][0])} ${f1(pts[pts.length-1][1])}`;
+  return d;
+}
+
+function spline(pts,steps=15){
+  const P=[pts[0],...pts,pts[pts.length-1]];
+  let d=`M${f1(pts[0][0])} ${f1(pts[0][1])}`;
+  const S=[];const push=(x,y)=>S.push({x,y});
+  push(pts[0][0],pts[0][1]);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=P[i],p1=P[i+1],p2=P[i+2],p3=P[i+3];
+    const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=`C${f1(c1x)} ${f1(c1y)} ${f1(c2x)} ${f1(c2y)} ${f1(p2[0])} ${f1(p2[1])}`;
+    for(let s=1;s<=steps;s++){
+      const t=s/steps,u=1-t;
+      push(u*u*u*p1[0]+3*u*u*t*c1x+3*u*t*t*c2x+t*t*t*p2[0],
+           u*u*u*p1[1]+3*u*u*t*c1y+3*u*t*t*c2y+t*t*t*p2[1]);
+    }
+  }
+  return {d,S};
+}
+
+/* ============ Map Data & Layers ============ */
+const world=document.getElementById('world');
+const bgGrp=grp(world), pathGrp=grp(world), decoGrp=grp(world), nodeGrp=grp(world);
+
+// Winding Path Points (Bottom to Top)
+const PW=[
+  [500, 11800], [250, 11500], [750, 11200], [450, 10800], [200, 10400], [600, 10000],
+  [800, 9600],  [400, 9200],  [300, 8800],  [750, 8400],  [500, 8000],  [250, 7600],
+  [650, 7200],  [850, 6800],  [450, 6400],  [250, 6000],  [700, 5600],  [550, 5200],
+  [250, 4800],  [650, 4400],  [800, 4000],  [350, 3600],  [250, 3200],  [700, 2800],
+  [500, 2400],  [300, 2000],  [750, 1600],  [600, 1200],  [250, 800],   [500, 400]
+];
+const pathData = spline(PW, 20);
+const pathD = pathData.d;
+const pathS = pathData.S; // dense points array for placing nodes
+
+// Spatial clearance engine
+const placed=[];
+const register=(x,y,r)=>placed.push({x,y,r});
+function distToPath(x,y){
+  let minDist=1e9;
+  for(let i=0;i<pathS.length;i+=5){
+    const d=Math.hypot(pathS[i].x-x, pathS[i].y-y);
+    if(d<minDist) minDist=d;
+  }
+  return minDist;
+}
+function free(x,y,r){
+  if(x<r+20||x>W-r-20||y<r+100||y>H-r-100) return false;
+  if(distToPath(x,y) < r + 45) return false; // keep off the candy track
+  for(const q of placed){if(Math.hypot(q.x-x,q.y-y)<q.r+r+10) return false;}
+  return true;
+}
+
+/* ============ 1. Render Background Environment ============ */
+// Blue sky base
+E('rect',{x:0,y:0,width:1000,height:H,fill:C.skyBot},bgGrp);
+
+// Render smooth rolling green hills sweeping across the screen
+for(let y=1500; y<=12200; y+=400){
+  let pts=[];
+  let phase = rnd() * 10;
+  for(let x=-20; x<=1020; x+=100) {
+      pts.push([x, y + Math.sin(x/200 + phase)*60 + R(-10,10)]);
+  }
+  let d = smoothPts(pts) + `L1020 ${H+20}L-20 ${H+20}Z`;
+  
+  // Choose grass color based on height (gradually getting brighter towards the bottom)
+  let colorIndex = Math.floor( ((y-1500) / 10700) * (C.grassBasics.length-1) );
+  if(colorIndex < 0) colorIndex = 0;
+  if(colorIndex >= C.grassBasics.length) colorIndex = C.grassBasics.length - 1;
+  
+  path(bgGrp, d, {fill: C.grassBasics[colorIndex]});
+  
+  // Wavy hill shadow for depth
+  path(bgGrp, smoothPts(pts), {stroke: 'rgba(0,0,0,0.06)', 'stroke-width': 12, fill: 'none'});
+}
+
+/* ============ 2. Render Path ============ */
+path(pathGrp, pathD, {stroke: C.pathShadow, 'stroke-width': 56, fill: 'none', 'stroke-linecap': 'round', transform: 'translate(0 8)'});
+path(pathGrp, pathD, {stroke: C.pathBase, 'stroke-width': 50, fill: 'none', 'stroke-linecap': 'round'});
+path(pathGrp, pathD, {stroke: C.pathStripe, 'stroke-width': 50, fill: 'none', 'stroke-dasharray': '50 50'});
+
+/* ============ 3. Decorative Assets ============ */
+function cuteTree(x,y, s=1){
+  register(x,y, 45*s);
+  ell(decoGrp, x, y+10*s, 35*s, 12*s, {fill: C.shadow});
+  rrect(decoGrp, x-5*s, y-30*s, 10*s, 40*s, 4*s, {fill: C.trunk});
+  circ(decoGrp, x-16*s, y-40*s, 22*s, {fill: C.treeDark});
+  circ(decoGrp, x+16*s, y-40*s, 22*s, {fill: C.treeDark});
+  circ(decoGrp, x, y-60*s, 30*s, {fill: C.treeLight});
+  // shine
+  path(decoGrp, circSub(x-8*s, y-70*s, 6*s), {fill: '#FFFFFF', opacity: 0.4});
+}
+
+function lollipop(x,y, s=1){
+  register(x,y, 35*s);
+  ell(decoGrp, x, y+6*s, 24*s, 8*s, {fill: C.shadow});
+  rrect(decoGrp, x-3*s, y-45*s, 6*s, 50*s, 3*s, {fill: '#FFF', stroke: '#E0E0E0', 'stroke-width': 1.5});
+  const candyCol = pick([C.candy1, C.candy2, C.candy3, C.candy4]);
+  circ(decoGrp, x, y-50*s, 22*s, {fill: candyCol});
+  // Simple spiral overlay using paths
+  path(decoGrp, `M${f1(x-8*s)} ${f1(y-50*s)} a${f1(8*s)} ${f1(8*s)} 0 1 1 ${f1(16*s)} 0 a${f1(16*s)} ${f1(16*s)} 0 0 1 ${f1(-32*s)} 0`, {stroke: '#FFF', 'stroke-width': 4*s, fill: 'none', 'stroke-linecap': 'round'});
+}
+
+function candyHouse(x,y, s=1){
+  register(x,y, 80*s);
+  ell(decoGrp, x, y+15*s, 75*s, 22*s, {fill: C.shadow});
+  // Main building
+  rrect(decoGrp, x-45*s, y-65*s, 90*s, 70*s, 10*s, {fill: '#FF9CEE', stroke: '#F48FB1', 'stroke-width': 3});
+  // Door
+  path(decoGrp, `M${f1(x-14*s)} ${f1(y+5*s)} L${f1(x-14*s)} ${f1(y-25*s)} a${f1(14*s)} ${f1(14*s)} 0 0 1 ${f1(28*s)} 0 L${f1(x+14*s)} ${f1(y+5*s)} Z`, {fill: '#A06E44'});
+  // Roof
+  path(decoGrp, `M${f1(x-55*s)} ${f1(y-65*s)} L${f1(x)} ${f1(y-110*s)} L${f1(x+55*s)} ${f1(y-65*s)} Z`, {fill: '#E040FB', stroke: '#AA00FF', 'stroke-width': 4, 'stroke-linejoin': 'round'});
+  // Chimney (Candy cane)
+  rrect(decoGrp, x+20*s, y-105*s, 16*s, 35*s, 2*s, {fill: '#FFF'});
+  path(decoGrp, `M${f1(x+20*s)} ${f1(y-95*s)} L${f1(x+36*s)} ${f1(y-100*s)} M${f1(x+20*s)} ${f1(y-80*s)} L${f1(x+36*s)} ${f1(y-85*s)}`, {stroke: '#FF5252', 'stroke-width': 6*s});
+  circ(decoGrp, x, y-40*s, 10*s, {fill: '#FFF', stroke: '#00E5FF', 'stroke-width': 3});
+}
+
+function flower(x,y){
+  register(x,y, 16);
+  const col = pick(['#FFF', '#FFEA00', '#FF8A80']);
+  const cX = x, cY = y-6;
+  path(decoGrp, `M${f1(x)} ${f1(y)} L${f1(x)} ${f1(y-6)}`, {stroke: '#71CE33', 'stroke-width': 3});
+  path(decoGrp, circSub(cX-4, cY-4, 4) + circSub(cX+4, cY-4, 4) + circSub(cX-4, cY+4, 4) + circSub(cX+4, cY+4, 4), {fill: col});
+  circ(decoGrp, cX, cY, 3, {fill: '#FFB300'});
+}
+
+// Generate Environment Props Safely
+let attempts = 0;
+// Houses
+for(let i=0; i<15; i++) {
+  while(attempts<1000){ attempts++;
+    let px = R(100, 900), py = R(500, 11500);
+    if(free(px,py,90)) { candyHouse(px,py,R(0.9, 1.1)); break; }
+  }
+}
+// Trees
+attempts = 0;
+for(let i=0; i<60; i++) {
+  while(attempts<2000){ attempts++;
+    let px = R(50, 950), py = R(300, 11700);
+    if(free(px,py,50)) { cuteTree(px,py,R(0.8, 1.2)); break; }
+  }
+}
+// Lollipops
+attempts = 0;
+for(let i=0; i<45; i++) {
+  while(attempts<2000){ attempts++;
+    let px = R(50, 950), py = R(300, 11800);
+    if(free(px,py,40)) { lollipop(px,py,R(0.7, 1.1)); break; }
+  }
+}
+// Small Flowers
+for(let i=0; i<80; i++) {
+  let px = R(40, 960), py = R(500, 11900);
+  if(distToPath(px,py)>30) flower(px,py);
+}
+
+
+/* ============ 4. Render Level Nodes ============ */
+// The array pathS holds the dense path. 
+// We want to drop nodes every X distance from bottom to top.
+// Because the line draws starting from PW[0] (Y=11800, the bottom),
+// index 0 of pathS is Level 1.
+let nodeSpacing = 56; // Distance in steps along the path
+let levelNum = 1;
+const totalNodes = Math.floor(pathS.length / nodeSpacing) - 1;
+// Mock progression: Level 1-15 unlocked, 16 is active, rest locked.
+const activeLevel = 16; 
+
+for(let i = 20; i < pathS.length - 20; i += nodeSpacing){
+  const pt = pathS[i];
+  const isLocked = levelNum > activeLevel;
+  const isActive = levelNum === activeLevel;
+  
+  // Outer Shadow
+  circ(nodeGrp, pt.x, pt.y+6, 26, {fill: C.nodeShadow});
+  
+  // Thick White Rim
+  circ(nodeGrp, pt.x, pt.y, 24, {fill: C.nodeWhite});
+  
+  // Colored Inner Puck
+  circ(nodeGrp, pt.x, pt.y-3, 20, {fill: isLocked ? C.nodeLocked : C.nodeActive});
+  
+  // Highlight gleam on puck
+  path(nodeGrp, `M${f1(pt.x-10)} ${f1(pt.y-14)} A14 14 0 0 1 ${f1(pt.x+10)} ${f1(pt.y-14)} A10 10 0 0 0 ${f1(pt.x-10)} ${f1(pt.y-14)} Z`, {fill: '#FFF', opacity: 0.35});
+  
+  // Level Text
+  const txt = E('text', {
+    x: pt.x, y: pt.y + 3, 
+    'font-family': 'Baloo 2', 'font-size': '18px', 'font-weight': '800', 
+    fill: C.nodeText, 'text-anchor': 'middle', 'dominant-baseline': 'middle'
+  }, nodeGrp);
+  txt.textContent = levelNum;
+
+  // Crown/Highlight active level
+  if (isActive) {
+    // simple crown or glow
+    circ(nodeGrp, pt.x, pt.y-3, 29, {stroke: '#FFEA00', 'stroke-width': 4, fill: 'none', opacity: 0.8});
+  }
+
+  levelNum++;
+}
+
+
+/* ============ Page Chrome & Export Logic ============ */
+// Start view at the bottom (where level 1 is)
+window.onload = () => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+};
+
+const railThumb=document.getElementById('railThumb');
+addEventListener('scroll',()=>{
+  const max=document.documentElement.scrollHeight-innerHeight;
+  // Calculate reverse scroll (bottom is 0%, top is 100% of thumb position visually if desired, 
+  // but standard native is fine: top is 0, bottom is max)
+  railThumb.style.top=(Math.min(1,scrollY/(max||1))*100)+'%';
+},{passive:true});
+
+const hint=document.getElementById('hint');
+['wheel','touchstart','keydown','mousedown'].forEach(e=>addEventListener(e,()=>hint.classList.add('gone'),{passive:true}));
+
+const toastEl=document.getElementById('toast');let toastT;
+function toast(m){
+    toastEl.textContent=m;toastEl.classList.add('on');
+    clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('on'),2400);
+}
+
+function svgString(){
+  const c=world.cloneNode(true);
+  c.setAttribute('xmlns',NS);
+  c.setAttribute('width','1000');c.setAttribute('height','12000');
+  return new XMLSerializer().serializeToString(c);
+}
+function save(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+document.getElementById('btnSvg').onclick=()=>{
+  save(new Blob([svgString()],{type:'image/svg+xml'}),'saga-map-candy.svg');
+  toast('SVG saved · 1000 × 12000 vector');
+};
+
+document.getElementById('btnPng').onclick=async()=>{
+  toast('Rendering PNG…');
+  try{
+    const url=URL.createObjectURL(new Blob([svgString()],{type:'image/svg+xml'}));
+    const img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+    const cv=document.createElement('canvas');cv.width=1080;cv.height=12960;
+    // Fill white background to prevent transparency issues
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0,0,1080,12960);
+    ctx.drawImage(img,0,0,1080,12960);
+    URL.revokeObjectURL(url);
+    cv.toBlob(b=>{
+        if(b){save(b,'saga-map-candy.png');toast('PNG saved · 1080 × 12960');}
+        else toast('PNG export failed in this browser');
+    },'image/png');
+  }catch(e){
+      toast('PNG export failed — try the SVG');
+  }
+};
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "generatedAt": "2026-09-22T18:04:15.281Z",
+  "files": {
+    "fixtures/broken/collision.json": "a3b7e10e7efcc21a6596e25893617a36b6db123fd24b46302cb305736f7e1b04",
+    "fixtures/broken/empty_ref.json": "5bb098691a8c74b18deaee8fc1fe8cfd045ccb6c00e9ef7a155309fa40d3b904",
+    "fixtures/broken/no_crossing.json": "632aec513c846bcd82bd22685e74b66c15f3b1c515b8023891f55ce2b2da0986",
+    "fixtures/broken/types_shadows.json": "00729d4f17b53a0ef390e8ff8ce45049d925bfe1108a3160555b62a8ecf1b94c",
+    "fixtures/canonical/esther.canonical.json": "4561a21fd215841d50880b7024933087f3d3007b48b03cd34a908e288187d7ac",
+    "fixtures/canonical/jael.canonical.json": "8bc6f147e3d9019f85403ff7c09d76c003d9eb09ae23abe75964f2a5471861f5",
+    "fixtures/canonical/wilderness.canonical.json": "c291115478e3432a38beb4f091acb82d87b9d23e3f20dfa4708786507ca0a468",
+    "fixtures/valid/esther.json": "181efa88cc0c846edbee606873e65a7351e5472b478b7dbfeea6df07da709875",
+    "fixtures/valid/jael.json": "f3cd87d58b47a199670b4016eecb90a6639c84515cb589327f828dcdac125f77",
+    "fixtures/valid/wilderness.json": "1dc629c3f4cf6dc6788954d12fb6f7f4218f3cf47725d4049a0ca9036444b9cb",
+    "json-schema/chain.schema.json": "41e76aefcb251b24a46443ba7baf72d12e63e0df04aacfd7d3d607a6bf9e0239",
+    "json-schema/crossword-data.schema.json": "e168fce39c2e41f16207e188143c18bc21a7e5dc30bf57945e26887af8d31a41",
+    "json-schema/crossword.schema.json": "4d28af78713f760b0419d3e62459a8b23e3b6dd5544b367765d2249c1203c002",
+    "json-schema/layout.schema.json": "2e86b861ffc03713862e893ef72fecc4fae30df6538ddd77a00765c165b35a06",
+    "json-schema/matching-data.schema.json": "348806c92bf2aac4d82df279b7915ad1af388a74979901b9124368a93550643d",
+    "json-schema/matching.schema.json": "be820d004717d11923601c6384af4cb9eea4bb2c68854893747fcda0739d3334",
+    "json-schema/puzzle-envelope.schema.json": "fb54a55ee0ce9c9f0a2ce1e4491fc219341e2813de58d4b69b03f8c967fd4348"
+  }
+}

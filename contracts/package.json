@@ -1,0 +1,44 @@
+{
+  "name": "@askhub/puzzle-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared TBA puzzle contracts + pure lib/puzzles (TS ↔ Dart)",
+  "main": "./lib/puzzles/index.ts",
+  "types": "./lib/puzzles/index.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/puzzles/index.ts",
+      "import": "./lib/puzzles/index.ts",
+      "default": "./lib/puzzles/index.ts"
+    },
+    "./lib/puzzles": {
+      "types": "./lib/puzzles/index.ts",
+      "import": "./lib/puzzles/index.ts",
+      "default": "./lib/puzzles/index.ts"
+    }
+  },
+  "bin": {
+    "tba-puzzle-validate": "./scripts/validate-cli.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "validate": "tsx scripts/validate-cli.ts",
+    "export:json-schema": "tsx scripts/export-json-schema.ts",
+    "manifest": "tsx scripts/hash-manifest.ts",
+    "sync:dart-fixtures": "tsx scripts/sync-dart-fixtures.ts",
+    "golden": "tsx scripts/write-goldens.ts",
+    "prepare:all": "npm run export:json-schema && npm run golden && npm run manifest && npm run sync:dart-fixtures"
+  },
+  "dependencies": {
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.23.12",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

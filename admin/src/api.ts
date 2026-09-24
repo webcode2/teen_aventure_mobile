@@ -30,6 +30,52 @@ function readStoredUser(): AdminUser | null {
 let token: string | null = readStoredToken();
 let currentUser: AdminUser | null = readStoredUser();
 
+const PASTOR_TOKEN_KEY = 'askhub_pastor_token';
+const PASTOR_USER_KEY = 'askhub_pastor_user';
+
+export type PastorUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  familyId?: string | null;
+  churchId?: string | null;
+  churchRole?: string | null;
+  roles?: string[];
+};
+
+export function getPastorToken(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(PASTOR_TOKEN_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getPastorUser(): PastorUser | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(PASTOR_USER_KEY);
+    return raw ? (JSON.parse(raw) as PastorUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setPastorSession(t: string | null, u?: PastorUser | null) {
+  try {
+    if (t) localStorage.setItem(PASTOR_TOKEN_KEY, t);
+    else localStorage.removeItem(PASTOR_TOKEN_KEY);
+    if (u) localStorage.setItem(PASTOR_USER_KEY, JSON.stringify(u));
+    else localStorage.removeItem(PASTOR_USER_KEY);
+  } catch {
+    /* ignore missing localStorage in tests */
+  }
+}
+
+export function clearPastorSession() {
+  setPastorSession(null, null);
+}
+
 export function getToken() { return token; }
 export function getUser() { return currentUser; }
 
@@ -49,25 +95,34 @@ export function setToken(t: string | null, user?: AdminUser | null) {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  body: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body ?? null;
   }
 }
 
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  const activeToken = token || getPastorToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(activeToken ? { authorization: `Bearer ${activeToken}` } : {}),
       ...(options.headers || {}),
     },
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch { /* non-JSON */ }
-    throw new ApiError(res.status, message);
+    let body: unknown = null;
+    try {
+      body = await res.json();
+      if (body && typeof body === 'object' && 'message' in body && typeof (body as { message: unknown }).message === 'string') {
+        message = (body as { message: string }).message;
+      }
+    } catch { /* non-JSON */ }
+    throw new ApiError(res.status, message, body);
   }
   return res.json();
 }
@@ -81,6 +136,20 @@ export async function login(email: string, password: string) {
   });
   if (!DASHBOARD_ROLES.has(res.user.role)) throw new ApiError(403, 'Dashboard access required');
   setToken(res.token, res.user);
+  return res;
+}
+
+export async function pastorLogin(email: string, password: string) {
+  const res = await api<{ token: string; user: PastorUser }>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+  const churchRole = res.user.churchRole;
+  const isPastor = churchRole === 'PASTOR' || churchRole === 'PASTOR_NOMINEE' || churchRole === 'CHILDRENS_CHURCH_LEAD';
+  if (!isPastor) {
+    throw new ApiError(403, 'Church Pastor or Leadership role required. Please sign in with your pastoral credentials.');
+  }
+  setPastorSession(res.token, res.user);
   return res;
 }
 

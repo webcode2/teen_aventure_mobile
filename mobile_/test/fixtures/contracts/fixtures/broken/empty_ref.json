@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "layout-empty-ref-v1",
+  "type": "LAYOUT",
+  "title": "Broken: empty scripture ref",
+  "scripture": "Test 1:1",
+  "rewards": {},
+  "data": {
+    "entries": [
+      {
+        "id": "a1",
+        "direction": "across",
+        "row": 0,
+        "col": 0,
+        "answer": "FAITH",
+        "clue": "Has a clue but empty ref",
+        "ref": ""
+      },
+      {
+        "id": "d1",
+        "direction": "down",
+        "row": 0,
+        "col": 0,
+        "answer": "FEAR",
+        "clue": "Crossing down entry",
+        "ref": "Isaiah 41:10"
+      }
+    ]
+  }
+}

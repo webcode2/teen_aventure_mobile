@@ -4,9 +4,14 @@ export const APP_NAME = 'Teen Bible Adventures';
 export const DASHBOARD_TITLE = `${APP_NAME} Manager`;
 
 export function Brand({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'h-[44px]',
+    md: 'h-[72px]',
+    lg: 'h-[88px]',
+  }[size];
   return (
-    <div className={`brand brand-${size}`}>
-      <img src="/logo.svg" alt={APP_NAME} className="brand-logo" />
+    <div className="flex items-center">
+      <img src="/logo.svg" alt={APP_NAME} className={`block w-auto max-w-full object-contain ${sizeClasses}`} />
     </div>
   );
 }
@@ -21,23 +26,33 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
+    <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted tracking-tight">
+      <span className="text-navy text-xs font-semibold tracking-wide uppercase">{label}</span>
       {children}
-      {hint ? <span className="field-hint">{hint}</span> : null}
+      {hint ? <span className="text-[11px] font-normal text-muted">{hint}</span> : null}
     </label>
   );
 }
 
 export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'bad' | 'info'; children: ReactNode }) {
-  return <span className={`badge ${kind}`}>{children}</span>;
+  const styles = {
+    ok: 'bg-sage text-forest border-forest/20',
+    warn: 'bg-surface-2 text-orange border-orange/30',
+    bad: 'bg-error-bg text-error border-error/20',
+    info: 'bg-teal-tint text-teal border-teal/20',
+  }[kind];
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles}`}>
+      {children}
+    </span>
+  );
 }
 
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
-    <div className="empty">
-      <strong>{title}</strong>
-      <p>{body}</p>
+    <div className="text-center py-10 px-6 rounded-card border border-dashed border-border bg-surface/60">
+      <strong className="block text-navy font-semibold text-sm mb-1">{title}</strong>
+      <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">{body}</p>
     </div>
   );
 }
@@ -54,25 +69,35 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="page-header">
+    <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 mb-6 border-b border-border">
       <div>
-        {kicker ? <p className="kicker">{kicker}</p> : null}
-        <h1>{title}</h1>
-        {subtitle ? <p className="lede">{subtitle}</p> : null}
+        {kicker ? <p className="text-[11px] font-bold uppercase tracking-wider text-teal mb-1">{kicker}</p> : null}
+        <h1 className="text-2xl font-bold tracking-tight text-navy">{title}</h1>
+        {subtitle ? <p className="text-sm text-muted mt-1 max-w-2xl leading-relaxed">{subtitle}</p> : null}
       </div>
-      {actions ? <div className="page-actions">{actions}</div> : null}
+      {actions ? <div className="flex items-center gap-2.5 shrink-0">{actions}</div> : null}
     </header>
   );
 }
 
 export function Alert({ kind, children }: { kind: 'error' | 'ok'; children: ReactNode }) {
-  return <p className={kind === 'error' ? 'error-text' : 'ok-text'} role={kind === 'error' ? 'alert' : 'status'}>{children}</p>;
+  const style = kind === 'error'
+    ? 'bg-error-bg text-error border-error/30'
+    : 'bg-sage text-forest border-forest/30';
+  return (
+    <p
+      className={`p-3 rounded-xl text-xs font-semibold border ${style}`}
+      role={kind === 'error' ? 'alert' : 'status'}
+    >
+      {children}
+    </p>
+  );
 }
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
-    <div className="card muted-card">
-      <p className="muted">{label}</p>
+    <div className="bg-surface border border-border rounded-card p-8 text-center shadow-xs">
+      <p className="text-sm text-muted animate-pulse">{label}</p>
     </div>
   );
 }
@@ -110,22 +135,22 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="dialog-root">
-      <div className="dialog-backdrop" aria-hidden />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-navy/50 backdrop-blur-xs transition-opacity" onClick={onClose} aria-hidden />
       <div
-        className="dialog-panel"
+        className="relative bg-surface border border-border rounded-card shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto z-10 p-6 flex flex-col gap-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'dialog-title' : undefined}
       >
-        <div className="dialog-head">
-          <div className="dialog-head-text">
-            {title ? <h3 id="dialog-title">{title}</h3> : null}
-            {subtitle ? <p className="muted">{subtitle}</p> : null}
+        <div className="flex items-start justify-between gap-4 pb-3 border-b border-border">
+          <div>
+            {title ? <h3 id="dialog-title" className="text-lg font-bold text-navy">{title}</h3> : null}
+            {subtitle ? <p className="text-xs text-muted mt-0.5">{subtitle}</p> : null}
           </div>
           <button
             type="button"
-            className="icon-btn dialog-close"
+            className="p-1.5 rounded-lg text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer"
             aria-label="Close"
             title="Close"
             onClick={onClose}
@@ -133,7 +158,74 @@ export function Dialog({
             <CloseIcon />
           </button>
         </div>
-        <div className="dialog-body">{children}</div>
+        <div className="flex flex-col gap-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function Drawer({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+  headerActions,
+  widthClass = 'max-w-xl',
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  subtitle?: string;
+  children: ReactNode;
+  headerActions?: ReactNode;
+  widthClass?: string;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby={title ? 'drawer-title' : undefined}>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-navy/40 backdrop-blur-xs transition-opacity animate-fade-in"
+        onClick={onClose}
+        aria-hidden
+      />
+      {/* Slide-over container anchored right */}
+      <div className="fixed inset-y-0 right-0 flex pl-6 sm:pl-10 pointer-events-none max-w-full">
+        <div
+          className={`pointer-events-auto w-screen ${widthClass} bg-surface border-l border-border shadow-2xl flex flex-col h-full overflow-hidden animate-slide-in-right`}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border bg-surface shrink-0">
+            <div className="min-w-0 flex-1">
+              {title ? (
+                <h3 id="drawer-title" className="text-lg font-bold text-navy truncate">
+                  {title}
+                </h3>
+              ) : null}
+              {subtitle ? (
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">{subtitle}</p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {headerActions}
+              <button
+                type="button"
+                className="p-1.5 rounded-lg text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer"
+                aria-label="Close"
+                title="Close"
+                onClick={onClose}
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          </div>
+          {/* Scrollable content body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-4">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -141,7 +233,13 @@ export function Dialog({
 
 export function EditButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" className="icon-btn" aria-label={label} title={label} onClick={onClick}>
+    <button
+      type="button"
+      className="p-1.5 rounded-lg text-muted hover:text-navy hover:bg-surface-2 border border-border/60 transition-colors cursor-pointer"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+    >
       <PencilIcon />
     </button>
   );
@@ -163,11 +261,11 @@ export function EditableCard({
   children: ReactNode;
 }) {
   return (
-    <div className="card">
-      <div className="card-head">
-        <h3>{title}</h3>
+    <div className="bg-surface border border-border rounded-card p-5 shadow-xs">
+      <div className="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-border/60">
+        <h3 className="text-base font-bold text-navy">{title}</h3>
         {editing
-          ? <button type="button" className="icon-btn" aria-label="Done" title="Done" onClick={onCancel}><CloseIcon /></button>
+          ? <button type="button" className="p-1 rounded-lg text-muted hover:text-navy hover:bg-surface-2 cursor-pointer" aria-label="Done" title="Done" onClick={onCancel}><CloseIcon /></button>
           : <EditButton label={`Edit ${title}`} onClick={onEdit} />}
       </div>
       {editing ? children : view}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "id": "layout-esther-v1",
+  "type": "CROSSWORD",
+  "title": "Esther: The Details",
+  "scripture": "Esther 1–9",
+  "rewards": {
+    "points": 45
+  },
+  "data": {
+    "grid": {
+      "rows": 9,
+      "cols": 10
+    },
+    "entries": [
+      {
+        "id": "hadassah",
+        "direction": "across",
+        "row": 0,
+        "col": 0,
+        "answer": "HADASSAH",
+        "clue": "The name Esther was known by before she became queen.",
+        "ref": "Esther 2:7",
+        "number": 1
+      },
+      {
+        "id": "ahasuerus",
+        "direction": "down",
+        "row": 0,
+        "col": 1,
+        "answer": "AHASUERUS",
+        "clue": "The king’s name in the book of Esther.",
+        "ref": "Esther 1:1",
+        "number": 2
+      },
+      {
+        "id": "haman",
+        "direction": "across",
+        "row": 1,
+        "col": 1,
+        "answer": "HAMAN",
+        "clue": "The man who built the gallows for Mordecai.",
+        "ref": "Esther 5:14",
+        "number": 3
+      },
+      {
+        "id": "mordecai",
+        "direction": "down",
+        "row": 1,
+        "col": 3,
+        "answer": "MORDECAI",
+        "clue": "The person who sat at the king’s gate.",
+        "ref": "Esther 2:19",
+        "number": 4
+      },
+      {
+        "id": "adar",
+        "direction": "down",
+        "row": 1,
+        "col": 4,
+        "answer": "ADAR",
+        "clue": "The month in which the Jews were originally scheduled to be destroyed.",
+        "ref": "Esther 3:7",
+        "number": 5
+      },
+      {
+        "id": "decree",
+        "direction": "across",
+        "row": 2,
+        "col": 4,
+        "answer": "DECREE",
+        "clue": "The document the king could not revoke, so another decree had to be written.",
+        "ref": "Esther 8:8",
+        "number": 6
+      }
+    ]
+  }
+}
