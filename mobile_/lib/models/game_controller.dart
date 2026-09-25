@@ -28,7 +28,16 @@ class GameController extends ChangeNotifier {
   int streakDays = 5;
 
   UserRole currentRole = UserRole.student;
-  int completedVideoParts = 0; // Sequential video progression
+  final Set<int> _watchedVideoParts = <int>{};
+
+  /// Longest finished prefix: index 0, then 1, then 2.
+  int get completedVideoParts {
+    var prefix = 0;
+    while (_watchedVideoParts.contains(prefix)) {
+      prefix += 1;
+    }
+    return prefix;
+  }
   bool weekQuizDone = false;
   bool weekPuzzleDone = false;
 
@@ -112,12 +121,11 @@ class GameController extends ChangeNotifier {
   }
 
   void completeVideoPart(int partIndex) {
-    if (partIndex >= completedVideoParts) {
-      completedVideoParts = partIndex + 1;
-      score += QuestPoints.video;
-      gems += 1;
-      notifyListeners();
-    }
+    if (partIndex < 0) return;
+    if (!_watchedVideoParts.add(partIndex)) return;
+    score += QuestPoints.video;
+    gems += 1;
+    notifyListeners();
   }
 
   void completeWeekQuiz() {
@@ -132,7 +140,8 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
-  int get weekVideosDone => completedVideoParts.clamp(0, 3);
+  int get weekVideosDone =>
+      _watchedVideoParts.where((index) => index >= 0 && index < 3).length;
 
   WeekQuestProgress get weekQuest => WeekQuestProgress(
         videosDone: weekVideosDone,
