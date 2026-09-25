@@ -1,55 +1,130 @@
-### Task 3: Wire `main.tsx` / `App.tsx`
+### Task 3: Show all five Home quest rows
 
 **Files:**
-- Modify: `admin/src/main.tsx`
-- Modify: `admin/src/App.tsx`
+- Modify: `mobile_/lib/screens/teen/widgets/todays_quest_card.dart` (`TodaysQuestSlide._nextStep` and the call site in `build`)
 
 **Interfaces:**
-- Consumes: `AppRoutes`, `LegacyHashRedirect`, `BrowserRouter`
-- Produces: App boots on History API paths
+- Consumes: `onOpenVideo(int)`, `onQuiz`, `onPuzzle`, `progress.videosCompleted`, `progress.isCaughtUp`, `videoSubtitles`, `AdventureListCard`, `TodaysQuestCard`, `AppColors`
+- Produces: a column of video 1 thumbnail, video 2 row, video 3 row, quiz row, puzzle row, and the caught-up line when `progress.isCaughtUp`
 
-- [ ] **Step 1: Replace `App.tsx`**
+- [ ] **Step 1: Replace the single next-step card**
 
-```tsx
-import { AppRoutes } from './router';
-import './studio/studio.css';
+In `TodaysQuestSlide.build`, replace `const SizedBox(height: 16), _nextStep(),` with:
 
-export default function App() {
-  return <AppRoutes />;
-}
+```dart
+          const SizedBox(height: 16),
+          ..._rows(context),
 ```
 
-- [ ] **Step 2: Wrap with BrowserRouter in `main.tsx`**
+Delete `_nextStep`. Add `_rows` and `_lockedTap` on `TodaysQuestSlide`:
 
-```tsx
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router';
-import './index.css';
-import App from './App';
-import { LegacyHashRedirect } from './guards';
+```dart
+  List<Widget> _rows(BuildContext context) {
+    final videosOpen = progress.videosCompleted >= WeekQuestProgress.videoCount;
+    final rows = <Widget>[
+      SizedBox(
+        key: const ValueKey('home-video-0'),
+        height: 178,
+        child: TodaysQuestCard(
+          label: 'Video 1',
+          passage: passage,
+          subtitle: videoSubtitles.isNotEmpty ? videoSubtitles[0] : 'Video 1',
+          onStart: () => onOpenVideo(0),
+        ),
+      ),
+    ];
+    for (var index = 1; index < videoSubtitles.length && index < cardCount; index++) {
+      rows.add(const SizedBox(height: 10));
+      rows.add(
+        AdventureListCard(
+          key: ValueKey('home-video-$index'),
+          icon: Icons.play_arrow_rounded,
+          title: videoSubtitles[index],
+          accent: AdventureListAccent.orange,
+          onTap: () => onOpenVideo(index),
+        ),
+      );
+    }
+    rows.add(const SizedBox(height: 10));
+    rows.add(
+      Opacity(
+        opacity: videosOpen ? 1 : 0.45,
+        child: AdventureListCard(
+          key: const ValueKey('home-quiz'),
+          icon: Icons.quiz_rounded,
+          title: 'Quiz',
+          subtitle: 'Objective questions for this week.',
+          accent: AdventureListAccent.navy,
+          onTap: videosOpen ? onQuiz : () => _lockedTap(context, puzzle: false),
+        ),
+      ),
+    );
+    rows.add(const SizedBox(height: 10));
+    rows.add(
+      Opacity(
+        opacity: videosOpen ? 1 : 0.45,
+        child: AdventureListCard(
+          key: const ValueKey('home-puzzle'),
+          icon: Icons.extension_rounded,
+          title: 'Puzzle',
+          subtitle: 'Bible puzzle adventure for this week.',
+          accent: AdventureListAccent.teal,
+          onTap: videosOpen ? onPuzzle : () => _lockedTap(context, puzzle: true),
+        ),
+      ),
+    );
+    if (progress.isCaughtUp) {
+      rows.add(const SizedBox(height: 12));
+      rows.add(
+        const Text(
+          "You're caught up",
+          style: TextStyle(
+            color: AppColors.navy,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
+        ),
+      );
+    }
+    return rows;
+  }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <LegacyHashRedirect />
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-);
+  void _lockedTap(BuildContext context, {required bool puzzle}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          puzzle
+              ? 'Finish all 3 videos to open the puzzle.'
+              : 'Finish all 3 videos to open the quiz.',
+        ),
+        backgroundColor: AppColors.navy,
+      ),
+    );
+  }
 ```
 
-No `basename` in v1 (paths match the design literally). If production later serves only under `/admin/`, set Vite `base: '/admin/'` and `basename="/admin"` together — out of scope unless deploy breaks.
+`WeekQuestProgress` is already imported by this file. Keep `_CaughtUpCard` in the file even if nothing calls it, only if the analyzer does not flag it. If the analyzer reports it unused, delete the class.
 
-- [ ] **Step 3: Smoke-check build types for new entry**
+- [ ] **Step 2: Analyze the widget**
+
+Run from `mobile_`:
 
 ```bash
-cd admin && npx tsc -b --pretty false 2>&1 | head -40
+dart analyze lib/screens/teen/widgets/todays_quest_card.dart lib/screens/teen/explorer_home_tab.dart
 ```
 
-Expected: errors only from remaining `navigate` imports in pages (Task 4–5). Entry/`router`/`guards` should be clean.
+Expected: no errors.
 
-- [ ] **Step 4: Commit** (only if user asked)
+- [ ] **Step 3: Commit**
+
+```bash
+git add mobile_/lib/screens/teen/widgets/todays_quest_card.dart
+git commit -m "$(cat <<'EOF'
+feat: show every home quest step, with quiz and puzzle locked
+
+EOF
+)"
+```
 
 ---
 

@@ -99,7 +99,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
     final progress = (_tapCount / widget.targetTaps).clamp(0.0, 1.0);
     final statusLabel = _complete
         ? 'Declared!  ·  ${widget.targetTaps}/${widget.targetTaps}'
-        : '— ${widget.reference}  ·  $_tapCount/${widget.targetTaps}  ·  Tap to declare it';
+        : '— ${widget.reference}  ·  $_tapCount/${widget.targetTaps}  ·  Tap ';
 
     return Stack(
       clipBehavior: Clip.none,

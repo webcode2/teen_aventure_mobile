@@ -1,64 +1,91 @@
-# Task 1 Report: Install react-router + path helpers (TDD)
+# Task 1 Report: Record each watched video once
 
 ## Status
 
-**DONE**
+**DONE_WITH_CONCERNS** — Implementation and tests match the task brief; two follow-ups noted for later home-quest tasks (not in scope for Task 1).
 
-## Commits
+## What was implemented
 
-None (per user instruction).
+- Replaced the mutable `completedVideoParts` counter with a private `_watchedVideoParts` set.
+- Added `completedVideoParts` getter that returns the longest finished prefix (0, then 1, then 2).
+- Updated `completeVideoPart` to award score/gems only on first watch per index; ignores negative indices.
+- Updated `weekVideosDone` to count distinct watched indexes in `[0, 2]`.
+- Left `weekQuest` unchanged (still uses `weekVideosDone`).
 
-## Test summary
-
-`npm test -- src/path-helpers.test.ts` — **3 passed** (isDashboardTab, safeStaffNext, legacyHashToPath).
-
-## TDD Evidence
-
-### RED (Step 3)
-
-```
- FAIL  src/path-helpers.test.ts [ src/path-helpers.test.ts ]
-Error: Failed to resolve import "./path-helpers" from "src/path-helpers.test.ts". Does the file exist?
-```
-
-### GREEN (Step 5)
-
-```
- Test Files  1 passed (1)
-      Tests  3 passed (3)
-```
-
-## Changes
+## Files changed
 
 | File | Action |
 |------|--------|
-| `admin/package.json` | Added `react-router@^8.4.0` via `npm install react-router@^8` |
-| `admin/package-lock.json` | Updated by npm |
-| `admin/src/path-helpers.ts` | Created — `DASHBOARD_TAB_IDS`, `isDashboardTab`, `safeStaffNext`, `legacyHashToPath` |
-| `admin/src/path-helpers.test.ts` | Created — verbatim from brief |
-| `admin/src/route.ts` | Slimmed to `TABS`, `Tab`, deprecated `navigate()` stub |
+| `mobile_/test/home_quest_progress_test.dart` | Created |
+| `mobile_/lib/models/game_controller.dart` | Modified |
 
-## Removed from `route.ts` (intentional)
+## TDD evidence
 
-- `AuthView`, `Route`, `parseHash`, `hashFor`, hash-based `navigate` implementation
+### RED (Step 2)
+
+Command:
+
+```bash
+cd mobile_ && flutter test test/home_quest_progress_test.dart
+```
+
+Output (excerpt):
+
+```
+00:00 +0 -1: watching video 3 first does not mark videos 1 and 2 [E]
+  Expected: <0>
+    Actual: <3>
+
+00:00 +0 -2: the same video awards points once [E]
+  Expected: <1>
+    Actual: <3>
+
+00:00 +1 -2: Some tests failed.
+```
+
+Matches brief expectation: `completedVideoParts` was 3 after `completeVideoPart(2)` under the old highest-index-as-prefix behavior.
+
+### GREEN (Step 4)
+
+Command:
+
+```bash
+cd mobile_ && flutter test test/home_quest_progress_test.dart
+```
+
+Output:
+
+```
+00:00 +3: All tests passed!
+```
+
+Re-run before commit: same command, same result (3/3 pass).
+
+## Commit
+
+- **SHA:** `f1e20f8`
+- **Subject:** fix: count each watched home video on its own
+- Only the two task files were staged; other working-tree edits were left unstaged.
 
 ## Self-review
 
-- Helper logic matches brief verbatim; imports `TABS` / `Tab` from slim `route.ts`.
-- `legacyHashToPath` covers landing/auth/dashboard tabs, pastor/church → `/groups`, unknown tab → `/app/dashboard`, empty hash → `null`.
-- `safeStaffNext` rejects non-path, protocol-relative (`//`), and paths outside `/app/dashboard`.
-- `navigate` stub preserves import compatibility for call sites until Task 5; throws at runtime if invoked.
+- **Requirements:** All three brief tests pass; interfaces match spec (`QuestPoints.video`, starting score 120, getters as named).
+- **Idempotency:** `Set.add` guard prevents double scoring on the same index.
+- **Prefix vs count:** Out-of-order watch (e.g. index 2 only) yields `completedVideoParts == 0` and `weekVideosDone == 1`, as required.
+- **Call sites:** `completedVideoParts` remains a readable getter; no assignments to the old field elsewhere in the repo.
+- **Flutter reviewer notes (informational):**
+  1. No upper bound on `partIndex` in `completeVideoPart` — indices ≥ 3 could still award points without affecting `weekVideosDone`. Not specified in Task 1; consider a guard in a later task if the API should only accept 0–2.
+  2. `weekQuest` still passes `weekVideosDone` into `WeekQuestProgress`, while `nextVideoIndex` is positional — out-of-order watching may desync “next video” UI until a later task wires prefix-based navigation. Brief explicitly said to leave `weekQuest` as-is.
 
 ## Concerns
 
-1. **`App.tsx` still imports `parseHash` and `Route`** — `tsc -b` / full admin build will fail until a later migration task restores or replaces those symbols. Focused helper tests are green; this is expected per task scope.
-2. **`navigate` stub** — existing pages still compile against the export but will throw if executed before Task 5 migrates call sites to `useNavigate`.
+1. **Out-of-range `partIndex`:** Not rejected for `partIndex >= 3`; could inflate score/gems without quest progress.
+2. **`weekQuest.nextVideoIndex` vs out-of-order watches:** Intentionally deferred per brief; later Home quest layout tasks should align navigation with `completedVideoParts` or equivalent.
 
-## Out of scope (not touched)
+## Verification command (from brief)
 
-- Flutter, backend, call-site migrations (Tasks 3–5).
-- Word Scramble / scrambleQuiz (permanent removal).
+```bash
+cd mobile_ && flutter test test/home_quest_progress_test.dart
+```
 
-## Report path
-
-`/home/bash/Desktop/ASKADONAI/ask_teens_app/.superpowers/sdd/task-1-report.md`
+Expected: PASS (3 tests).

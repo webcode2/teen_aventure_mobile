@@ -39,7 +39,8 @@ class ChildAchievementRecordScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           CircleStatsCard(
-            title: 'Stats',
+            
+            title: '$first’s Journey',
             subtitle: 'Share, streak, and family points',
             stats: [
               CircleStat(

@@ -1,173 +1,101 @@
-### Task 1: Install react-router + path helpers (TDD)
+### Task 1: Record each watched video once
 
 **Files:**
-- Modify: `admin/package.json` (via npm)
-- Create: `admin/src/path-helpers.ts`
-- Create: `admin/src/path-helpers.test.ts`
-- Modify: `admin/src/route.ts` (slim to `TABS` / `Tab` only after helpers exist)
+- Create: `mobile_/test/home_quest_progress_test.dart`
+- Modify: `mobile_/lib/models/game_controller.dart:31-31` and `mobile_/lib/models/game_controller.dart:114-140`
+- Test: `mobile_/test/home_quest_progress_test.dart`
 
 **Interfaces:**
-- Consumes: `Tab`, `TABS` from `./route`
-- Produces:
-  - `DASHBOARD_TAB_IDS: readonly Tab[]` — `TABS` without `'dashboard'`
-  - `isDashboardTab(value: string): value is Tab` — true only for allowlisted non-overview tabs
-  - `safeStaffNext(next: string | null): string` — returns `next` only if it is a path under `/app/dashboard` (exact or with further segments/search); else `/app/dashboard`
-  - `legacyHashToPath(hash: string): string | null` — maps old `#/...` to a path; `null` if no hash route
+- Consumes: `GameController.completeVideoPart(int partIndex)`, `QuestPoints.video` (value 1), starting `score` 120
+- Produces: `completedVideoParts` getter (longest prefix), `weekVideosDone` getter (count of indexes 0–2), `weekQuest` still built from `weekVideosDone`
 
-- [ ] **Step 1: Install dependency**
+- [ ] **Step 1: Write the failing test**
 
-```bash
-cd admin && npm install react-router@^8
-```
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:teen_aventure/models/game_controller.dart';
 
-Expected: `react-router` listed in `dependencies`.
-
-- [ ] **Step 2: Write failing helper tests**
-
-Create `admin/src/path-helpers.test.ts`:
-
-```ts
-import { describe, it, expect } from 'vitest';
-import { isDashboardTab, safeStaffNext, legacyHashToPath } from './path-helpers';
-
-describe('isDashboardTab', () => {
-  it('accepts people and rejects dashboard and junk', () => {
-    expect(isDashboardTab('people')).toBe(true);
-    expect(isDashboardTab('dashboard')).toBe(false);
-    expect(isDashboardTab('nope')).toBe(false);
+void main() {
+  test('watching video 3 first does not mark videos 1 and 2', () {
+    final game = GameController();
+    game.completeVideoPart(2);
+    expect(game.completedVideoParts, 0);
+    expect(game.weekVideosDone, 1);
+    expect(game.score, 121);
   });
-});
 
-describe('safeStaffNext', () => {
-  it('allows dashboard paths and rejects others', () => {
-    expect(safeStaffNext('/app/dashboard')).toBe('/app/dashboard');
-    expect(safeStaffNext('/app/dashboard/people')).toBe('/app/dashboard/people');
-    expect(safeStaffNext('/app/dashboard/quests?week=3')).toBe('/app/dashboard/quests?week=3');
-    expect(safeStaffNext('/groups')).toBe('/app/dashboard');
-    expect(safeStaffNext('https://evil.example/')).toBe('/app/dashboard');
-    expect(safeStaffNext(null)).toBe('/app/dashboard');
+  test('the same video awards points once', () {
+    final game = GameController();
+    game.completeVideoPart(2);
+    game.completeVideoPart(2);
+    expect(game.weekVideosDone, 1);
+    expect(game.score, 121);
   });
-});
 
-describe('legacyHashToPath', () => {
-  it('maps known hashes', () => {
-    expect(legacyHashToPath('#/landing')).toBe('/');
-    expect(legacyHashToPath('#/login')).toBe('/app/login');
-    expect(legacyHashToPath('#/forgot')).toBe('/app/forgot');
-    expect(legacyHashToPath('#/reset?token=abc')).toBe('/app/reset?token=abc');
-    expect(legacyHashToPath('#/dashboard')).toBe('/app/dashboard');
-    expect(legacyHashToPath('#/people')).toBe('/app/dashboard/people');
-    expect(legacyHashToPath('#/pastor')).toBe('/groups');
-    expect(legacyHashToPath('#/church/ch_1')).toBe('/groups/ch_1');
-    expect(legacyHashToPath('')).toBe(null);
-    expect(legacyHashToPath('#/unknown-tab')).toBe('/app/dashboard');
+  test('three distinct videos open the quest count', () {
+    final game = GameController();
+    game.completeVideoPart(0);
+    game.completeVideoPart(1);
+    game.completeVideoPart(2);
+    expect(game.completedVideoParts, 3);
+    expect(game.weekVideosDone, 3);
+    expect(game.weekQuest.videosCompleted, 3);
   });
-});
-```
-
-- [ ] **Step 3: Run tests — expect FAIL**
-
-```bash
-cd admin && npm test -- src/path-helpers.test.ts
-```
-
-Expected: FAIL (module not found / exports missing).
-
-- [ ] **Step 4: Implement helpers**
-
-Create `admin/src/path-helpers.ts`:
-
-```ts
-import { TABS, type Tab } from './route';
-
-export const DASHBOARD_TAB_IDS = TABS.filter((t): t is Exclude<Tab, 'dashboard'> => t !== 'dashboard');
-
-export function isDashboardTab(value: string): value is Tab {
-  return (DASHBOARD_TAB_IDS as readonly string[]).includes(value);
 }
+```
 
-export function safeStaffNext(next: string | null): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/app/dashboard';
-  const pathOnly = next.split('?')[0] ?? next;
-  if (pathOnly === '/app/dashboard' || pathOnly.startsWith('/app/dashboard/')) return next;
-  return '/app/dashboard';
-}
+- [ ] **Step 2: Run test to verify it fails**
 
-export function legacyHashToPath(hash: string): string | null {
-  const raw = (hash || '').replace(/^#/, '');
-  if (!raw) return null;
-  const [pathPart, queryPart = ''] = raw.split('?');
-  const segments = pathPart.replace(/^\//, '').split('/').filter(Boolean);
-  const page = (segments[0] || '').toLowerCase();
-  const sub = segments[1] || '';
-  const qs = queryPart ? `?${queryPart}` : '';
+Run from `mobile_`: `flutter test test/home_quest_progress_test.dart`
 
-  if (page === 'landing' || page === 'home' || page === 'public') return '/';
-  if (page === 'login') return '/app/login';
-  if (page === 'forgot') return '/app/forgot';
-  if (page === 'reset') return `/app/reset${qs}`;
-  if (page === 'pastor' || page === 'church-portal') {
-    const church = sub || new URLSearchParams(queryPart).get('church') || '';
-    return church ? `/groups/${church}` : '/groups';
+Expected: FAIL. `completedVideoParts` is 3 after `completeVideoPart(2)` because the current code treats the highest index as a finished prefix.
+
+- [ ] **Step 3: Write minimal implementation**
+
+In `mobile_/lib/models/game_controller.dart`, replace the `completedVideoParts` field:
+
+```dart
+  final Set<int> _watchedVideoParts = <int>{};
+
+  /// Longest finished prefix: index 0, then 1, then 2.
+  int get completedVideoParts {
+    var prefix = 0;
+    while (_watchedVideoParts.contains(prefix)) {
+      prefix += 1;
+    }
+    return prefix;
   }
-  if (page === 'church') return sub ? `/groups/${sub}` : '/groups';
-  if (page === 'dashboard' || page === '') return '/app/dashboard';
-  if ((TABS as readonly string[]).includes(page) && page !== 'dashboard') {
-    return `/app/dashboard/${page}${qs}`;
+```
+
+Replace `completeVideoPart` and `weekVideosDone`:
+
+```dart
+  void completeVideoPart(int partIndex) {
+    if (partIndex < 0) return;
+    if (!_watchedVideoParts.add(partIndex)) return;
+    score += QuestPoints.video;
+    gems += 1;
+    notifyListeners();
   }
-  if (page) return '/app/dashboard';
-  return null;
-}
+
+  int get weekVideosDone =>
+      _watchedVideoParts.where((index) => index >= 0 && index < 3).length;
 ```
 
-Slim `admin/src/route.ts` to:
+Leave `weekQuest` as it is. It already reads `weekVideosDone`.
 
-```ts
-export const TABS = [
-  'dashboard',
-  'people',
-  'churches',
-  'groups',
-  'weeks',
-  'quests',
-  'puzzles',
-  'notifications',
-  'consent',
-  'reports',
-  'deletions',
-  'scoring',
-] as const;
+- [ ] **Step 4: Run test to verify it passes**
 
-export type Tab = (typeof TABS)[number];
-```
+Run from `mobile_`: `flutter test test/home_quest_progress_test.dart`
 
-Delete `AuthView`, `Route`, `parseHash`, `hashFor`, `navigate` from this file. Do **not** update call sites yet (they will break compile until later tasks — if `tsc` is run via tests only, Vitest still compiles changed modules; leave call sites until Task 3–5, or temporarily keep stub `navigate` that throws — prefer updating imports in Tasks 3–5 in order).
+Expected: PASS. All three tests pass.
 
-**Interim:** After Step 4, only `path-helpers` + slim `route.ts` must compile. Call sites still import `navigate` — restore a temporary deprecated stub in `route.ts` until Task 5 removes it:
-
-```ts
-/** @deprecated Removed in path-routing migration; do not use. */
-export function navigate(_route: unknown): void {
-  throw new Error('navigate() removed — use react-router useNavigate');
-}
-```
-
-Remove the stub in Task 5 once all call sites are migrated.
-
-- [ ] **Step 5: Run helper tests — expect PASS**
+- [ ] **Step 5: Commit**
 
 ```bash
-cd admin && npm test -- src/path-helpers.test.ts
-```
-
-Expected: PASS.
-
-- [ ] **Step 6: Commit** (only if user asked)
-
-```bash
-git add admin/package.json admin/package-lock.json admin/src/route.ts admin/src/path-helpers.ts admin/src/path-helpers.test.ts
+git add mobile_/test/home_quest_progress_test.dart mobile_/lib/models/game_controller.dart
 git commit -m "$(cat <<'EOF'
-feat(admin): add path helpers and react-router dependency
+fix: count each watched home video on its own
 
 EOF
 )"

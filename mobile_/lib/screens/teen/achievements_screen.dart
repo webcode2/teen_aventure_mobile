@@ -183,7 +183,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
           weeksCompleted: weeksCompleted,
           current: current,
           next: next,
-          sessionsDone: game.weekQuest.completed,
           children: familyHub ? children : const [],
           onOpenChild: familyHub ? _openChild : null,
         ),
@@ -211,42 +210,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     required int weeksCompleted,
     required QuestMilestone current,
     required QuestMilestone? next,
-    required int sessionsDone,
     List<FamilyChildScore> children = const [],
     ValueChanged<FamilyChildScore>? onOpenChild,
   }) {
-    final longestStreak = streak;
     return [
-      Row(
-        children: [
-          Expanded(
-            child: _QuickStatCard(
-              value: streak <= 0 ? '0' : '$streak Day${streak == 1 ? '' : 's'}',
-              label: 'Total Streak',
-              icon: Icons.local_fire_department_rounded,
-              iconColor: AppColors.orange,
-              iconBg: AppColors.terracottaContainer,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _QuickStatCard(
-              value: '$points',
-              label: 'Total Points',
-              icon: Icons.stars_rounded,
-              iconColor: AppColors.forestGreen,
-              iconBg: AppColors.sageContainer,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 22),
-  
-     const SizedBox(height: 12),
       _RecordCard(
         value: '$points pts',
         title: 'Victory points',
-        dateLabel: current.criteria,
         tint: AppColors.surfaceVariant,
         icon: Icons.emoji_events_rounded,
         iconColor: AppColors.gold,
@@ -254,13 +224,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       ),
       const SizedBox(height: 10),
       _RecordCard(
-        value: longestStreak <= 0 ? '0 Days' : '$longestStreak Day${longestStreak == 1 ? '' : 's'}',
+        value: streak <= 0 ? '0 Days' : '$streak Day${streak == 1 ? '' : 's'}',
         title: 'Streak',
-        dateLabel: sessionsDone > 0 ? 'This quest week' : 'Keep exploring',
         tint: AppColors.terracottaContainer,
         icon: Icons.whatshot_rounded,
         iconColor: AppColors.orange,
-        badgeLabel: '$longestStreak',
+        badgeLabel: '$streak',
       ),
       const SizedBox(height: 22),
       const Text(
@@ -314,81 +283,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   }
 }
 
-class _QuickStatCard extends StatelessWidget {
-  const _QuickStatCard({
-    required this.value,
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBg,
-  });
-
-  final String value;
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.navy.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    letterSpacing: -0.4,
-                    color: AppColors.navy,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RecordCard extends StatelessWidget {
   const _RecordCard({
     required this.value,
     required this.title,
-    required this.dateLabel,
     required this.tint,
     required this.icon,
     required this.iconColor,
@@ -397,7 +295,6 @@ class _RecordCard extends StatelessWidget {
 
   final String value;
   final String title;
-  final String dateLabel;
   final Color tint;
   final IconData icon;
   final Color iconColor;
@@ -434,25 +331,6 @@ class _RecordCard extends StatelessWidget {
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.schedule_rounded, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        dateLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),

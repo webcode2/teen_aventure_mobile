@@ -331,19 +331,6 @@ class _ProfileHeroCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: AppColors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-                  ),
-                ),
               ],
             ),
           ),

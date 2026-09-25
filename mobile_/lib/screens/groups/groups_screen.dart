@@ -343,19 +343,77 @@ class _GroupsScreenState extends State<GroupsScreen> {
     ];
   }
 
-  Widget _yourGroupsHeader() {
-    return const Column(
+  Future<void> _createGroup() async {
+    final nameCtrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New group'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Group name'),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, nameCtrl.text.trim()),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      final created = await context.read<FamilyService>().createGroup(name);
+      await _load();
+      if (!mounted) return;
+      final id = created['id'] as String?;
+      if (id == null) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InviteShareScreen(kind: 'CLASS', classId: id),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: AppColors.navy),
+        );
+      }
+    }
+  }
+
+  Widget _yourGroupsHeader(bool canCreate) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Your groups',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your groups',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Open a group to see details and standing.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ],
+          ),
         ),
-        SizedBox(height: 4),
-        Text(
-          'Open a group to see details and standing.',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-        ),
+        if (canCreate)
+          TextButton.icon(
+            key: const Key('create-group'),
+            onPressed: _createGroup,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('New group'),
+          ),
       ],
     );
   }
@@ -409,7 +467,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _yourGroupsHeader(),
+                _yourGroupsHeader(session.isAdult),
                 const SizedBox(height: 12),
                 if (listings.isEmpty)
                   Container(

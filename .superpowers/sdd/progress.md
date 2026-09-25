@@ -43,3 +43,12 @@ Task 7: complete (no commit; Fastify /app+/groups + legacy redirects)
 Task 8: complete (no commit; 23/23 + build PASS; manual checklist unverified)
 Final review fixes: assets static + reset link path; 23/23
 Option 1 blocked (merge to main skipped). Landed commits on feat/admin-path-routing (+ backend feat/admin-path-routing-spa).
+
+# SDD progress — 2026-09-25 home quest layout
+
+Plan: docs/superpowers/plans/2026-09-25-home-quest-layout.md
+Work in place on feat/admin-path-routing (dirty tree; do not stage unrelated files).
+
+- Task 1: complete (commits 14a8cd3..f1e20f8, review clean). Minor observation: partIndex >= 3 still awards; nextVideoIndex still positional — left for later tasks.
+- Task 2: complete (commits f1e20f8..3174072, review clean).
+- Task 3: complete (commits 3174072..ef2c234, review clean).

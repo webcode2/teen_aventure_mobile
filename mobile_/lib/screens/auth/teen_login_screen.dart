@@ -74,7 +74,7 @@ class _TeenLoginScreenState extends State<TeenLoginScreen> {
     }
     setState(() => _busy = true);
     try {
-      await auth.loginDemoTeen();
+      await auth.loginDemoTeenSolo();
       if (!mounted) return;
       await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
     } on ApiException catch (e) {
@@ -120,8 +120,8 @@ class _TeenLoginScreenState extends State<TeenLoginScreen> {
             child: Text(_busy ? 'Signing in…' : 'Sign in'),
           ),
           DemoAccountActions(
-            label: 'Use demo teen account',
-            hint: '',
+            label: 'Account 2 — Teen (solo)',
+            hint: 'Riley · teen2@askhub.local · PIN 1234',
             enabled: !_busy,
             onUse: _demoTeen,
           ),

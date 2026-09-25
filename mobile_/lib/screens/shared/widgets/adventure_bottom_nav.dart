@@ -63,12 +63,18 @@ class _NavItem extends StatelessWidget {
   final ValueChanged<AdventureTab> onSelect;
 
   static const double _iconSize = 22;
-  static const double _labelHeight = 14;
 
   @override
   Widget build(BuildContext context) {
     final selected = current == tab;
     final color = selected ? AppColors.orange : AppColors.cream;
+    final labelBase = Theme.of(context).textTheme.labelMedium;
+    final labelStyle = labelBase?.copyWith(
+          color: color,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          height: 1.1,
+          fontSize: (labelBase.fontSize ?? 13) - 2,
+        );
 
     return Expanded(
       child: InkWell(
@@ -81,20 +87,12 @@ class _NavItem extends StatelessWidget {
               child: Icon(icon, color: color, size: _iconSize),
             ),
             const SizedBox(height: 4),
-            SizedBox(
-              height: _labelHeight,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  height: 1.0,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                ),
-              ),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
           ],
         ),

@@ -66,29 +66,47 @@ class TodaysQuestSlide extends StatelessWidget {
 
   List<Widget> _rows(BuildContext context) {
     final videosOpen = progress.videosCompleted >= WeekQuestProgress.videoCount;
-    final rows = <Widget>[
-      SizedBox(
-        key: const ValueKey('home-video-0'),
-        height: 178,
-        child: TodaysQuestCard(
-          label: 'Video 1',
-          passage: passage,
-          subtitle: videoSubtitles.isNotEmpty ? videoSubtitles[0] : 'Video 1',
-          onStart: () => onOpenVideo(0),
-        ),
-      ),
-    ];
-    for (var index = 1; index < videoSubtitles.length && index < cardCount; index++) {
-      rows.add(const SizedBox(height: 10));
-      rows.add(
-        AdventureListCard(
-          key: ValueKey('home-video-$index'),
-          icon: Icons.play_arrow_rounded,
-          title: videoSubtitles[index],
-          accent: AdventureListAccent.orange,
-          onTap: () => onOpenVideo(index),
-        ),
-      );
+    final active = progress.nextVideoIndex;
+    final count = videoSubtitles.length < cardCount ? videoSubtitles.length : cardCount;
+    final rows = <Widget>[];
+    for (var index = 0; index < count; index++) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
+      final title = videoSubtitles[index];
+      if (active == index) {
+        rows.add(
+          SizedBox(
+            key: ValueKey('home-video-$index'),
+            height: 178,
+            child: TodaysQuestCard(
+              label: 'Video ${index + 1}',
+              passage: passage,
+              subtitle: title,
+              onStart: () => onOpenVideo(index),
+            ),
+          ),
+        );
+      } else if (active == null || index < active) {
+        rows.add(
+          AdventureListCard(
+            key: ValueKey('home-video-$index'),
+            icon: Icons.check_rounded,
+            title: title,
+            subtitle: 'Watched',
+            accent: AdventureListAccent.green,
+            onTap: () => onOpenVideo(index),
+          ),
+        );
+      } else {
+        rows.add(
+          AdventureListCard(
+            key: ValueKey('home-video-$index'),
+            icon: Icons.play_arrow_rounded,
+            title: title,
+            accent: AdventureListAccent.orange,
+            onTap: () => onOpenVideo(index),
+          ),
+        );
+      }
     }
     rows.add(const SizedBox(height: 10));
     rows.add(
@@ -98,7 +116,6 @@ class TodaysQuestSlide extends StatelessWidget {
           key: const ValueKey('home-quiz'),
           icon: Icons.quiz_rounded,
           title: 'Quiz',
-          subtitle: 'Objective questions for this week.',
           accent: AdventureListAccent.navy,
           onTap: videosOpen ? onQuiz : () => _lockedTap(context, puzzle: false),
         ),
@@ -112,7 +129,6 @@ class TodaysQuestSlide extends StatelessWidget {
           key: const ValueKey('home-puzzle'),
           icon: Icons.extension_rounded,
           title: 'Puzzle',
-          subtitle: 'Bible puzzle adventure for this week.',
           accent: AdventureListAccent.teal,
           onTap: videosOpen ? onPuzzle : () => _lockedTap(context, puzzle: true),
         ),

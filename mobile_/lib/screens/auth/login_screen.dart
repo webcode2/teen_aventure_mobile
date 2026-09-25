@@ -89,6 +89,26 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _demoTeenSolo() async {
+    final auth = _auth;
+    if (auth == null) {
+      widget.onAuthenticated?.call();
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await auth.loginDemoTeenSolo();
+      if (!mounted) return;
+      await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
+    } on ApiException catch (e) {
+      setState(() => _formError = e.message);
+    } catch (e) {
+      setState(() => _formError = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DoubleBackExit(
@@ -142,10 +162,16 @@ class _LoginScreenState extends State<LoginScreen> {
               child: const Text('Create account'),
             ),
             DemoAccountActions(
-              label: 'Use demo account',
-              hint: '',
+              label: 'Account 1 — Adult with family',
+              hint: 'Pat Peterson + teen subaccounts',
               enabled: !_busy,
               onUse: _demoLogin,
+            ),
+            DemoAccountActions(
+              label: 'Account 2 — Teen (solo)',
+              hint: 'Riley · no subaccounts attached',
+              enabled: !_busy,
+              onUse: _demoTeenSolo,
             ),
           ],
         ),

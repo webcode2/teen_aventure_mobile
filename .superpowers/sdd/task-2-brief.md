@@ -1,280 +1,95 @@
-### Task 2: Guards + route tree (TDD)
+### Task 2: Open a chosen video, quiz, or puzzle
 
 **Files:**
-- Create: `admin/src/guards.tsx`
-- Create: `admin/src/router.tsx`
-- Create: `admin/src/router.test.tsx`
-- Modify: `admin/src/shell.tsx` (accept `Outlet` / derive tab from params — minimal change in this task)
+- Modify: `mobile_/lib/screens/teen/week_quest_flow.dart`
+- Modify: `mobile_/lib/screens/teen/video_learning_screen.dart:136-143`
+- Modify: `mobile_/lib/screens/teen/explorer_home_tab.dart:77-79`
 
 **Interfaces:**
-- Consumes: `getToken` from `./api`; helpers from `./path-helpers`; page components; `Shell`
+- Consumes: `SampleEpisodes.week1Package`, `VideoLearningScreen`, `ObjectiveQuizScreen`, `PuzzleScreen`, `WeekQuestFlow.passage`
 - Produces:
-  - `RequireStaff` / `RequireGuest` / `LegacyHashRedirect` components
-  - `AppRoutes` — the `<Routes>` element tree
+  - `static Future<void> openVideo(BuildContext context, int index)`
+  - `static Future<void> openQuiz(BuildContext context)`
+  - `static Future<void> openPuzzle(BuildContext context)`
+  - `openNext` stays unchanged for the quiz Continue button
 
-- [ ] **Step 1: Write failing router tests**
+- [ ] **Step 1: Add the three openers**
 
-Create `admin/src/router.test.tsx`:
+In `mobile_/lib/screens/teen/week_quest_flow.dart`, add these methods on `WeekQuestFlow` next to `openNext`. Do not change `openNext` or `_nextPage`.
 
-```tsx
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
-import { AppRoutes } from './router';
-import { setToken, clearPastorSession } from './api';
-
-vi.mock('./api', async () => {
-  const actual = await vi.importActual<typeof import('./api')>('./api');
-  return {
-    ...actual,
-    api: vi.fn(async (path: string) => {
-      if (path === '/api/admin/stats') {
-        return {
-          families: 0, groups: 0, kidsOnParentAccount: 0, standaloneTeens: 0,
-          pastors: 0, churchStaff: 0, churches: 0, dashboardAdmins: 0, openReports: 0,
-        };
-      }
-      if (path === '/api/admin/people') return { users: [], children: [], families: [] };
-      if (path === '/api/admin/groups') return [];
-      if (path === '/api/admin/scoring-rules') return {};
-      return [];
-    }),
-    login: vi.fn(),
-    pastorLogin: vi.fn(),
-    forgotPassword: vi.fn(),
-    resetPassword: vi.fn(),
-  };
-});
-
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AppRoutes />
-    </MemoryRouter>,
-  );
-}
-
-beforeEach(() => {
-  cleanup();
-  setToken(null);
-  clearPastorSession();
-  window.location.hash = '';
-});
-
-describe('AppRoutes', () => {
-  it('renders landing at /', async () => {
-    renderAt('/');
-    expect(await screen.findByText(/Nurturing Teen Discipleship/i)).toBeTruthy();
-  });
-
-  it('redirects unauthed /app/dashboard to login with next', async () => {
-    render(
-      <MemoryRouter initialEntries={['/app/dashboard']}>
-        <LocationProbe />
-        <AppRoutes />
-      </MemoryRouter>,
+```dart
+  static Future<void> openVideo(BuildContext context, int index) async {
+    final pack = SampleEpisodes.week1Package;
+    if (index < 0 || index >= pack.videos.length) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoLearningScreen(
+          lesson: pack.videos[index],
+          weekLabel: 'Week ${pack.weekNumber} Quest',
+          lessonTitle: passage,
+        ),
+      ),
     );
-    expect(await screen.findByPlaceholderText('Email')).toBeTruthy();
-    expect(screen.getByTestId('loc').textContent).toBe(
-      '/app/login?next=%2Fapp%2Fdashboard',
-    );
-  });
-
-  it('renders People inside Shell when authed at /app/dashboard/people', async () => {
-    setToken('test-token');
-    renderAt('/app/dashboard/people');
-    expect(await screen.findByText('Users (0)')).toBeTruthy();
-  });
-
-  it('redirects invalid tab to overview', async () => {
-    setToken('test-token');
-    renderAt('/app/dashboard/not-a-tab');
-    expect(await screen.findByText('Community snapshot')).toBeTruthy();
-  });
-
-  it('renders pastor portal at /groups', async () => {
-    renderAt('/groups');
-    expect(await screen.findByText(/Pastor/i)).toBeTruthy();
-  });
-});
-```
-
-Also define (above `renderAt`) in the same file:
-
-```tsx
-import { useLocation } from 'react-router';
-
-function LocationProbe() {
-  const loc = useLocation();
-  return <div data-testid="loc">{`${loc.pathname}${loc.search}`}</div>;
-}
-```
-
-- [ ] **Step 2: Run — expect FAIL**
-
-```bash
-cd admin && npm test -- src/router.test.tsx
-```
-
-Expected: FAIL (missing module).
-
-- [ ] **Step 3: Implement guards**
-
-Create `admin/src/guards.tsx`:
-
-```tsx
-import { Navigate, useLocation, useNavigate } from 'react-router';
-import { useEffect } from 'react';
-import { getToken } from './api';
-import { legacyHashToPath, safeStaffNext } from './path-helpers';
-
-export function RequireStaff({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  if (!getToken()) {
-    const next = encodeURIComponent(`${location.pathname}${location.search}`);
-    return <Navigate to={`/app/login?next=${next}`} replace />;
   }
-  return children;
-}
 
-export function RequireGuest({ children }: { children: React.ReactNode }) {
-  if (getToken()) return <Navigate to="/app/dashboard" replace />;
-  return children;
-}
+  static Future<void> openQuiz(BuildContext context) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const ObjectiveQuizScreen()),
+    );
+  }
 
-export function LegacyHashRedirect() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    const mapped = legacyHashToPath(window.location.hash);
-    if (!mapped) return;
-    const url = new URL(mapped, window.location.origin);
-    navigate(`${url.pathname}${url.search}`, { replace: true });
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-  }, [navigate]);
-  return null;
-}
+  static Future<void> openPuzzle(BuildContext context) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const PuzzleScreen()),
+    );
+  }
 ```
 
-Clearing hash: after navigate, set `window.location.hash = ''` via `history.replaceState` on the path URL without hash:
+- [ ] **Step 2: Return Home when a video ends**
 
-```ts
-const { pathname, search } = window.location;
-window.history.replaceState(null, '', `${pathname}${search}`);
+In `mobile_/lib/screens/teen/video_learning_screen.dart`, replace the end of `_finishAndContinue`:
+
+```dart
+    await _leaveVideoPlayback();
+    if (!mounted) return;
+    if (Navigator.canPop(context)) Navigator.pop(context);
 ```
 
-Call this **before** `navigate` so the URL becomes path-only.
+Remove the `WeekQuestFlow.openNext(context, replace: true)` call from this method. If `week_quest_flow.dart` is then unused in this file, remove that import.
 
-- [ ] **Step 4: Implement `AppRoutes`**
+- [ ] **Step 3: Point Home taps at the chosen step**
 
-Create `admin/src/router.tsx`:
+In `mobile_/lib/screens/teen/explorer_home_tab.dart`, replace the three callbacks:
 
-```tsx
-import { Navigate, Outlet, Route, Routes, useParams } from 'react-router';
-import { ForgotPage, LoginPage, ResetPage } from './auth-pages';
-import { PublicLandingPage } from './pages-landing';
-import { PastorPortalPage } from './pages-pastor';
-import { QuestsPage } from './pages-content';
-import { PublishedWeeksPage } from './pages-weeks';
-import { PuzzlesStudioPage } from './pages-puzzles';
-import { NotificationsPage, ConsentPage } from './pages-notify';
-import { ChurchesPage, DeletionsPage, GroupsPage, OverviewPage, ReportsPage, ScoringPage } from './pages-ops';
-import { PeoplePage } from './pages-people';
-import { Shell } from './shell';
-import { RequireGuest, RequireStaff } from './guards';
-import { isDashboardTab } from './path-helpers';
-import type { Tab } from './route';
-import { useSearchParams } from 'react-router';
-
-function DashboardLayout() {
-  const params = useParams();
-  const tab: Tab = params.tab && isDashboardTab(params.tab) ? params.tab : 'dashboard';
-  return (
-    <RequireStaff>
-      <Shell tab={tab}>
-        <Outlet />
-      </Shell>
-    </RequireStaff>
-  );
-}
-
-function DashboardTabPage() {
-  const { tab } = useParams();
-  if (!tab || !isDashboardTab(tab)) return <Navigate to="/app/dashboard" replace />;
-  const page = {
-    people: <PeoplePage />,
-    churches: <ChurchesPage />,
-    groups: <GroupsPage />,
-    weeks: <PublishedWeeksPage />,
-    quests: <QuestsPage />,
-    puzzles: <PuzzlesStudioPage />,
-    notifications: <NotificationsPage />,
-    consent: <ConsentPage />,
-    reports: <ReportsPage />,
-    deletions: <DeletionsPage />,
-    scoring: <ScoringPage />,
-  }[tab];
-  return page ?? <Navigate to="/app/dashboard" replace />;
-}
-
-function ResetRoute() {
-  const [params] = useSearchParams();
-  return <ResetPage token={params.get('token') ?? ''} />;
-}
-
-function PastorRoute() {
-  const { churchId } = useParams();
-  return <PastorPortalPage churchIdFromRoute={churchId} />;
-}
-
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<PublicLandingPage />} />
-      <Route
-        path="/app/login"
-        element={
-          <RequireGuest>
-            <LoginPage />
-          </RequireGuest>
-        }
-      />
-      <Route
-        path="/app/forgot"
-        element={
-          <RequireGuest>
-            <ForgotPage />
-          </RequireGuest>
-        }
-      />
-      <Route
-        path="/app/reset"
-        element={
-          <RequireGuest>
-            <ResetRoute />
-          </RequireGuest>
-        }
-      />
-      <Route path="/app/dashboard" element={<DashboardLayout />}>
-        <Route index element={<OverviewPage />} />
-        <Route path=":tab" element={<DashboardTabPage />} />
-      </Route>
-      <Route path="/groups" element={<PastorRoute />} />
-      <Route path="/groups/:churchId" element={<PastorRoute />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
+```dart
+              onOpenVideo: (index) => WeekQuestFlow.openVideo(context, index),
+              onQuiz: () => WeekQuestFlow.openQuiz(context),
+              onPuzzle: () => WeekQuestFlow.openPuzzle(context),
 ```
 
-- [ ] **Step 5: Run router tests — expect PASS**
+- [ ] **Step 4: Analyze the three files**
+
+Run from `mobile_`:
 
 ```bash
-cd admin && npm test -- src/router.test.tsx src/path-helpers.test.ts
+dart analyze lib/screens/teen/week_quest_flow.dart lib/screens/teen/video_learning_screen.dart lib/screens/teen/explorer_home_tab.dart
 ```
 
-Expected: PASS. Fix pastor assertion text if the gateway copy differs (read `pages-pastor.tsx` for a stable string like `Church Pastor` or email placeholder).
+Expected: no errors. Infos that already existed may remain.
 
-- [ ] **Step 6: Commit** (only if user asked)
+- [ ] **Step 5: Commit**
+
+```bash
+git add mobile_/lib/screens/teen/week_quest_flow.dart mobile_/lib/screens/teen/video_learning_screen.dart mobile_/lib/screens/teen/explorer_home_tab.dart
+git commit -m "$(cat <<'EOF'
+feat: open the home quest video the explorer picked
+
+EOF
+)"
+```
 
 ---
 

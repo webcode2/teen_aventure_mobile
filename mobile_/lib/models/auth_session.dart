@@ -383,15 +383,15 @@ class AuthSession extends ChangeNotifier {
 
     if (userType == 'child' || shell == AppShell.teen) {
 
-      if (ageBand == 'CHILD') return 'Under-age explorer';
+      if (ageBand == 'CHILD') return 'Explorer';
 
-      if (ageBand == 'TEEN') return 'Teen explorer';
+      if (ageBand == 'TEEN') return 'Explorer';
 
       return 'Explorer';
 
     }
 
-    return 'Main account';
+    return '';
 
   }
 

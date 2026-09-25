@@ -74,6 +74,12 @@ class AuthService {
     return authResponse;
   }
 
+  Future<AuthResponse> loginDemoTeenSolo() async {
+    final authResponse = DemoAccount.teenSoloAuth();
+    await _storeAuthToken(authResponse);
+    return authResponse;
+  }
+
   Future<AuthResponse> loginDemoChild() async {
     final authResponse = DemoAccount.childAuth();
     await _storeAuthToken(authResponse);
@@ -140,7 +146,9 @@ class AuthService {
     required String pin,
   }) async {
     if (DemoAccount.enabled && DemoAccount.matchesTeen(email, pin)) {
-      final authResponse = DemoAccount.teenAuth();
+      final authResponse = DemoAccount.matchesTeenSolo(email, pin)
+          ? DemoAccount.teenSoloAuth()
+          : DemoAccount.teenAuth();
       await _storeAuthToken(authResponse);
       return authResponse;
     }
@@ -160,10 +168,12 @@ class AuthService {
   /// Parent switches into an under-age child profile (no PIN).
   Future<AuthResponse> switchToUnderageChild(String childId) async {
     await _stashParentRestoreIfNeeded();
-    if (DemoAccount.enabled && DemoAccount.isDemoToken(await getAuthToken())) {
+      if (DemoAccount.enabled && DemoAccount.isDemoToken(await getAuthToken())) {
       final authResponse = childId == DemoAccount.samId
           ? DemoAccount.teenAuth()
-          : DemoAccount.childAuth();
+          : childId == DemoAccount.teenSoloId
+              ? DemoAccount.teenSoloAuth()
+              : DemoAccount.childAuth();
       await _storeAuthToken(authResponse);
       return authResponse;
     }

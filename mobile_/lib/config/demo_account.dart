@@ -11,12 +11,16 @@ class DemoAccount {
   static const tokenPrefix = 'demo-local';
   static const parentToken = '$tokenPrefix-parent';
   static const teenToken = '$tokenPrefix-teen';
+  static const teenSoloToken = '$tokenPrefix-teen-solo';
   static const childToken = '$tokenPrefix-child';
 
   static const parentEmail = 'parent@askhub.local';
   static const parentPassword = 'demo1234';
   static const teenEmail = 'sam@askhub.local';
   static const teenPin = '1234';
+  /// Account 2 — standalone teen (no family subaccounts).
+  static const teenSoloEmail = 'teen2@askhub.local';
+  static const teenSoloPin = '1234';
   static const childId = 'demo-grace';
   static const childPin = '1234';
 
@@ -29,6 +33,8 @@ class DemoAccount {
   static const youthFellowshipId = 'demo-youth-fellowship';
   static const churchId = 'demo-grace-chapel';
   static const samId = 'demo-sam';
+  static const teenSoloId = 'demo-teen-solo';
+  static const teenSoloFamilyId = 'demo-solo-family';
 
   static bool get enabled => StoreConfig.showDemoRoles;
 
@@ -38,14 +44,24 @@ class DemoAccount {
   static bool matchesParent(String email, String password) =>
       email.trim().toLowerCase() == parentEmail && password == parentPassword;
 
-  static bool matchesTeen(String email, String pin) =>
-      email.trim().toLowerCase() == teenEmail && pin == teenPin;
+  static bool matchesTeen(String email, String pin) {
+    final normalized = email.trim().toLowerCase();
+    if (pin != teenPin && pin != teenSoloPin) return false;
+    return normalized == teenEmail || normalized == teenSoloEmail;
+  }
+
+  static bool matchesTeenSolo(String email, String pin) =>
+      email.trim().toLowerCase() == teenSoloEmail && pin == teenSoloPin;
 
   static bool matchesChild(String id, String pin) =>
-      pin == childPin && (id.trim() == childId || id.trim() == samId);
+      pin == childPin &&
+      (id.trim() == childId || id.trim() == samId || id.trim() == teenSoloId);
 
   static AuthResponse familyPinAuth(String childId) {
-    return childId.trim() == samId ? teenAuth() : childAuth();
+    final id = childId.trim();
+    if (id == samId) return teenAuth();
+    if (id == teenSoloId) return teenSoloAuth();
+    return childAuth();
   }
 
   static const parentUser = User(
@@ -63,12 +79,20 @@ class DemoAccount {
     independentLogin: true,
   );
 
+  /// Standalone teen — not attached to the Peterson family or any subaccounts.
+  static const teenSoloChild = Child(
+    id: teenSoloId,
+    familyId: teenSoloFamilyId,
+    name: 'Riley',
+    ageBand: AgeBand.TEEN,
+    independentLogin: true,
+  );
+
   static const underAgeChild = Child(
     id: childId,
     familyId: familyId,
     name: 'Alex Peterson',
     ageBand: AgeBand.TEEN,
-
   );
 
   static AuthResponse parentAuth() => const AuthResponse(
@@ -79,6 +103,11 @@ class DemoAccount {
   static AuthResponse teenAuth() => const AuthResponse(
         token: teenToken,
         child: teenChild,
+      );
+
+  static AuthResponse teenSoloAuth() => const AuthResponse(
+        token: teenSoloToken,
+        child: teenSoloChild,
       );
 
   static AuthResponse childAuth() => const AuthResponse(
@@ -130,6 +159,7 @@ class DemoAccount {
   static List<Map<String, dynamic>> get demoAppReports => List.unmodifiable(_appReports);
   static bool _joinedChurch = false;
   static final List<Map<String, dynamic>> _extraFamilies = [];
+  static final List<Map<String, dynamic>> _ownedGroups = [];
   static final Set<String> _pendingDeletionIds = {};
 
   static Map<String, dynamic> createDemoFamily(String name) {
@@ -147,6 +177,23 @@ class DemoAccount {
       'creatorEmail': parentEmail,
     });
     return {'id': id, 'name': trimmed};
+  }
+
+  static Map<String, dynamic> createDemoGroup(String name) {
+    final trimmed = name.trim();
+    final id = 'demo-group-${_ownedGroups.length + 1}';
+    _ownedGroups.add({
+      'id': id,
+      'kind': 'CLASS',
+      'name': trimmed,
+      'role': 'Owner',
+      'canLeave': false,
+      'canAdmin': true,
+      'memberCount': 1,
+      'creatorName': 'Pat Peterson',
+      'creatorEmail': parentEmail,
+    });
+    return {'id': id, 'name': trimmed, 'kind': 'CLASS'};
   }
 
   static Map<String, dynamic> joinDemoChurch(String joinCode) {
@@ -195,6 +242,11 @@ class DemoAccount {
   }
 
   static Map<String, dynamic> membershipsForToken(String? token) {
+    // Account 2: standalone teen — no family / subaccounts attached.
+    if (token == teenSoloToken) {
+      return {'used': 0, 'max': maxMemberships, 'items': <Map<String, dynamic>>[]};
+    }
+
     final items = <Map<String, dynamic>>[
       {
         'id': familyId,
@@ -273,6 +325,15 @@ class DemoAccount {
         'deletionPending': _pendingDeletionIds.contains(churchId),
       });
     }
+    if (token == parentToken) {
+      for (final group in _ownedGroups) {
+        if (_leftMembershipIds.contains(group['id'])) continue;
+        items.add({
+          ...group,
+          'deletionPending': _pendingDeletionIds.contains(group['id']),
+        });
+      }
+    }
     for (final extra in _extraFamilies) {
       if (_leftMembershipIds.contains(extra['id'])) continue;
       items.add({
@@ -285,6 +346,19 @@ class DemoAccount {
   }
 
   static Map<String, dynamic> sessionForToken(String? token) {
+    if (token == teenSoloToken) {
+      return {
+        'type': 'child',
+        'childId': teenSoloId,
+        'familyId': teenSoloFamilyId,
+        'name': 'Riley',
+        'email': teenSoloEmail,
+        'ageBand': 'TEEN',
+        'roles': ['CHILD'],
+        'children': const [],
+        'assignedClasses': const <Map<String, dynamic>>[],
+      };
+    }
     if (token == teenToken) {
       return {
         'type': 'child',
@@ -705,11 +779,13 @@ class DemoAccount {
     }).where((row) => !familyBoard || row.familyId == familyId).toList()
       ..sort((a, b) => b.points.compareTo(a.points));
 
-    final viewerChildId = token == teenToken
-        ? samId
-        : token == childToken
-            ? childId
-            : null;
+    final viewerChildId = token == teenSoloToken
+        ? teenSoloId
+        : token == teenToken
+            ? samId
+            : token == childToken
+                ? childId
+                : null;
     final parentFamilyId = token == parentToken ? familyId : null;
     var anon = 1;
 

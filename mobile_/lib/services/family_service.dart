@@ -33,6 +33,16 @@ class FamilyService {
     }
   }
 
+  Future<Map<String, dynamic>> createGroup(String name) async {
+    if (_apiClient.isDemoSession) return DemoAccount.createDemoGroup(name);
+    try {
+      final response = await _apiClient.dio.post('/api/classes', data: {'name': name});
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> joinChurch(String joinCode) async {
     if (_apiClient.isDemoSession) {
       return DemoAccount.joinDemoChurch(joinCode);

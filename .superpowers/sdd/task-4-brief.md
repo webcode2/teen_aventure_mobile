@@ -1,57 +1,56 @@
-### Task 4: Shell + TopNav path navigation
+### Task 4: Drop the app-wide font bump to +1
 
 **Files:**
-- Modify: `admin/src/shell.tsx`
-- Modify: `admin/src/top-nav.tsx`
+- Modify: `mobile_/lib/theme.dart` (`kAppFontBump`)
+- Modify: `mobile_/test/home_quest_progress_test.dart`
 
 **Interfaces:**
-- Consumes: `useNavigate` from `react-router`; existing `tab: Tab` prop from layout
-- Produces: Sidebar/top actions update the URL
+- Consumes: `kAppFontBump` in `mobile_/lib/theme.dart`
+- Produces: `kAppFontBump == 1`
 
-- [ ] **Step 1: Update `shell.tsx` sidebar click**
+- [ ] **Step 1: Write the failing expectation**
 
-Replace `import { navigate, type Tab } from './route'` with:
+Add this import and test to `mobile_/test/home_quest_progress_test.dart`:
 
-```ts
-import { useNavigate } from 'react-router';
-import type { Tab } from './route';
+```dart
+import 'package:teen_aventure/theme.dart';
 ```
 
-Inside `Shell`, `const navigate = useNavigate();`
-
-Replace sidebar `onClick`:
-
-```ts
-onClick={() => {
-  closeMobileNav();
-  navigate(id === 'dashboard' ? '/app/dashboard' : `/app/dashboard/${id}`);
-}}
+```dart
+  test('app font bump is one point', () {
+    expect(kAppFontBump, 1);
+  });
 ```
 
-- [ ] **Step 2: Update `top-nav.tsx`**
+- [ ] **Step 2: Run test to verify it fails**
 
-```ts
-import { useNavigate } from 'react-router';
+Run from `mobile_`: `flutter test test/home_quest_progress_test.dart`
+
+Expected: FAIL. `kAppFontBump` is 3.
+
+- [ ] **Step 3: Set the bump**
+
+In `mobile_/lib/theme.dart`:
+
+```dart
+const double kAppFontBump = 1;
 ```
 
-```ts
-const navigate = useNavigate();
-// notifications:
-onClick={() => navigate('/app/dashboard/notifications')}
-// new quest:
-onClick={() => navigate('/app/dashboard/quests')}
-// sign out:
-onClick={() => {
-  setToken(null);
-  navigate('/app/login');
-}}
+Do not change `kAppTextScale` or any `fontSize` literal.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run from `mobile_`: `flutter test test/home_quest_progress_test.dart`
+
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add mobile_/lib/theme.dart mobile_/test/home_quest_progress_test.dart
+git commit -m "$(cat <<'EOF'
+fix: reduce the app-wide font bump to one point
+
+EOF
+)"
 ```
-
-Remove `import { navigate } from './route'`.
-
-- [ ] **Step 3: Manual sanity** — `cd admin && npm run dev`, open `/app/login`, sign-in flow deferred until auth pages updated; sidebar works once authed via `setToken` in console if needed.
-
-- [ ] **Step 4: Commit** (only if user asked)
-
----
-

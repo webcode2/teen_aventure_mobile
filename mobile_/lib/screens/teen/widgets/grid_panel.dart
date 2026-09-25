@@ -11,17 +11,39 @@ class GridPanel extends StatelessWidget {
     final game = context.watch<GameController>();
     final size = game.episode.gridSize;
 
+    var minR = size;
+    var maxR = 0;
+    var minC = size;
+    var maxC = 0;
+    var anyLetter = false;
+    for (var r = 0; r < size; r++) {
+      for (var c = 0; c < size; c++) {
+        if (!game.grid[r][c].isLetterCell) continue;
+        anyLetter = true;
+        if (r < minR) minR = r;
+        if (r > maxR) maxR = r;
+        if (c < minC) minC = c;
+        if (c > maxC) maxC = c;
+      }
+    }
+    if (!anyLetter) {
+      minR = 0;
+      maxR = size - 1;
+      minC = 0;
+      maxC = size - 1;
+    }
+    final rows = maxR - minR + 1;
+    final cols = maxC - minC + 1;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double availableWidth = constraints.maxWidth - 8.0;
-        final double availableHeight = constraints.maxHeight - 8.0;
-        final double cellWidth = availableWidth / size;
-        final double cellHeight = availableHeight / size;
-        final double childAspectRatio = (cellHeight > 0 && cellWidth > 0)
-            ? (cellWidth / cellHeight)
-            : 1.0;
-        final double fontSize = (cellWidth * 0.55).clamp(11.0, 24.0);
-        final double clueFontSize = (cellWidth * 0.28).clamp(7.0, 11.0);
+        const gap = 2.0;
+        final availableWidth = constraints.maxWidth - 8.0;
+        final cell = (availableWidth / cols).clamp(26.0, 40.0);
+        final fontSize = (cell * 0.5).clamp(11.0, 18.0);
+        final clueFontSize = (cell * 0.28).clamp(7.0, 11.0);
+        final gridW = cols * cell + (cols - 1) * gap;
+        final gridH = rows * cell + (rows - 1) * gap;
 
         return Container(
           width: double.infinity,
@@ -38,86 +60,100 @@ class GridPanel extends StatelessWidget {
               ),
             ],
           ),
-          child: GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: size,
-              crossAxisSpacing: 2.0,
-              mainAxisSpacing: 2.0,
-              childAspectRatio: childAspectRatio,
-            ),
-            itemCount: size * size,
-            itemBuilder: (context, index) {
-              final r = index ~/ size;
-              final c = index % size;
-              final cell = game.grid[r][c];
+          child: InteractiveViewer(
+            panEnabled: true,
+            scaleEnabled: false,
+            constrained: false,
+            alignment: Alignment.center,
+            boundaryMargin: const EdgeInsets.all(64),
+            child: SizedBox(
+              width: gridW,
+              height: gridH,
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: cols,
+                  crossAxisSpacing: gap,
+                  mainAxisSpacing: gap,
+                  childAspectRatio: 1,
+                ),
+                itemCount: rows * cols,
+                itemBuilder: (context, index) {
+                  final r = minR + index ~/ cols;
+                  final c = minC + index % cols;
+                  final letter = game.grid[r][c];
 
-              if (!cell.isLetterCell) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                );
-              }
+                  if (!letter.isLetterCell) {
+                    return const SizedBox.shrink();
+                  }
 
-              final isCursor = r == game.cursorRow && c == game.cursorCol;
-              final isWordActive = game.activeWord != null && cell.wordIds.contains(game.activeWord!.id);
-              final isSolved = cell.isSolved;
+                  final isCursor = r == game.cursorRow && c == game.cursorCol;
+                  final isWordActive = game.activeWord != null &&
+                      letter.wordIds.contains(game.activeWord!.id);
+                  final isSolved = letter.isSolved;
 
-              Color bgColor = Colors.white;
-              Color borderColor = TeenAppTheme.violet.withOpacity(0.4);
+                  var bgColor = Colors.white;
+                  var borderColor = TeenAppTheme.violet.withOpacity(0.4);
 
-              if (isSolved) {
-                bgColor = TeenAppTheme.freshGreen.withOpacity(0.25);
-                borderColor = TeenAppTheme.freshGreen;
-              } else if (isCursor) {
-                bgColor = TeenAppTheme.gold;
-                borderColor = TeenAppTheme.deepPurple;
-              } else if (isWordActive) {
-                bgColor = TeenAppTheme.lavender;
-                borderColor = TeenAppTheme.violet;
-              }
+                  if (isSolved) {
+                    bgColor = TeenAppTheme.freshGreen.withOpacity(0.25);
+                    borderColor = TeenAppTheme.freshGreen;
+                  } else if (isCursor) {
+                    bgColor = TeenAppTheme.gold;
+                    borderColor = TeenAppTheme.deepPurple;
+                  } else if (isWordActive) {
+                    bgColor = TeenAppTheme.lavender;
+                    borderColor = TeenAppTheme.violet;
+                  }
 
-              return GestureDetector(
-                onTap: () => game.selectCell(r, c),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 120),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: borderColor, width: isCursor ? 2.5 : 1.2),
-                  ),
-                  child: Stack(
-                    children: [
-                      if (cell.clueNumber != null)
-                        Positioned(
-                          top: 2,
-                          left: 2,
-                          child: Text(
-                            '${cell.clueNumber}',
-                            style: TextStyle(
-                              fontSize: clueFontSize,
-                              fontWeight: FontWeight.w800,
-                              color: isCursor ? TeenAppTheme.deepPurple : TeenAppTheme.violet,
-                            ),
-                          ),
-                        ),
-                      Center(
-                        child: Text(
-                          cell.userLetter,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w900,
-                            color: isSolved ? TeenAppTheme.freshGreen : TeenAppTheme.midnight,
-                          ),
+                  return GestureDetector(
+                    onTap: () => game.selectCell(r, c),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: borderColor,
+                          width: isCursor ? 2.5 : 1.2,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                      child: Stack(
+                        children: [
+                          if (letter.clueNumber != null)
+                            Positioned(
+                              top: 2,
+                              left: 2,
+                              child: Text(
+                                '${letter.clueNumber}',
+                                style: TextStyle(
+                                  fontSize: clueFontSize,
+                                  fontWeight: FontWeight.w800,
+                                  color: isCursor
+                                      ? TeenAppTheme.deepPurple
+                                      : TeenAppTheme.violet,
+                                ),
+                              ),
+                            ),
+                          Center(
+                            child: Text(
+                              letter.userLetter,
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w900,
+                                color: isSolved
+                                    ? TeenAppTheme.freshGreen
+                                    : TeenAppTheme.midnight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         );
       },

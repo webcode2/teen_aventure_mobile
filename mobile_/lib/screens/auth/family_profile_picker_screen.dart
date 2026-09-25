@@ -35,7 +35,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
     final session = context.watch<AuthSession>();
     final parentName = session.displayName?.trim().isNotEmpty == true
         ? session.displayName!
-        : 'Main account';
+        : '';
 
     return Scaffold(
       backgroundColor: AppColors.navy,
