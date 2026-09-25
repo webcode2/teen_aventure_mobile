@@ -11,6 +11,35 @@ import 'video_learning_screen.dart';
 class WeekQuestFlow {
   static const passage = 'Joshua 1–4';
 
+  static Future<void> openVideo(BuildContext context, int index) async {
+    final pack = SampleEpisodes.week1Package;
+    if (index < 0 || index >= pack.videos.length) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoLearningScreen(
+          lesson: pack.videos[index],
+          weekLabel: 'Week ${pack.weekNumber} Quest',
+          lessonTitle: passage,
+        ),
+      ),
+    );
+  }
+
+  static Future<void> openQuiz(BuildContext context) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const ObjectiveQuizScreen()),
+    );
+  }
+
+  static Future<void> openPuzzle(BuildContext context) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const PuzzleScreen()),
+    );
+  }
+
   static Future<void> openNext(
     BuildContext context, {
     bool replace = false,

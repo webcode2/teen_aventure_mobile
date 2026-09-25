@@ -74,9 +74,10 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                   .take(TodaysQuestSlide.cardCount)
                   .map((v) => v.title)
                   .toList(),
-              onOpenVideo: (_) => WeekQuestFlow.openNext(context),
-              onQuiz: () => WeekQuestFlow.openNext(context),
-              onPuzzle: () => WeekQuestFlow.openNext(context),
+              onOpenVideo: (index) =>
+                  WeekQuestFlow.openVideo(context, index),
+              onQuiz: () => WeekQuestFlow.openQuiz(context),
+              onPuzzle: () => WeekQuestFlow.openPuzzle(context),
               progress: game.weekQuest,
             ),
             const SizedBox(height: 28),

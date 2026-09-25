@@ -15,7 +15,6 @@ import '../shared/offline_videos_screen.dart';
 import '../../services/video_download_service.dart';
 import '../../services/content_service.dart';
 import '../../models/auth_session.dart';
-import 'week_quest_flow.dart';
 
 class VideoLearningScreen extends StatefulWidget {
   final VideoLesson lesson;
@@ -139,7 +138,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     _markLessonWatched();
     await _leaveVideoPlayback();
     if (!mounted) return;
-    await WeekQuestFlow.openNext(context, replace: true);
+    if (Navigator.canPop(context)) Navigator.pop(context);
   }
 
   Future<void> _loadPlaybackSource() async {
