@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   static const Color navy = Color(0xFF011F3B);
@@ -39,62 +40,85 @@ class AppRadii {
       BorderRadius.all(Radius.circular(card));
 }
 
-/// Extra logical pixels added to every font size after text scaling.
+/// Global bump for hardcoded `fontSize`s that skip the theme.
+const double kAppTextScale = 1.15;
+
+/// Extra logical pixels added to every font size after [kAppTextScale].
 const double kAppFontBump = 1;
 
-TextTheme _appleText(TextTheme base) {
-  TextStyle soften(TextStyle? style, {double tracking = -0.3}) =>
+/// Applies [kAppTextScale], then adds [kAppFontBump] to the result.
+class AppTextScaler extends TextScaler {
+  const AppTextScaler(this.inner, {this.bump = kAppFontBump});
+
+  final TextScaler inner;
+  final double bump;
+
+  @override
+  double scale(double fontSize) => inner.scale(fontSize) + bump;
+
+  @override
+  double get textScaleFactor => scale(16) / 16;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AppTextScaler && other.bump == bump && other.inner == inner;
+
+  @override
+  int get hashCode => Object.hash(inner, bump);
+}
+
+TextTheme _teenText(TextTheme base) {
+  TextStyle display(TextStyle? style, {double tracking = -0.2}) =>
       (style ?? const TextStyle()).copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: tracking,
-        height: 1.25,
+        height: 1.2,
+      );
+
+  TextStyle body(TextStyle? style) => (style ?? const TextStyle()).copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0,
+        height: 1.4,
       );
 
   return base.copyWith(
-    displayLarge: soften(base.displayLarge, tracking: -0.8),
-    displayMedium: soften(base.displayMedium, tracking: -0.6),
-    displaySmall: soften(base.displaySmall, tracking: -0.5),
-    headlineLarge: soften(base.headlineLarge, tracking: -0.6),
-    headlineMedium: soften(base.headlineMedium, tracking: -0.4),
-    headlineSmall: soften(base.headlineSmall, tracking: -0.3),
-    titleLarge: soften(base.titleLarge, tracking: -0.4),
-    titleMedium: soften(base.titleMedium, tracking: -0.2),
-    titleSmall: soften(base.titleSmall),
-    bodyLarge: (base.bodyLarge ?? const TextStyle()).copyWith(
-      fontWeight: FontWeight.w400,
-      letterSpacing: -0.2,
-      height: 1.35,
-    ),
-    bodyMedium: (base.bodyMedium ?? const TextStyle()).copyWith(
-      fontWeight: FontWeight.w400,
-      letterSpacing: -0.15,
-      height: 1.35,
-    ),
-    bodySmall: (base.bodySmall ?? const TextStyle()).copyWith(
-      fontWeight: FontWeight.w400,
-      letterSpacing: -0.1,
-      height: 1.3,
-    ),
+    displayLarge:
+        display(base.displayLarge, tracking: -0.4).copyWith(fontSize: 36),
+    displayMedium:
+        display(base.displayMedium, tracking: -0.3).copyWith(fontSize: 30),
+    displaySmall: display(base.displaySmall).copyWith(fontSize: 26),
+    headlineLarge: display(base.headlineLarge).copyWith(fontSize: 24),
+    headlineMedium: display(base.headlineMedium).copyWith(fontSize: 22),
+    headlineSmall: display(base.headlineSmall).copyWith(fontSize: 20),
+    titleLarge: display(base.titleLarge).copyWith(fontSize: 20),
+    titleMedium: display(base.titleMedium).copyWith(fontSize: 17),
+    titleSmall: display(base.titleSmall).copyWith(fontSize: 15),
+    bodyLarge: body(base.bodyLarge).copyWith(fontSize: 17),
+    bodyMedium: body(base.bodyMedium).copyWith(fontSize: 15),
+    bodySmall: body(base.bodySmall).copyWith(fontSize: 13),
     labelLarge: (base.labelLarge ?? const TextStyle())
-        .copyWith(fontWeight: FontWeight.w600),
+        .copyWith(fontWeight: FontWeight.w600, fontSize: 15),
     labelMedium: (base.labelMedium ?? const TextStyle())
-        .copyWith(fontWeight: FontWeight.w600),
+        .copyWith(fontWeight: FontWeight.w600, fontSize: 13),
     labelSmall: (base.labelSmall ?? const TextStyle())
-        .copyWith(fontWeight: FontWeight.w500),
+        .copyWith(fontWeight: FontWeight.w500, fontSize: 12),
   );
 }
 
 final ThemeData naturalTonesTheme = ThemeData(
   useMaterial3: true,
   typography: Typography.material2021(platform: TargetPlatform.iOS),
-  textTheme: _appleText(
-    Typography.blackCupertino.apply(
-      bodyColor: AppColors.navy,
-      displayColor: AppColors.navy,
+  textTheme: _teenText(
+    GoogleFonts.fredokaTextTheme(
+      Typography.blackCupertino.apply(
+        bodyColor: AppColors.navy,
+        displayColor: AppColors.navy,
+      ),
     ),
   ),
-  primaryTextTheme: Typography.whiteCupertino,
+  primaryTextTheme: GoogleFonts.fredokaTextTheme(Typography.whiteCupertino),
   scaffoldBackgroundColor: AppColors.cream,
+  fontFamily: GoogleFonts.fredoka().fontFamily,
   colorScheme: const ColorScheme(
     brightness: Brightness.light,
     primary: AppColors.navy,
@@ -121,17 +145,17 @@ final ThemeData naturalTonesTheme = ThemeData(
     onErrorContainer: Color(0xFF410E0B),
     surfaceContainerHighest: AppColors.surfaceVariant,
   ),
-  appBarTheme: const AppBarTheme(
+  appBarTheme: AppBarTheme(
     backgroundColor: AppColors.navy,
     foregroundColor: AppColors.cream,
     elevation: 0,
     scrolledUnderElevation: 0,
     systemOverlayStyle: TeenAppTheme.lightStatusBar,
-    titleTextStyle: TextStyle(
+    titleTextStyle: GoogleFonts.fredoka(
       color: AppColors.cream,
-      fontSize: 17,
+      fontSize: 20,
       fontWeight: FontWeight.w600,
-      letterSpacing: -0.4,
+      letterSpacing: -0.2,
     ),
   ),
   filledButtonTheme: FilledButtonThemeData(
@@ -140,8 +164,11 @@ final ThemeData naturalTonesTheme = ThemeData(
       foregroundColor: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       shape: RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
-      textStyle:
-          const TextStyle(fontWeight: FontWeight.w600, letterSpacing: -0.2),
+      textStyle: GoogleFonts.fredoka(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        letterSpacing: 0,
+      ),
     ),
   ),
   cardTheme: const CardThemeData(

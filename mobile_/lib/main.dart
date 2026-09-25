@@ -68,9 +68,16 @@ class AskHubTeenApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: TeenAppTheme.themeData,
         builder: (context, child) {
-          return AnnotatedRegion<SystemUiOverlayStyle>(
-            value: TeenAppTheme.lightStatusBar,
-            child: child ?? const SizedBox.shrink(),
+          final media = MediaQuery.of(context);
+          final bumped = AppTextScaler(
+            TextScaler.linear(media.textScaler.scale(1.0) * kAppTextScale),
+          );
+          return MediaQuery(
+            data: media.copyWith(textScaler: bumped),
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: TeenAppTheme.lightStatusBar,
+              child: child ?? const SizedBox.shrink(),
+            ),
           );
         },
         home: const SplashScreen(),
