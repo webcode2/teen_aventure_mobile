@@ -58,93 +58,91 @@ class TodaysQuestSlide extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _nextStep(),
+          ..._rows(context),
         ],
       ),
     );
   }
 
-  Widget _nextStep() {
-    final videoIndex = progress.nextVideoIndex;
-    if (videoIndex != null) {
-      return SizedBox(
-        key: ValueKey('home-video-$videoIndex'),
+  List<Widget> _rows(BuildContext context) {
+    final videosOpen = progress.videosCompleted >= WeekQuestProgress.videoCount;
+    final rows = <Widget>[
+      SizedBox(
+        key: const ValueKey('home-video-0'),
         height: 178,
         child: TodaysQuestCard(
-          label: 'Video ${videoIndex + 1}',
+          label: 'Video 1',
           passage: passage,
-          subtitle: videoIndex < videoSubtitles.length
-              ? videoSubtitles[videoIndex]
-              : 'Video ${videoIndex + 1}',
-          onStart: () => onOpenVideo(videoIndex),
+          subtitle: videoSubtitles.isNotEmpty ? videoSubtitles[0] : 'Video 1',
+          onStart: () => onOpenVideo(0),
+        ),
+      ),
+    ];
+    for (var index = 1; index < videoSubtitles.length && index < cardCount; index++) {
+      rows.add(const SizedBox(height: 10));
+      rows.add(
+        AdventureListCard(
+          key: ValueKey('home-video-$index'),
+          icon: Icons.play_arrow_rounded,
+          title: videoSubtitles[index],
+          accent: AdventureListAccent.orange,
+          onTap: () => onOpenVideo(index),
         ),
       );
     }
-    if (!progress.quizDone) {
-      return AdventureListCard(
-        icon: Icons.quiz_rounded,
-        title: 'Quiz',
-        subtitle: 'Objective questions for this week.',
-        accent: AdventureListAccent.navy,
-        onTap: onQuiz,
-      );
-    }
-    if (!progress.puzzleDone) {
-      return AdventureListCard(
-        icon: Icons.extension_rounded,
-        title: 'Puzzle',
-        subtitle: 'Bible puzzle adventure for this week.',
-        accent: AdventureListAccent.teal,
-        onTap: onPuzzle,
-      );
-    }
-    return const _CaughtUpCard();
-  }
-}
-
-class _CaughtUpCard extends StatelessWidget {
-  const _CaughtUpCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppRadii.cardRadius,
-        border: Border.all(color: AppColors.border),
+    rows.add(const SizedBox(height: 10));
+    rows.add(
+      Opacity(
+        opacity: videosOpen ? 1 : 0.45,
+        child: AdventureListCard(
+          key: const ValueKey('home-quiz'),
+          icon: Icons.quiz_rounded,
+          title: 'Quiz',
+          subtitle: 'Objective questions for this week.',
+          accent: AdventureListAccent.navy,
+          onTap: videosOpen ? onQuiz : () => _lockedTap(context, puzzle: false),
+        ),
       ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.check_circle_rounded,
-                  color: AppColors.forestGreen, size: 22),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  "You're caught up",
-                  style: TextStyle(
-                    color: AppColors.navy,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ),
-            ],
+    );
+    rows.add(const SizedBox(height: 10));
+    rows.add(
+      Opacity(
+        opacity: videosOpen ? 1 : 0.45,
+        child: AdventureListCard(
+          key: const ValueKey('home-puzzle'),
+          icon: Icons.extension_rounded,
+          title: 'Puzzle',
+          subtitle: 'Bible puzzle adventure for this week.',
+          accent: AdventureListAccent.teal,
+          onTap: videosOpen ? onPuzzle : () => _lockedTap(context, puzzle: true),
+        ),
+      ),
+    );
+    if (progress.isCaughtUp) {
+      rows.add(const SizedBox(height: 12));
+      rows.add(
+        const Text(
+          "You're caught up",
+          style: TextStyle(
+            color: AppColors.navy,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
           ),
-          SizedBox(height: 8),
-          Text(
-            "You've finished this week's quest. Come back when the next week opens.",
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-        ],
+        ),
+      );
+    }
+    return rows;
+  }
+
+  void _lockedTap(BuildContext context, {required bool puzzle}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          puzzle
+              ? 'Finish all 3 videos to open the puzzle.'
+              : 'Finish all 3 videos to open the quiz.',
+        ),
+        backgroundColor: AppColors.navy,
       ),
     );
   }
