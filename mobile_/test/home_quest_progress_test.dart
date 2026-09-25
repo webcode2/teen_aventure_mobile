@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:teen_aventure/models/game_controller.dart';
+import 'package:teen_aventure/theme.dart';
 
 void main() {
   test('watching video 3 first does not mark videos 1 and 2', () {
@@ -26,5 +27,9 @@ void main() {
     expect(game.completedVideoParts, 3);
     expect(game.weekVideosDone, 3);
     expect(game.weekQuest.videosCompleted, 3);
+  });
+
+  test('app font bump is one point', () {
+    expect(kAppFontBump, 1);
   });
 }

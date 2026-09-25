@@ -39,6 +39,9 @@ class AppRadii {
       BorderRadius.all(Radius.circular(card));
 }
 
+/// Extra logical pixels added to every font size after text scaling.
+const double kAppFontBump = 1;
+
 TextTheme _appleText(TextTheme base) {
   TextStyle soften(TextStyle? style, {double tracking = -0.3}) =>
       (style ?? const TextStyle()).copyWith(
