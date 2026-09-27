@@ -258,7 +258,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
             <div className="flex items-center gap-3">
               <Brand size="md" />
               <span className="hidden sm:inline text-xs font-bold text-teal bg-teal-tint px-2.5 py-0.5 rounded-full border border-teal/20">
-                Church &amp; Pastoral Portal
+                Church Operations Portal
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
@@ -293,18 +293,18 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
             </h1>
 
             <p className="text-sm sm:text-base text-muted leading-relaxed">
-              Welcome, Pastor. This portal is exclusively crafted for Senior Pastors, Youth Pastors, and Children’s Church Directors. Monitor classroom engagement, review confidential safeguarding matters, and generate instant join code barcode passes for church families.
+              Welcome to the Church Operations Portal. Designed for church leaders, youth directors, and ministry administrators to monitor classroom engagement, review safeguarding matters, and generate instant join code barcode passes for church families.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
                 <span className="text-xs font-bold text-teal">🛡️ Safeguarding Console</span>
                 <p className="text-[11px] text-muted mt-1 leading-relaxed">
-                  Confidential reports, safety incident escalation, and pastoral care audits.
+                  Confidential reports, safety incident escalation, and care audits.
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
-                <span className="text-xs font-bold text-teal">⛪ One Pastor, One Church</span>
+                <span className="text-xs font-bold text-teal">⛪ Dedicated Church Workspace</span>
                 <p className="text-[11px] text-muted mt-1 leading-relaxed">
                   Your flock data is strictly scoped and protected for your specific congregation.
                 </p>
@@ -328,7 +328,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
           <div className="lg:col-span-5 flex flex-col gap-4">
             <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 shadow-card flex flex-col gap-4">
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-navy">Pastor Sign In</h2>
+                <h2 className="text-xl font-bold tracking-tight text-navy">Church Sign In</h2>
                 <p className="text-xs text-muted mt-1">
                   Access live church operations for your congregation.
                 </p>
@@ -338,13 +338,13 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
 
               <form onSubmit={handleLogin} className="flex flex-col gap-3.5">
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Pastoral Email</span>
+                  <span>Church Email</span>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="pastor@church.com"
+                    placeholder="leader@church.com"
                     className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
                   />
                 </label>
@@ -373,7 +373,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
               {/* Demo Quick-Fill Links */}
               <div className="pt-3 border-t border-border/60 flex flex-col gap-1.5">
                 <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                  Quick-Fill Demo Pastors:
+                  Quick-Fill Demo Church Accounts:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   <button
@@ -470,13 +470,13 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
         {feedbackMsg ? <Alert kind="ok">{feedbackMsg}</Alert> : null}
         {errorMsg ? <Alert kind="error">{errorMsg}</Alert> : null}
 
-        {/* Boundary violation alert (One Pastor, One Church) */}
+        {/* Boundary violation alert (Dedicated Church Workspace) */}
         {hasBoundaryConflict ? (
           <Alert kind="error">
             <div className="flex flex-col gap-1">
               <strong>Congregational Safeguarding Boundary:</strong>
               <span>
-                As an appointed pastor, you are authorized to steward{' '}
+                As authorized church leadership, you are steward of{' '}
                 <strong className="text-navy">{church?.name || assignedChurchId}</strong>. You cannot monitor other
                 church operations.
               </span>
@@ -598,9 +598,9 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
           <div className="bg-surface border border-border rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-border/60">
               <div>
-                <h3 className="font-bold text-navy text-base">Safeguarding &amp; Pastoral Incidents</h3>
+                <h3 className="font-bold text-navy text-base">Safeguarding &amp; Care Incidents</h3>
                 <p className="text-xs text-muted mt-0.5">
-                  Direct, confidential reports filed by parents and guardians. Visible only to church pastors.
+                  Direct, confidential reports filed by parents and guardians. Visible only to authorized church leadership.
                 </p>
               </div>
             </div>
@@ -610,7 +610,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
             ) : reports.length === 0 ? (
               <Empty
                 title="No active safeguarding incidents"
-                body="Your church currently has zero open safeguarding reports or escalated pastoral care cases."
+                body="Your church currently has zero open safeguarding reports or escalated care cases."
               />
             ) : (
               <div className="flex flex-col gap-3">
@@ -657,7 +657,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
                       }}
                       className="px-3.5 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy text-xs font-semibold cursor-pointer shrink-0 transition-colors shadow-2xs"
                     >
-                      Pastoral Review →
+                      Review Incident →
                     </button>
                   </div>
                 ))}
@@ -843,11 +843,11 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
         )}
       </main>
 
-      {/* Pastoral Safeguarding Review Modal */}
+      {/* Safeguarding Review Modal */}
       <Dialog
         open={selectedReport !== null}
         onClose={() => setSelectedReport(null)}
-        title="Pastoral Safeguarding Review"
+        title="Safeguarding Incident Review"
         subtitle={`Incident Case #${selectedReport?.id.slice(0, 8)}`}
       >
         {selectedReport ? (
@@ -874,20 +874,20 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
                 className="rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-1 focus:ring-teal"
               >
                 <option value="SUBMITTED">SUBMITTED (Pending intake)</option>
-                <option value="UNDER_REVIEW">UNDER_REVIEW (Pastoral inquiry ongoing)</option>
-                <option value="ESCALATED">ESCALATED (Urgent pastoral care &amp; leadership notification)</option>
+                <option value="UNDER_REVIEW">UNDER_REVIEW (Care inquiry ongoing)</option>
+                <option value="ESCALATED">ESCALATED (Urgent care &amp; leadership notification)</option>
                 <option value="CLOSED">CLOSED (Resolved with families)</option>
               </select>
             </label>
 
             {/* Note Input */}
             <label className="flex flex-col gap-1 font-semibold text-navy">
-              <span>Add Confidential Pastoral Note:</span>
+              <span>Add Confidential Care Note:</span>
               <textarea
                 rows={3}
                 value={pastoralNote}
                 onChange={(e) => setPastoralNote(e.target.value)}
-                placeholder="Record actions taken, pastoral contact made, or resolution steps…"
+                placeholder="Record actions taken, family contact made, or resolution steps…"
                 className="rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
               />
             </label>
@@ -906,7 +906,7 @@ export function PastorPortalPage({ churchIdFromRoute }: { churchIdFromRoute?: st
                 onClick={handleSaveReport}
                 className="px-4 py-1.5 rounded-xl bg-navy hover:bg-teal text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
               >
-                {savingReport ? 'Saving…' : 'Record Pastoral Action'}
+                {savingReport ? 'Saving…' : 'Record Care Action'}
               </button>
             </div>
           </div>

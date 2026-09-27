@@ -23,6 +23,9 @@ describe('safeStaffNext', () => {
 describe('legacyHashToPath', () => {
   it('maps known hashes', () => {
     expect(legacyHashToPath('#/landing')).toBe('/');
+    expect(legacyHashToPath('#/about')).toBe('/about');
+    expect(legacyHashToPath('#/privacy')).toBe('/privacy');
+    expect(legacyHashToPath('#/contact')).toBe('/contact');
     expect(legacyHashToPath('#/login')).toBe('/app/login');
     expect(legacyHashToPath('#/forgot')).toBe('/app/forgot');
     expect(legacyHashToPath('#/reset?token=abc')).toBe('/app/reset?token=abc');

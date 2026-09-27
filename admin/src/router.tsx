@@ -7,8 +7,11 @@ import {
   useSearchParams,
 } from 'react-router';
 import { ForgotPage, LoginPage, ResetPage } from './auth-pages';
-import { RequireGuest, RequireStaff } from './guards';
+import { RequireStaff } from './guards';
 import { PublicLandingPage } from './pages-landing';
+import { AboutPage } from './pages-about';
+import { PrivacyPage } from './pages-privacy';
+import { ContactPage } from './pages-contact';
 import { NotificationsPage, ConsentPage } from './pages-notify';
 import {
   ChurchesPage,
@@ -83,30 +86,12 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PublicLandingPage />} />
-      <Route
-        path="/app/login"
-        element={
-          <RequireGuest>
-            <LoginPage />
-          </RequireGuest>
-        }
-      />
-      <Route
-        path="/app/forgot"
-        element={
-          <RequireGuest>
-            <ForgotPage />
-          </RequireGuest>
-        }
-      />
-      <Route
-        path="/app/reset"
-        element={
-          <RequireGuest>
-            <ResetRoute />
-          </RequireGuest>
-        }
-      />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/app/login" element={<LoginPage />} />
+      <Route path="/app/forgot" element={<ForgotPage />} />
+      <Route path="/app/reset" element={<ResetRoute />} />
       <Route path="/app/dashboard" element={<DashboardLayout />}>
         <Route index element={<OverviewPage />} />
         <Route path=":tab" element={<DashboardTabPage />} />

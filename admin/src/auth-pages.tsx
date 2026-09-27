@@ -107,7 +107,7 @@ export function LoginPage() {
               onClick={() => navigate('/groups')}
               className="w-full py-2 px-3 rounded-xl bg-teal-tint hover:bg-teal hover:text-white text-teal font-bold transition-all border border-teal/20 cursor-pointer text-xs"
             >
-              ⛪ Church Pastor &amp; Operations Portal →
+              Study Circle Leader Portal →
             </button>
             <button
               type="button"

@@ -23,6 +23,9 @@ export function legacyHashToPath(hash: string): string | null {
   const qs = queryPart ? `?${queryPart}` : '';
 
   if (page === 'landing' || page === 'home' || page === 'public') return '/';
+  if (page === 'about') return '/about';
+  if (page === 'privacy') return '/privacy';
+  if (page === 'contact') return '/contact';
   if (page === 'login') return '/app/login';
   if (page === 'forgot') return '/app/forgot';
   if (page === 'reset') return `/app/reset${qs}`;

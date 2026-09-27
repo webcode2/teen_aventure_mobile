@@ -60,7 +60,7 @@ beforeEach(() => {
 describe('AppRoutes', () => {
   it('renders landing at /', async () => {
     renderAt('/');
-    expect(await screen.findByText(/Nurturing Teen Discipleship/i)).toBeTruthy();
+    expect(await screen.findByText(/Nurturing Christian Teens/i)).toBeTruthy();
   });
 
   it('redirects unauthed /app/dashboard to login with next', async () => {
@@ -102,6 +102,30 @@ describe('AppRoutes', () => {
 
   it('renders pastor portal at /groups', async () => {
     renderAt('/groups');
-    expect(await screen.findByText('Pastor Sign In')).toBeTruthy();
+    expect(await screen.findByText('Church Sign In')).toBeTruthy();
+  });
+
+  it('renders about page at /about', async () => {
+    renderAt('/about');
+    expect(await screen.findByRole('heading', { name: /Discipleship Built for the Next Generation/i })).toBeTruthy();
+    expect(screen.getByText('Zack')).toBeTruthy();
+    expect(screen.getByText('Abi')).toBeTruthy();
+    expect(screen.getByText(/The Four Discipleship Pillars/i)).toBeTruthy();
+  });
+
+  it('renders privacy policy at /privacy', async () => {
+    renderAt('/privacy');
+    expect(await screen.findByRole('heading', { name: 'Privacy Policy' })).toBeTruthy();
+    expect(screen.getByText('100% Ad-Free')).toBeTruthy();
+    expect(screen.getByText('No Data Selling')).toBeTruthy();
+    expect(screen.getAllByText(/Parental Oversight/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders contact page at /contact', async () => {
+    renderAt('/contact');
+    expect(await screen.findByRole('heading', { name: /We’re Here to Help/i })).toBeTruthy();
+    expect(screen.getByText(/Youth Circles & Study Groups/i)).toBeTruthy();
+    expect(screen.getByText('fellowship@askhub.org')).toBeTruthy();
+    expect(screen.getByText('Send Us a Message')).toBeTruthy();
   });
 });

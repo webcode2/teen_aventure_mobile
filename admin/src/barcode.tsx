@@ -275,7 +275,7 @@ export function ChurchJoinBarcodeCard({
   const [format, setFormat] = useState<'barcode' | 'qr'>('barcode');
   const [copied, setCopied] = useState(false);
 
-  const cleanCode = (joinCode || 'CHURCH').toUpperCase();
+  const cleanCode = (joinCode || 'FAITH52').toUpperCase();
 
   function copyCode() {
     navigator.clipboard.writeText(cleanCode).then(() => {
@@ -293,24 +293,24 @@ export function ChurchJoinBarcodeCard({
       {/* Header */}
       <div className="flex items-center justify-between w-full pb-3 border-b border-border/60">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-teal">Church Onboarding Pass</span>
-          <h4 className="text-sm font-bold text-navy truncate" title={churchName}>
+          <span className="text-xs font-bold uppercase tracking-wider text-teal">Family &amp; Group Study Pass</span>
+          <h4 className="text-base sm:text-lg font-extrabold text-navy truncate" title={churchName}>
             {churchName}
           </h4>
         </div>
         {jurisdiction ? (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-navy/5 text-navy border border-border">
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-navy/5 text-navy border border-border">
             {jurisdiction}
           </span>
         ) : null}
       </div>
 
       {/* Code Display & Toggle Bar */}
-      <div className="flex items-center justify-between w-full mt-3">
-        <div className="flex items-center gap-1.5 bg-surface-2 p-0.5 rounded-lg border border-border text-[11px]">
+      <div className="flex items-center justify-between w-full mt-3.5">
+        <div className="flex items-center gap-1.5 bg-surface-2 p-1 rounded-lg border border-border text-xs sm:text-sm">
           <button
             type="button"
-            className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               format === 'barcode' ? 'bg-navy text-white shadow-2xs' : 'text-muted hover:text-navy'
             }`}
             onClick={() => setFormat('barcode')}
@@ -319,7 +319,7 @@ export function ChurchJoinBarcodeCard({
           </button>
           <button
             type="button"
-            className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               format === 'qr' ? 'bg-navy text-white shadow-2xs' : 'text-muted hover:text-navy'
             }`}
             onClick={() => setFormat('qr')}
@@ -331,7 +331,7 @@ export function ChurchJoinBarcodeCard({
         <button
           type="button"
           onClick={copyCode}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-teal hover:text-teal/80 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-teal hover:text-teal/80 transition-colors cursor-pointer"
         >
           {copied ? '✓ Copied!' : 'Copy Code'}
         </button>
@@ -343,8 +343,8 @@ export function ChurchJoinBarcodeCard({
           <BarcodeSvg value={cleanCode} width={290} height={70} showText={true} />
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <QrCodeSvg value={`askhub://church/join?code=${cleanCode}`} size={160} />
-            <span className="text-[11px] font-mono font-bold text-navy tracking-widest mt-1">
+            <QrCodeSvg value={`askhub://study/join?code=${cleanCode}`} size={160} />
+            <span className="text-xs font-mono font-bold text-navy tracking-widest mt-1">
               JOIN CODE: {cleanCode}
             </span>
           </div>
@@ -352,7 +352,7 @@ export function ChurchJoinBarcodeCard({
       </div>
 
       {/* Instructions & Actions */}
-      <p className="text-[11px] text-muted text-center leading-relaxed">
+      <p className="text-xs sm:text-sm text-text-2 text-center leading-relaxed">
         Visiting families scan this pass in the Teen Bible Adventures app or enter code{' '}
         <strong className="text-navy font-bold font-mono tracking-wide">{cleanCode}</strong> during family profile setup.
       </p>
@@ -361,14 +361,14 @@ export function ChurchJoinBarcodeCard({
         <button
           type="button"
           onClick={handlePrint}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs sm:text-sm font-semibold text-navy transition-colors cursor-pointer"
         >
           <span>🖨️ Print Onboarding Pass</span>
         </button>
         <button
           type="button"
           onClick={copyCode}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy hover:bg-teal text-white text-xs font-semibold transition-colors cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
         >
           <span>{copied ? '✓ Code Copied' : 'Copy Join Code'}</span>
         </button>

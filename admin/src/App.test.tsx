@@ -237,19 +237,19 @@ describe('Teen Bible Adventures Admin', () => {
     renderApp('/');
 
     // Check main headlines and value propositions
-    expect(await screen.findByText(/Nurturing Teen Discipleship/i)).toBeTruthy();
-    expect(screen.getByText(/Weekly Teen Quests/i)).toBeTruthy();
-    expect(screen.getByText(/Safeguarding Oversight/i)).toBeTruthy();
-    expect(screen.getByText(/Seamless Church Check-In/i)).toBeTruthy();
+    expect(await screen.findByText(/Nurturing Christian Teens/i)).toBeTruthy();
+    expect(screen.getAllByText(/Weekly Scripture Quests/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Christian Fellowship/i)).toBeTruthy();
+    expect(screen.getAllByText(/Family Safeguarding/i).length).toBeGreaterThan(0);
 
     // Check Barcode pass card preview
-    expect(screen.getByText(/Church Onboarding Pass/i)).toBeTruthy();
-    expect(screen.getAllByText(/GRACE01/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Family & Group Study Pass/i)).toBeTruthy();
+    expect(screen.getAllByText(/FAITH52/).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /1D Barcode/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /2D QR Code/i })).toBeTruthy();
 
-    // Pastor portal gateway button
-    expect(screen.getAllByRole('button', { name: /Pastor Portal/i }).length).toBeGreaterThan(0);
+    // Contact Us action button
+    expect(screen.getAllByRole('button', { name: /Contact Us/i }).length).toBeGreaterThan(0);
   });
 
   it('renders pastor portal at /groups, allows pastoral sign in, and loads church operations with one-pastor-one-church scope', async () => {
@@ -339,8 +339,8 @@ describe('Teen Bible Adventures Admin', () => {
 
     renderApp('/groups');
 
-    // Unauthenticated Pastor Gateway view
-    expect(await screen.findByRole('heading', { name: /Pastor Sign In/i })).toBeTruthy();
+    // Unauthenticated Church Gateway view
+    expect(await screen.findByRole('heading', { name: /Church Sign In/i })).toBeTruthy();
     expect(screen.getByText(/Shepherd the Flock/i)).toBeTruthy();
 
     // Click quick-fill demo pastor button
@@ -371,12 +371,12 @@ describe('Teen Bible Adventures Admin', () => {
 
     // Barcode & Pass tab
     await userEvent.click(screen.getByRole('button', { name: /Barcode & Pass Generator/i }));
-    expect(await screen.findByText(/Church Onboarding Pass/i)).toBeTruthy();
+    expect(await screen.findByText(/Family & Group Study Pass/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Regenerate Church Join Code/i })).toBeTruthy();
 
     // Sign out button
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(await screen.findByRole('heading', { name: /Pastor Sign In/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Church Sign In/i })).toBeTruthy();
   });
 });
 

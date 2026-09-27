@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
-import { Brand } from './ui';
 import { ChurchJoinBarcodeCard } from './barcode';
+import { PublicLayout, GooglePlayButton, AppStoreButton } from './public-shell';
+import { WorldMapBackground } from './pages-contact';
 
 function CompassIcon() {
   return (
@@ -20,14 +21,13 @@ function ShieldCheckIcon() {
   );
 }
 
-function ChurchIcon() {
+function UsersIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2" />
-      <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4" />
-      <path d="M18 22V5l-6-3-6 3v17" />
-      <path d="M12 7v5" />
-      <path d="M10 9h4" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }
@@ -46,71 +46,7 @@ export function PublicLandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-cream text-navy flex flex-col selection:bg-teal selection:text-white">
-      {/* Top Banner Alert for Church Pastors */}
-      <div className="bg-navy text-cream text-xs py-2 px-4 border-b border-white/10 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 mx-auto">
-          <span className="inline-block w-2 h-2 rounded-full bg-gold animate-pulse" />
-          <span className="font-medium text-cream/90">
-            Are you a Senior Pastor or Youth Ministry Director?
-          </span>
-          <button
-            type="button"
-            onClick={() => navigate('/groups')}
-            className="font-bold text-gold hover:text-white underline decoration-gold transition-colors cursor-pointer ml-1"
-          >
-            Enter Pastor &amp; Church Operations Portal →
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/app/login')}
-          className="text-[11px] text-cream/60 hover:text-cream hidden sm:inline transition-colors cursor-pointer"
-        >
-          Staff login
-        </button>
-      </div>
-
-      {/* Main Navigation Header */}
-      <header className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-border/80 px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Brand size="md" />
-          </div>
-
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-muted">
-            <a href="#quests" className="hover:text-navy transition-colors">
-              Weekly Quests
-            </a>
-            <a href="#churches" className="hover:text-navy transition-colors">
-              For Churches
-            </a>
-            <a href="#safeguarding" className="hover:text-navy transition-colors">
-              Safeguarding
-            </a>
-            <a href="#onboarding" className="hover:text-navy transition-colors">
-              Mobile App &amp; Join Code
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => navigate('/groups')}
-              className="px-3.5 py-2 rounded-xl bg-teal-tint border border-teal/30 text-teal hover:bg-teal hover:text-white text-xs font-bold transition-all cursor-pointer shadow-2xs"
-            >
-              Pastor Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/app/login')}
-              className="px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer"
-            >
-              Sign in
-            </button>
-          </div>
-        </div>
-      </header>
+    <PublicLayout activeTab="home">
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-16 pb-24 sm:pt-28 sm:pb-36 px-4 sm:px-8 border-b border-border/60">
@@ -124,41 +60,30 @@ export function PublicLandingPage() {
 
           {/* Zack — left character */}
           <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
-            <div className="relative">
-              {/* Speech bubble */}
-              <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-navy text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-md after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-navy">
-                "Let's go on a Quest! 🎧"
-              </div>
-              <img
-                src="/zack.png"
-                alt="Zack — Teen Bible Adventures character"
-                className="w-52 h-auto object-contain drop-shadow-xl animate-[float_6s_ease-in-out_infinite]"
-                style={{ animationDelay: '0s' }}
-              />
-            </div>
+            <img
+              src="/zack.png"
+              alt="Zack — Teen Bible Adventures character"
+              className="w-52 h-auto object-contain drop-shadow-xl"
+            />
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-extrabold text-navy">Zack</span>
               <span className="text-[11px] font-medium text-muted bg-orange/15 border border-orange/30 px-2.5 py-0.5 rounded-full">
-                Quest Explorer 🎧
+                Quest Explorer
               </span>
             </div>
           </div>
 
           {/* Center: headline, tagline, CTAs, metrics */}
           <div className="flex flex-col items-center text-center gap-12 py-6">
-            {/* Badge + headline + tagline group */}
+            {/* Headline + tagline group */}
             <div className="flex flex-col items-center gap-7">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/15 border border-gold/40 text-navy text-xs font-bold tracking-widest uppercase">
-                <span>✨ Teen Discipleship &bull; Sunday School &bull; Family Care</span>
-              </div>
-
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-navy leading-[1.1] max-w-2xl">
-                Nurturing Teen Discipleship Through Biblical Truth &amp; Community.
+                Nurturing Christian Teens Through Biblical Truth &amp; Faith Adventures.
               </h1>
 
               <p className="text-sm sm:text-base lg:text-lg text-muted max-w-xl leading-loose mt-2">
-                Teen Bible Adventures connects Christian teenagers, families, and local churches through structured weekly quests,
-                video teachings, engaging quizzes, and trusted pastoral oversight.
+                Teen Bible Adventures inspires Christian teenagers and families through structured weekly scripture quests,
+                video reflections, interactive Bible quizzes, and engaging scripture puzzles.
               </p>
             </div>
 
@@ -176,38 +101,39 @@ export function PublicLandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
+              <a
+                href="#quests"
+                className="px-8 py-4 rounded-xl bg-navy hover:bg-teal text-white text-sm font-bold shadow-card transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-lg inline-flex items-center gap-2"
+              >
+                <span>Explore Weekly Quests</span>
+                <span>→</span>
+              </a>
               <button
                 type="button"
-                onClick={() => navigate('/groups')}
-                className="px-8 py-4 rounded-xl bg-navy hover:bg-teal text-white text-sm font-bold shadow-card transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-lg"
+                onClick={() => navigate('/about')}
+                className="px-8 py-4 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5 cursor-pointer"
               >
-                Pastor &amp; Church Operations Portal →
+                Our Christian Mission
               </button>
-              <a
-                href="#onboarding"
-                className="px-8 py-4 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5"
-              >
-                Scan Church Barcode Pass
-              </a>
             </div>
 
             {/* Quick Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mt-4 pt-10 border-t border-border/60 w-full max-w-2xl text-left">
               <div className="flex flex-col gap-1.5">
-                <span className="text-2xl font-extrabold text-navy">52 Weeks</span>
-                <span className="text-xs text-muted leading-relaxed">Annual quest journey</span>
+                <span className="text-2xl sm:text-3xl font-black text-navy">52 Weeks</span>
+                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Annual quest journey</span>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-2xl font-extrabold text-teal">100% Verified</span>
-                <span className="text-xs text-muted leading-relaxed">Biblical doctrine</span>
+                <span className="text-2xl sm:text-3xl font-black text-teal">100% Biblical</span>
+                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Scripture-rooted truth</span>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-2xl font-extrabold text-navy">Protected</span>
-                <span className="text-xs text-muted leading-relaxed">COPPA &amp; GDPR privacy</span>
+                <span className="text-2xl sm:text-3xl font-black text-navy">Protected</span>
+                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Safe &amp; ad-free for kids and families</span>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-2xl font-extrabold text-gold">One Click</span>
-                <span className="text-xs text-muted leading-relaxed">Church pass barcode join</span>
+                <span className="text-2xl sm:text-3xl font-black text-gold">Interactive</span>
+                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Quizzes &amp; Bible puzzles</span>
               </div>
             </div>
           </div>
@@ -215,78 +141,71 @@ export function PublicLandingPage() {
 
           {/* Abi — right character */}
           <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
-            <div className="relative">
-              {/* Speech bubble */}
-              <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap bg-teal text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-md after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-teal">
-                "I know this verse! 📖"
-              </div>
-              <img
-                src="/abi.png"
-                alt="Abi — Teen Bible Adventures character"
-                className="w-52 h-auto object-contain drop-shadow-xl animate-[float_6s_ease-in-out_infinite]"
-                style={{ animationDelay: '1.5s' }}
-              />
-            </div>
+            <img
+              src="/abi.png"
+              alt="Abi — Teen Bible Adventures character"
+              className="w-52 h-auto object-contain drop-shadow-xl"
+            />
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-extrabold text-navy">Abi</span>
               <span className="text-[11px] font-medium text-muted bg-teal/10 border border-teal/30 px-2.5 py-0.5 rounded-full">
-                Scripture Champion 📖
+                Scripture Champion
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4 Pillars of ASK Hub Discipleship */}
-      <section id="quests" className="py-16 sm:py-20 px-4 sm:px-8 bg-surface border-b border-border/60">
+      {/* 4 Pillars of Christian Teen Discipleship */}
+      <section id="quests" className="py-16 sm:py-24 px-4 sm:px-8 bg-surface border-b border-border/60">
         <div className="max-w-6xl mx-auto flex flex-col gap-12">
-          <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal">Core Pillars</span>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-navy">
-              Everything Your Youth Ministry Needs in One Cohesive Platform
+          <div className="text-center max-w-3xl mx-auto flex flex-col gap-3">
+            <span className="text-sm font-bold uppercase tracking-widest text-teal">Core Foundations</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-navy">
+              Everything Christian Youth &amp; Families Need to Grow in Faith
             </h2>
-            <p className="text-xs sm:text-sm text-muted">
-              Built specifically for modern adolescent discipleship — engaging for teenagers, reassuring for parents, and empowering for pastors.
+            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
+              Built specifically for adolescent Christian spiritual growth — engaging for teenagers, reassuring for parents, and centered on Christ.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-teal-tint text-teal flex items-center justify-center">
+            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                 <BookHeartIcon />
               </div>
-              <h3 className="font-bold text-navy text-base">Weekly Teen Quests</h3>
-              <p className="text-xs text-muted leading-relaxed">
+              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Weekly Scripture Quests</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
                 Scheduled curriculum featuring scripture reading passages, curated video reflections, and 4-option objective quizzes that build biblical literacy.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-sage text-forest flex items-center justify-center">
-                <ChurchIcon />
+            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-xl bg-sage text-forest flex items-center justify-center shrink-0">
+                <UsersIcon />
               </div>
-              <h3 className="font-bold text-navy text-base">Local Church Connection</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Sunday school classes and youth cell groups seamlessly tied to the curriculum. Teachers open class quizzes while pastors monitor overall church engagement.
+              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Christian Fellowship</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+                Connect with Christian friends, youth mentors, and family study circles to walk together in daily faith, encouragement, and scripture reading.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-gold/20 text-navy flex items-center justify-center">
+            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-xl bg-gold/20 text-navy flex items-center justify-center shrink-0">
                 <ShieldCheckIcon />
               </div>
-              <h3 className="font-bold text-navy text-base">Safeguarding Oversight</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Confidential incident reporting console for parents and guardians. Pastors receive instant alerts, escalate care, and audit resolution notes securely.
+              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Family Safeguarding</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+                Confidential, ad-free environment where parents retain full oversight of their teens' accounts, protecting their digital spiritual journey.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-navy-tint text-navy flex items-center justify-center">
+            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-xl bg-navy-tint text-navy flex items-center justify-center shrink-0">
                 <CompassIcon />
               </div>
-              <h3 className="font-bold text-navy text-base">TBA Puzzle Studio</h3>
-              <p className="text-xs text-muted leading-relaxed">
+              <h3 className="font-extrabold text-navy text-lg sm:text-xl">TBA Puzzle Studio</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
                 Challenging word chains, crossword grids, and Scripture matching exercises that reinforce the weekly lesson themes without gamification distraction.
               </p>
             </div>
@@ -294,50 +213,48 @@ export function PublicLandingPage() {
         </div>
       </section>
 
-      {/* For Pastors & Church Operations Highlight */}
-      <section id="churches" className="py-16 sm:py-20 px-4 sm:px-8 border-b border-border/60 bg-cream">
+      {/* Christian Living & Discipleship Highlight */}
+      <section id="discipleship" className="relative overflow-hidden py-16 sm:py-24 px-4 sm:px-8 border-b border-border/60 bg-cream">
+        <WorldMapBackground />
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-7 flex flex-col gap-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-tint border border-teal/30 text-teal text-xs font-bold w-fit">
-              <span>Church Leadership &bull; One Pastor, One Church</span>
-            </div>
-
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy tracking-tight leading-snug">
-              Pastors: Monitor Your Church Operation in Real Time.
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            <h2 className="text-3xl sm:text-5xl font-black text-navy tracking-tight leading-tight">
+              A Faith-Filled Digital Sanctuary for Today’s Christian Youth.
             </h2>
 
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              We know your pastoral heart wants to know how your young people are growing in Christ. Our dedicated Church Operations Portal provides your pastoral team with clear, safeguarded visibility into:
+            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
+              We help teenagers navigate modern life firmly grounded in the living Word of God. Teen Bible Adventures provides a safe, vibrant alternative to secular social noise:
             </p>
 
-            <ul className="flex flex-col gap-2.5 text-xs text-navy font-medium">
-              <li className="flex items-center gap-2">
-                <span className="text-teal font-bold">✓</span>
-                <span>Active youth classes, attendance levels, and weekly quest completion rates.</span>
+            <ul className="flex flex-col gap-3 text-sm sm:text-base text-navy font-medium">
+              <li className="flex items-start gap-2.5">
+                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span>Active scripture journeys: 52 weekly guided Bible quests with reflection questions.</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-teal font-bold">✓</span>
-                <span>Confidential safeguarding inbox with status management and pastoral action notes.</span>
+              <li className="flex items-start gap-2.5">
+                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span>Engaging video teachings that unpack biblical truth for everyday teen challenges.</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-teal font-bold">✓</span>
-                <span>Ministry staff assignments: Teachers, Chaperones, and Children’s Church Leads.</span>
+              <li className="flex items-start gap-2.5">
+                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span>Creative Bible puzzles (Crosswords, Word Chains, Scripture Matching) that make learning enjoyable.</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-teal font-bold">✓</span>
-                <span>Church join codes with instant Barcode &amp; QR Code pass generation for Sunday bulletins.</span>
+              <li className="flex items-start gap-2.5">
+                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span>Family study passes with instant barcode cards for Christian households and study circles.</span>
               </li>
             </ul>
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => navigate('/groups')}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-navy hover:bg-teal text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <GooglePlayButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs" />
+              <AppStoreButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs" />
+              <a
+                href="#quests"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface hover:bg-surface-2 text-navy font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-xs hover:shadow-md"
               >
-                <span>Enter Church Operations Portal</span>
+                <span>Start Weekly Quests</span>
                 <span>→</span>
-              </button>
+              </a>
             </div>
           </div>
 
@@ -345,50 +262,50 @@ export function PublicLandingPage() {
             {/* Live Barcode Card Preview */}
             <div className="w-full">
               <ChurchJoinBarcodeCard
-                joinCode="GRACE01"
-                churchName="Grace Demo Church"
-                jurisdiction="US"
+                joinCode="FAITH52"
+                churchName="Christian Discipleship Circle"
+                jurisdiction="Global"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Onboarding & Barcode Pass Generator Section */}
-      <section id="onboarding" className="py-16 sm:py-20 px-4 sm:px-8 bg-surface border-b border-border/60">
-        <div className="max-w-5xl mx-auto flex flex-col items-center gap-8 text-center">
-          <div className="max-w-xl flex flex-col gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal">Family &amp; Church Onboarding</span>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-navy">
-              Seamless Church Check-In &amp; Mobile Joining
+      {/* Onboarding & Pass Section */}
+      <section id="onboarding" className="py-16 sm:py-24 px-4 sm:px-8 bg-surface border-b border-border/60">
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-10 text-center">
+          <div className="max-w-2xl flex flex-col gap-3">
+            <span className="text-sm font-bold uppercase tracking-widest text-teal">Getting Started</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-navy">
+              How Christian Teens &amp; Families Journey Together
             </h2>
-            <p className="text-xs sm:text-sm text-muted">
-              Whether you are welcoming a new family on Sunday morning or enrolling students in Wednesday youth group, our instant barcode generator makes connection effortless.
+            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
+              Simple, safe, and engaging. Begin your weekly scripture adventure in three easy steps.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left w-full max-w-4xl">
-            <div className="p-5 rounded-xl bg-cream border border-border/80 flex flex-col gap-2">
-              <div className="text-xs font-bold text-teal">Step 1</div>
-              <h4 className="font-bold text-sm text-navy">Pastors Generate Pass</h4>
-              <p className="text-xs text-muted leading-relaxed">
-                Log into your church console to retrieve or regenerate your church’s unique join code with printable barcode cards.
+            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 1</div>
+              <h4 className="font-extrabold text-base sm:text-lg text-navy">Get Your Study Pass</h4>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+                Families and youth study circles receive a unique 6-character pass code or barcode card to connect together.
               </p>
             </div>
 
-            <div className="p-5 rounded-xl bg-cream border border-border/80 flex flex-col gap-2">
-              <div className="text-xs font-bold text-teal">Step 2</div>
-              <h4 className="font-bold text-sm text-navy">Families Scan or Enter</h4>
-              <p className="text-xs text-muted leading-relaxed">
-                Parents download the Teen Bible Adventures app, open family setup, and scan the barcode or enter the 6-character code.
+            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 2</div>
+              <h4 className="font-extrabold text-base sm:text-lg text-navy">Download Mobile App</h4>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+                Parents and teens download the Teen Bible Adventures app for Android or iOS, and scan the pass code.
               </p>
             </div>
 
-            <div className="p-5 rounded-xl bg-cream border border-border/80 flex flex-col gap-2">
-              <div className="text-xs font-bold text-teal">Step 3</div>
-              <h4 className="font-bold text-sm text-navy">Youth Connected</h4>
-              <p className="text-xs text-muted leading-relaxed">
-                Children and teens are linked to your church classes, while parents retain verified oversight of all discipleship activity.
+            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 3</div>
+              <h4 className="font-extrabold text-base sm:text-lg text-navy">Grow in Faith Together</h4>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+                Complete weekly quests, solve creative scripture puzzles, and build lifelong Christian habits.
               </p>
             </div>
           </div>
@@ -396,65 +313,27 @@ export function PublicLandingPage() {
       </section>
 
       {/* Safeguarding Commitment */}
-      <section id="safeguarding" className="py-14 px-4 sm:px-8 bg-cream border-b border-border/60">
+      <section id="safeguarding" className="py-16 px-4 sm:px-8 bg-cream border-b border-border/60">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 rounded-2xl bg-surface border border-border shadow-xs">
-          <div className="h-12 w-12 rounded-2xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
+          <div className="h-14 w-14 rounded-2xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
             <ShieldCheckIcon />
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-bold text-navy">Uncompromising Commitment to Child &amp; Youth Safety</h3>
-            <p className="text-xs text-muted mt-1 leading-relaxed">
-              We adhere strictly to COPPA (US), Age-Appropriate Design Code (UK), and national child safety regulations. Children under 13 cannot create unverified accounts; teen logins remain parent-managed; and pastoral safeguarding reports remain strictly confidential.
+            <h3 className="text-lg sm:text-xl font-extrabold text-navy">Uncompromising Commitment to Teen &amp; Family Safety</h3>
+            <p className="text-sm sm:text-base text-text-2 mt-2 leading-relaxed">
+              We adhere strictly to COPPA (US), Age-Appropriate Design Code (UK), and national child safety regulations. Children under 13 cannot create unverified accounts; teen logins remain parent-managed; and all family safety reports remain strictly confidential.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => navigate('/groups')}
-            className="px-4 py-2 rounded-xl bg-navy hover:bg-teal text-white text-xs font-semibold shrink-0 transition-colors cursor-pointer"
+            onClick={() => navigate('/privacy')}
+            className="px-5 py-3 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-bold shrink-0 transition-colors cursor-pointer shadow-xs"
           >
-            Pastor Safety Console →
+            Safety &amp; Privacy Policy →
           </button>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto bg-navy text-cream py-10 px-4 sm:px-8 text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 border-b border-white/10 pb-8">
-          <div className="flex flex-col gap-1 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <span className="font-bold text-white text-sm">Teen Bible Adventures</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gold font-bold">ASK Hub</span>
-            </div>
-            <p className="text-cream/60 text-[11px]">Empowering churches and families in biblical truth.</p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-6 text-cream/70 font-medium">
-            <button
-              type="button"
-              onClick={() => navigate('/groups')}
-              className="hover:text-gold transition-colors cursor-pointer"
-            >
-              Pastor Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/app/login')}
-              className="hover:text-white transition-colors cursor-pointer"
-            >
-              App Manager Admin
-            </button>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 text-[11px] text-cream/50">
-          <p>&copy; {new Date().getFullYear()} ASK Hub &bull; Teen Bible Adventures. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <span>Jurisdictions: US &bull; GB &bull; NG</span>
-            <span>&bull;</span>
-            <span>Family-Verified Discipleship</span>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }
