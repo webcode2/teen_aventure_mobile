@@ -8,7 +8,7 @@ void main() {
     final document = await loadQuestMapDocument();
     expect(document, contains('<html class="embed"'));
     expect(document, contains('data:image/webp;base64,UklGR'));
-    expect(document, isNot(contains("url('quest_world.webp')")));
+    expect(document, isNot(contains("quest_world_light.webp")));
     expect(document, contains('window.QuestMap='));
     expect(document, isNot(contains('fonts.googleapis.com')));
   });

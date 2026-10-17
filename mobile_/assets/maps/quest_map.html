@@ -1,84 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
+<html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Quest journey</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{color-scheme:dark;--navy:#011f3b;--cream:#fcfefc;--gold:#f4b942;--teal:#159a9c}
-html{background:#073c43;scrollbar-width:none;overflow-x:hidden;overscroll-behavior-y:contain}
-html::-webkit-scrollbar{display:none}
-body{font-family:system-ui,sans-serif;color:var(--cream);background:radial-gradient(ellipse at 50% 0,#13646a,#011f3b);min-height:100vh}
-.world{position:relative;width:100%;max-width:680px;margin-inline:auto;isolation:isolate;background:#176d68;overflow:hidden}
-.scenery{position:absolute;inset:0;pointer-events:none;z-index:-2}
-.world-tile{position:absolute;left:0;right:0;background-image:url('quest_world.webp');background-size:100% 100%;
- mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent)}
-.world:after{content:'';position:absolute;inset:0;pointer-events:none;z-index:-1;background:linear-gradient(90deg,#011f3b44,transparent 23%,transparent 77%,#011f3b44)}
-.hud{position:fixed;z-index:10;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);width:calc(100% - 28px);max-width:440px;
- display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #fcfefc30;border-radius:20px;background:#011f3bf2;box-shadow:0 8px 28px #00172755}
-.hud-copy{min-width:0;flex:1}.eyebrow{display:block;color:#f4d78d;font-size:10px;letter-spacing:1.7px;font-weight:800;text-transform:uppercase}
-h1{font-size:18px;line-height:1.3;letter-spacing:-.4px;margin:3px 0}.status{font-size:12px;color:#d4e8e4;line-height:1.4}
-.return{border:1px solid #ffe6a6;background:linear-gradient(#ffdc80,#f4b942);color:var(--navy);padding:11px 14px;border-radius:13px;
- min-height:44px;font:800 12px/1.3 system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 0 #a87520;flex-shrink:0}
-.return:active{transform:translateY(2px);box-shadow:0 1px 0 #a87520}.return:disabled{opacity:.6;cursor:default}
-.route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.pins{position:absolute;inset:0}.pin{position:absolute;transform:translate(-50%,-50%);width:58px;height:58px;display:grid;place-content:center;gap:1px;
- border:3px solid #d9efe6;border-radius:50%;background:radial-gradient(circle at 30% 15%,#77d6ce,#159a9c 60%,#075861);
- color:#fff;font:800 19px/1 system-ui,sans-serif;text-shadow:0 2px 2px #011f3b55;cursor:pointer;
- box-shadow:inset 0 2px 1px #fff8,0 5px 0 #064549,0 9px 14px #011f3b66;-webkit-tap-highlight-color:transparent}
-.pin:active{translate:0 3px}.pin:focus-visible,.return:focus-visible{outline:3px solid #fff0b6;outline-offset:6px}
-.pin.completed{background:radial-gradient(circle at 30% 15%,#78bd8b,#2f7d5a 65%,#1c4e40);border-color:#bfe1bd}
-.stars{font-size:9px;letter-spacing:1px;color:#ffe49b;text-shadow:none}
-.pin.current{width:68px;height:68px;background:radial-gradient(circle at 30% 15%,#ffe4a1,#f4b942 60%,#b6771b);border-color:#fff1c4;
- color:#011f3b;text-shadow:none;box-shadow:inset 0 3px 1px #fff9,0 6px 0 #8e631f,0 0 0 8px #f4b94224,0 0 35px #f4b94255,0 12px 18px #011f3b77}
-.current-label{position:absolute;bottom:calc(100% + 17px);left:50%;transform:translateX(-50%);white-space:nowrap;color:#011f3b;
- background:#fff2c6;border-radius:8px;padding:6px 10px;font-size:10px;font-weight:900;letter-spacing:1px;box-shadow:0 3px 8px #011f3b33}
-.pin.locked{background:radial-gradient(circle at 30% 15%,#638e8c,#365d66);border-color:#90aeab;color:#e3edeb;box-shadow:inset 0 2px 1px #ffffff44,0 5px 0 #23434b,0 8px 14px #011f3b55}
-.lock{position:absolute;right:-4px;bottom:-3px;border:2px solid #c0d9d1;border-radius:50%;width:21px;height:21px;background:#173d4a;display:grid;place-items:center}
-.checkpoint{position:absolute;right:-8px;top:-9px;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:#f4b942;color:#011f3b;font-size:12px;border:2px solid #fff0bf}
-.firefly{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff1ad;box-shadow:0 0 9px 3px #f4b94255;animation:glimmer 4s ease-in-out infinite alternate;pointer-events:none}
-@keyframes glimmer{from{opacity:.15}to{opacity:.9}}
-.end-note{position:absolute;top:24px;left:18%;right:18%;text-align:center;padding:18px 8px;color:#fff2c6;font-size:12px;line-height:1.5;text-shadow:0 2px 6px #011f3b}
-@media(max-width:359px){.pin{width:50px;height:50px;font-size:17px}.pin.current{width:60px;height:60px}.hud{padding:10px 12px;gap:8px}h1{font-size:16px}.return{padding-inline:10px}}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
-
-/* The camera moves a fixed-size world; HUD and controls stay in the viewport. */
-html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+:root{color-scheme:dark;font-family:system-ui,sans-serif;color:#fcfefc}
+html,body{height:100%;overflow:hidden;background:#17655e;overscroll-behavior:none}
 .camera{position:fixed;inset:0;overflow:hidden;touch-action:none;cursor:grab;outline:none}
-.camera{background:#176d68 url('quest_world.webp') center/cover}
-.camera.dragging{cursor:grabbing}.world{position:absolute;left:0;top:0;width:1000px;max-width:none;margin:0;transform-origin:0 0;will-change:transform}
-.pin{transform:translate(-50%,-50%) scale(var(--pin-scale,1))}
-.camera-tools{position:fixed;right:14px;bottom:max(16px,env(safe-area-inset-bottom));z-index:12;display:flex;flex-direction:column;gap:8px}
-.camera-tools button,.ends button{min-width:44px;min-height:44px;border:1px solid #d5e9de66;border-radius:13px;background:#011f3bf2;color:#fff2c6;font:800 19px system-ui;box-shadow:0 4px 12px #011f3b44;cursor:pointer}
-.camera-tools button:disabled{opacity:.45}.camera-tools button:focus-visible,.ends button:focus-visible{outline:3px solid #f4b942;outline-offset:3px}
-.ends{position:fixed;left:14px;bottom:max(16px,env(safe-area-inset-bottom));z-index:12;display:flex;gap:8px}
-.ends button{font-size:12px;padding:10px 14px}
-.end-note{display:none}
-.world{mask-image:linear-gradient(transparent,#000 240px,#000 calc(100% - 240px),transparent);-webkit-mask-image:linear-gradient(transparent,#000 240px,#000 calc(100% - 240px),transparent)}
-</style>
-</head>
-<body>
-<nav class="hud" aria-label="Quest journey">
- <div class="hud-copy"><span class="eyebrow">Your adventure</span><h1>Follow the light</h1><div class="status" id="status">Loading your quest trail…</div></div>
- <button class="return" id="return" type="button" disabled>My quest</button>
-</nav>
-<div class="camera" id="camera" tabindex="0" role="region" aria-label="Adventure map. Drag to pan; use plus and minus to zoom. Arrow keys move the map.">
-<main class="world" id="world" aria-label="Quest map">
- <div class="scenery" id="scenery" aria-hidden="true"></div>
- <svg class="route" id="route" aria-hidden="true" preserveAspectRatio="none"></svg>
- <div class="pins" id="pins"></div>
- <p class="end-note">Keep growing, one quest at a time.</p>
-</main>
-</div>
-<div class="ends" aria-label="Journey endpoints"><button type="button" id="first">Quest 1</button><button type="button" id="last">Quest 52</button></div>
-<div class="camera-tools" aria-label="Map zoom"><button type="button" id="zoom-in" aria-label="Zoom in">+</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button></div>
+.camera.dragging{cursor:grabbing}
+#scene,.pins{position:absolute;inset:0;width:100%;height:100%}
+#scene{pointer-events:none}.pins{pointer-events:none}
+.hud{position:fixed;top:8px;left:10px;right:10px;max-width:440px;margin:auto;z-index:3;display:flex;align-items:center;gap:10px;padding:8px 10px;background:#011f3b;border:1px solid #52747c;border-radius:14px}
+.hud-copy{flex:1;min-width:0}h1{font-size:15px;line-height:1.3}.status{font-size:12px;line-height:1.4;color:#d5e8e2}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.return{min-height:44px;padding:9px 12px;border:1px solid #ffe7ad;border-radius:10px;background:#f4b942;color:#011f3b;font-size:12px;font-weight:800;flex-shrink:0}
+button:focus-visible,.camera:focus-visible{outline:3px solid #f4b942;outline-offset:3px}
+.pin{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;border:3px solid #d5eee5;border-radius:50%;background:#159a9c;color:#fff;font-size:17px;font-weight:800;pointer-events:auto;box-shadow:0 3px 0 #164b4d;display:grid;place-content:center;gap:1px}
+.pin[hidden]{display:none}.pin.current{width:56px;height:56px;background:#f4b942;border-color:#fff1c4;color:#011f3b;box-shadow:0 3px 0 #8e631f}
+.pin.completed{background:#2f7d5a}.pin.locked{background:#456b70;color:#e5edeb;border-color:#a3b9b3}
+.stars{font-size:8px;color:#ffe49b;letter-spacing:1px}.current-label{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff2c6;border-radius:6px;padding:4px 7px;font-size:9px;color:#011f3b}
+.lock,.checkpoint{position:absolute;right:-4px;top:-5px;width:18px;height:18px;border-radius:6px;display:grid;place-items:center;background:#f4b942;color:#011f3b;font-size:11px;border:1px solid #fff1c4}
+button:disabled{opacity:.5}
+@media(max-width:340px){.hud{top:6px;left:6px;right:6px;padding:6px 8px}h1{font-size:14px}}
+
+.finish-landmark{position:absolute;width:154px;height:142px;transform:translateX(-50%);pointer-events:none;text-align:center;color:#fff2c6}
+.finish-landmark[hidden]{display:none}.finish-landmark svg{display:block;width:142px;height:114px;margin:auto}
+.finish-landmark strong{display:block;background:#011f3b;border:1px solid #f4b942;border-radius:7px;padding:5px 6px;font-size:11px;line-height:16px;letter-spacing:.4px}
+@media(max-height:480px){.finish-landmark{width:130px;height:118px}.finish-landmark svg{width:112px;height:90px}.finish-landmark strong{font-size:10px;padding:3px}}
+</style></head><body>
+<nav class="hud" aria-label="Quest journey"><div class="hud-copy"><h1>Quest journey</h1><div class="status" id="status">Loading your trail…</div></div><button class="return" id="return" type="button" disabled>My quest</button></nav>
+<div class="camera" id="camera" tabindex="0" role="region" aria-label="Adventure map. Drag to pan; pinch to zoom. Arrow keys move the map."><canvas id="scene" aria-hidden="true"></canvas><div class="pins" id="pins" aria-label="Quest levels"></div>
+<div class="finish-landmark" id="finish-landmark" role="img" aria-label="Journey finish: the adventure house at Quest 52" hidden>
+<svg viewBox="0 0 180 140" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="90" cy="128" rx="77" ry="10" fill="#164b4d"/>
+<path d="M20 124V65H160V124Z" fill="#e6d7b8" stroke="#011f3b" stroke-width="3"/>
+<path d="M65 123V47H115V123Z" fill="#fcfefc" stroke="#011f3b" stroke-width="3"/>
+<path d="M10 67L46 36L76 67Z M104 67L135 36L170 67Z" fill="#159a9c" stroke="#011f3b" stroke-width="3" stroke-linejoin="round"/>
+<path d="M54 48L90 12L126 48Z" fill="#159a9c" stroke="#011f3b" stroke-width="3" stroke-linejoin="round"/>
+<path d="M62 46L90 20L118 46" fill="none" stroke="#87d2c6" stroke-width="3"/>
+<path d="M90 12V2M90 2H111L104 8H90" fill="#f4b942" stroke="#f4b942" stroke-width="2"/>
+<path d="M77 124V99A13 13 0 0 1 103 99V124Z" fill="#8a5a38" stroke="#011f3b" stroke-width="2"/>
+<circle cx="97" cy="110" r="2" fill="#f4b942"/>
+<g fill="#f4b942" stroke="#011f3b" stroke-width="2"><rect x="33" y="80" width="17" height="23" rx="5"/><rect x="131" y="80" width="17" height="23" rx="5"/><rect x="81" y="54" width="18" height="22" rx="7"/></g>
+<path d="M41 81V102M132 91H147M139 81V102M34 91H49M90 55V75" stroke="#fff2c6" stroke-width="2"/>
+<path d="M72 126H108L115 135H65Z" fill="#f4b942" stroke="#011f3b" stroke-width="2"/>
+<g fill="#2f7d5a"><circle cx="22" cy="120" r="10"/><circle cx="158" cy="120" r="10"/></g>
+</svg><strong>Journey finish · Quest 52</strong></div></div>
 <script>
 (()=>{
 'use strict';
-const W=1000,MIN_HEIGHT=24000,NS='http://www.w3.org/2000/svg';
-const world=document.getElementById('world'),pins=document.getElementById('pins'),route=document.getElementById('route');
-const scenery=document.getElementById('scenery'),status=document.getElementById('status'),back=document.getElementById('return');
+const W=1000,MIN_HEIGHT=24000;
+const pins=document.getElementById('pins'),status=document.getElementById('status'),back=document.getElementById('return');
 // about:srcdoc reports a null location.origin despite inheriting the parent's
 // security origin. Use the actual embedding origin for the Flutter bridge.
 const parentOrigin=(()=>{
@@ -88,6 +60,81 @@ const parentOrigin=(()=>{
 })();
 let current=null,height=MIN_HEIGHT,levels=[];
 const viewport=document.getElementById('camera');
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d',{alpha:false});
+const finishLandmark=document.getElementById('finish-landmark');
+const memory=typeof navigator==='undefined'?0:(navigator.deviceMemory||0);
+const cores=typeof navigator==='undefined'?0:(navigator.hardwareConcurrency||0);
+const lowPower=(memory>0&&memory<=4)||(cores>0&&cores<=4);
+const artwork=new Image();let frame=null,artEnabled=!(memory>0&&memory<=2),uprightTexture=null;
+artwork.onload=()=>{
+ // Blend the join once on a small cached texture. Never reflect scenery:
+ // trees, lanterns and waterfalls must retain their original orientation.
+ const width=artwork.naturalWidth,height=artwork.naturalHeight;
+ const overlap=Math.round(height/6),period=height-overlap;
+ const tile=document.createElement('canvas');tile.width=width;tile.height=period;
+ const paint=tile.getContext('2d',{alpha:false});
+ paint.drawImage(artwork,0,overlap,width,period,0,0,width,period);
+ for(let row=0;row<overlap;row++){
+  paint.globalAlpha=row/Math.max(1,overlap-1);
+  paint.drawImage(artwork,0,row,width,1,0,period-overlap+row,width,1);
+ }
+ paint.globalAlpha=1;uprightTexture=tile;requestRender();
+};
+artwork.src='quest_world_light.webp';
+function resizeCanvas(){
+ // Bound GPU backing memory to the viewport, independent of map length and zoom.
+ const dpr=Math.min(devicePixelRatio||1,lowPower?1:1.5);
+ canvas.width=Math.max(1,Math.round(viewport.clientWidth*dpr));
+ canvas.height=Math.max(1,Math.round(viewport.clientHeight*dpr));
+ requestRender();
+}
+function requestRender(){
+ if(frame!==null||document.hidden)return;
+ frame=requestAnimationFrame(()=>{frame=null;render();});
+}
+function render(){
+ const vw=viewport.clientWidth,vh=viewport.clientHeight,dpr=canvas.width/Math.max(vw,1),s=camera.scale;
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#17655e';ctx.fillRect(0,0,vw,vh);
+ const top=-camera.y/s,bottom=(vh-camera.y)/s;
+ ctx.save();ctx.translate(camera.x,camera.y);ctx.scale(s,s);
+ if(artEnabled&&uprightTexture){
+  const tileH=W*uprightTexture.height/uprightTexture.width;
+  // The cached texture already blends the seam; drawing is upright and limited
+  // to the viewport, with no masks or per-frame blending work.
+  for(let i=Math.floor(top/tileH);i<=Math.floor(bottom/tileH);i++){
+   ctx.drawImage(uprightTexture,0,i*tileH,W,tileH);
+  }
+ }
+ for(let i=1;i<levels.length;i++){
+  const a=levels[i-1],b=levels[i];
+  if(Math.max(a.y,b.y)<top-100||Math.min(a.y,b.y)>bottom+100)continue;
+  const mid=(a.y+b.y)/2;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x,mid,b.x,mid,b.x,b.y);
+  ctx.lineCap='round';ctx.strokeStyle='#124e51';ctx.lineWidth=48;ctx.stroke();
+  ctx.strokeStyle='#88c8c0';ctx.lineWidth=29;ctx.stroke();
+  if(a.status==='completed'&&(b.status==='completed'||b.status==='current')){ctx.strokeStyle='#f4d789';ctx.lineWidth=6;ctx.stroke();}
+ }
+ ctx.restore();
+ const finish=levels.find(l=>l.id===52);
+ if(finish){
+  const x=camera.x+finish.x*s,y=camera.y+finish.y*s;
+  const offset=vh<=480?174:210;
+  finishLandmark.hidden=x<-90||x>vw+90||y-offset>vh||y-60<0;
+  if(!finishLandmark.hidden){
+   const houseX=Math.max(80,Math.min(vw-80,x));
+   finishLandmark.style.left=houseX+'px';finishLandmark.style.top=(y-offset)+'px';
+   ctx.beginPath();ctx.moveTo(x,y-27);ctx.lineTo(houseX,y-65);
+   ctx.strokeStyle='#f4d789';ctx.lineWidth=4;ctx.lineCap='round';ctx.stroke();
+  }
+ }else finishLandmark.hidden=true;
+ for(let i=0;i<levels.length;i++){
+  const l=levels[i],button=pins.children[i],x=camera.x+l.x*s,y=camera.y+l.y*s;
+  const visible=x>-70&&x<vw+70&&y>-85&&y<vh+85;
+  button.hidden=!visible;
+  if(visible){button.style.left=x+'px';button.style.top=y+'px';}
+ }
+}
+addEventListener('visibilitychange',()=>{if(document.hidden&&frame!==null){cancelAnimationFrame(frame);frame=null;}else if(!document.hidden)requestRender();});
 let camera={x:0,y:0,scale:1},initialized=false,suppressClickUntil=0;
 const pointers=new Map();
 const baseScale=()=>Math.min(viewport.clientWidth,680)/W;
@@ -96,10 +143,7 @@ function drawCamera(){
  // Extra breathing room at BOTH ends keeps levels 1 and 52 clear of the HUD.
  camera.x=W*scale<=vw?(vw-W*scale)/2:Math.max(vw-W*scale,Math.min(0,camera.x));
  camera.y=Math.max(vh-height*scale-vh*.65,Math.min(vh*.65,camera.y));
- world.style.transform=`translate(${camera.x}px,${camera.y}px) scale(${scale})`;
- world.style.setProperty('--pin-scale',1/scale);
- document.getElementById('zoom-in').disabled=scale>=baseScale()*2.8-.001;
- document.getElementById('zoom-out').disabled=scale<=baseScale()*.45+.001;
+ requestRender();
 }
 function zoomTo(scale,x=viewport.clientWidth/2,y=viewport.clientHeight/2){
  const next=Math.max(baseScale()*.45,Math.min(baseScale()*2.8,scale));
@@ -143,57 +187,21 @@ viewport.addEventListener('keydown',event=>{
  if(event.key==='Home'){event.preventDefault();focusLevel(levels[0]?.id,true);}
  if(event.key==='End'){event.preventDefault();focusLevel(levels[levels.length-1]?.id,true);}
 });
-document.getElementById('zoom-in').onclick=()=>zoomTo(camera.scale*1.25);
-document.getElementById('zoom-out').onclick=()=>zoomTo(camera.scale/1.25);
-document.getElementById('first').onclick=()=>focusLevel(levels[0]?.id,true);
-document.getElementById('last').onclick=()=>focusLevel(levels[levels.length-1]?.id,true);
-addEventListener('resize',()=>focusLevel(current,true));
-function svg(tag,attrs,parent){const n=document.createElementNS(NS,tag);for(const [key,value]of Object.entries(attrs))n.setAttribute(key,value);parent.appendChild(n);return n;}
-function background(){
- scenery.replaceChildren();
- // Overlapping, feathered paintings share one continuous ground; no hard tile edges.
- const tileHeight=1500,step=tileHeight*.8;
- for(let y=-tileHeight*.1;y<height;y+=step){
-  const tile=document.createElement('div');tile.className='world-tile';tile.style.top=y/height*100+'%';tile.style.height=tileHeight/height*100+'%';scenery.appendChild(tile);
- }
- for(let i=0;i<Math.ceil(height/160);i++){
-  const light=document.createElement('i');light.className='firefly';light.style.left=(8+(i*37)%84)+'%';light.style.top=(i*157%height)/height*100+'%';light.style.animationDelay=-(i%7)+'s';scenery.appendChild(light);
- }
-}
+addEventListener('resize',()=>{resizeCanvas();focusLevel(current,true);});
 function scrollToLevel(id){focusLevel(id,true);}
 function notify(id){
  try{window.flutter_inappwebview?.callHandler('openLevel',id);}catch(_){}
  try{parent.postMessage({source:'quest-map',type:'openLevel',id},parentOrigin==='null'?'*':parentOrigin);}catch(_){}
 }
-function curve(points){
- if(!points.length)return '';
- let d='M'+points[0].x+' '+points[0].y;
- for(let i=1;i<points.length;i++){
-  const a=points[i-1],b=points[i],mid=(a.y+b.y)/2;
-  d+=' C'+a.x+' '+mid+' '+b.x+' '+mid+' '+b.x+' '+b.y;
- }
- return d;
-}
 function setLevels(input){
  if(!Array.isArray(input))return;
  levels=input.filter(l=>Number.isInteger(l.id)&&Number.isFinite(l.x)&&Number.isFinite(l.y));
  height=Math.max(MIN_HEIGHT,...levels.map(l=>l.y+600));
- world.style.height=height+'px';
- route.setAttribute('viewBox','0 0 '+W+' '+height);route.replaceChildren();pins.replaceChildren();background();
- const defs=svg('defs',{},route),glow=svg('filter',{id:'glow',x:'-100%',y:'-10%',width:'300%',height:'120%'},defs);
- svg('feGaussianBlur',{stdDeviation:9},glow);
- const d=curve(levels);
- svg('path',{d,fill:'none',stroke:'#011f3b', 'stroke-width':64,'stroke-linecap':'round',opacity:.45},route);
- svg('path',{d,fill:'none',stroke:'#4ca7ab','stroke-width':42,'stroke-linecap':'round'},route);
- svg('path',{d,fill:'none',stroke:'#a3dfd8','stroke-width':29,'stroke-linecap':'round',opacity:.45},route);
- svg('path',{d,fill:'none',stroke:'#d9efe3','stroke-width':22,'stroke-dasharray':'2 15','stroke-linecap':'butt',opacity:.5},route);
- const finished=levels.filter(l=>l.status==='completed'||l.status==='current');
- svg('path',{d:curve(finished),fill:'none',stroke:'#f4b942','stroke-width':14,filter:'url(#glow)',opacity:.65},route);
- svg('path',{d:curve(finished),fill:'none',stroke:'#ffdf88','stroke-width':5,'stroke-linecap':'round',opacity:.85},route);
+ pins.replaceChildren();
  for(const l of levels){
   const b=document.createElement('button');b.type='button';b.className='pin '+(['current','completed','locked'].includes(l.status)?l.status:'unlocked');
-  b.dataset.id=String(l.id);b.style.left=Math.max(12,Math.min(88,l.x/W*100))+'%';b.style.top=l.y/height*100+'%';
-  b.setAttribute('aria-label','Quest '+l.id+', '+l.status+(l.checkpoint?', checkpoint':''));
+  b.dataset.id=String(l.id);
+  b.setAttribute('aria-label','Quest '+l.id+(l.id===52?', journey finish':'')+', '+l.status+(l.checkpoint?', checkpoint':''));
   const number=document.createElement('span');number.textContent=l.id;b.appendChild(number);
   if(l.status==='completed'){const stars=document.createElement('small');stars.className='stars';stars.textContent='★'.repeat(Math.max(0,Math.min(3,l.stars|0)));b.appendChild(stars);}
   if(l.status==='current'){const label=document.createElement('span');label.className='current-label';label.textContent='YOU ARE HERE';b.appendChild(label);}
@@ -204,13 +212,10 @@ function setLevels(input){
  const active=levels.find(l=>l.status==='current');
  if(active)current=active.id;
  back.disabled=!levels.length;
- document.getElementById('first').disabled=!levels.length;
- document.getElementById('last').disabled=!levels.length;
- document.getElementById('last').textContent='Quest '+(levels[levels.length-1]?.id??52);
  if(!initialized&&levels.length)focusLevel(current??levels[0].id,true);else drawCamera();
- status.textContent=levels.length?'Quest '+(current??levels[levels.length-1].id)+' · '+levels.length+' levels to explore':'Your quest trail is being prepared';
+ status.textContent=levels.length?'Quest '+(current??levels[levels.length-1].id)+' of '+levels.length:'Your quest trail is being prepared';
 }
-window.QuestMap={setLevels,reveal(id){if(!Number.isInteger(id))return;current=id;scrollToLevel(id,false);if(levels.length)status.textContent='Quest '+id+' · '+levels.length+' levels to explore';}};
+window.QuestMap={setLevels,reveal(id){if(!Number.isInteger(id))return;current=id;scrollToLevel(id,false);if(levels.length)status.textContent='Quest '+id+' of '+levels.length;}};
 back.onclick=()=>scrollToLevel(current,true);
 addEventListener('message',event=>{
  if(event.source!==parent)return;
@@ -220,9 +225,7 @@ addEventListener('message',event=>{
  if(data.type==='setLevels')setLevels(data.levels);
  if(data.type==='reveal')window.QuestMap.reveal(data.id);
 });
-world.style.height=height+'px';
+resizeCanvas();
 try{parent.postMessage({source:'quest-map',type:'ready'},parentOrigin==='null'?'*':parentOrigin);}catch(_){}
 })();
-</script>
-</body>
-</html>
+</script></body></html>
