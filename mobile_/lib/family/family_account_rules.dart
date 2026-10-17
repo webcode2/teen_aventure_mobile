@@ -1,14 +1,28 @@
 enum ExplorerAgeKind { child, teen }
 
 /// Product ages: 0–14 child, 15+ teen. Reject nonsense values.
+const explorerAgeHint = 'Enter an age from 0 to 19. Ages 20+ need their own adult account.';
+
+/// Ages 20+ are adults and need their own account, so they are not explorers.
 ExplorerAgeKind? explorerKindFromAge(int age) {
-  if (age < 0 || age > 25) return null;
+  if (age < 0 || age >= 20) return null;
   if (age <= 14) return ExplorerAgeKind.child;
   return ExplorerAgeKind.teen;
 }
 
 bool canCreateOwnedFamily(String? familyId) {
   return familyId == null || familyId.isEmpty;
+}
+
+/// Only adult app accounts create custom groups. Standalone teens join only.
+bool canCreateGroupsRule({
+  required bool isAdult,
+  String? platformRole,
+  bool needsBirthYear = false,
+}) {
+  if (!isAdult || needsBirthYear) return false;
+  if (platformRole == 'CHILD') return false;
+  return true;
 }
 
 bool canIndependentlyAcceptInvite({required bool isUnderAgeExplorer}) {

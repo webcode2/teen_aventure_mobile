@@ -66,11 +66,16 @@ class PuzzleEpisode {
   });
 }
 
+/// Backend-owned quiz item types (`MULTIPLE_CHOICE` | `FILL_BLANK`).
+enum QuizItemType { multipleChoice, fillBlank }
+
 class QuizQuestion {
   final String id;
+  final QuizItemType type;
   final String question;
   final List<String> options;
   final int answerIndex;
+  final List<String> acceptedAnswers;
   final int points;
   final String? explanation;
   final String? verseReference;
@@ -80,8 +85,24 @@ class QuizQuestion {
     required this.question,
     required this.options,
     required this.answerIndex,
+    this.type = QuizItemType.multipleChoice,
+    this.acceptedAnswers = const [],
     this.points = 5,
     this.explanation,
     this.verseReference,
   });
+
+  bool get isFillBlank => type == QuizItemType.fillBlank;
+
+  bool matchesFillBlank(String raw) {
+    final given = _normalizeFillBlank(raw);
+    if (given.isEmpty) return false;
+    for (final answer in acceptedAnswers) {
+      if (_normalizeFillBlank(answer) == given) return true;
+    }
+    return false;
+  }
+
+  static String _normalizeFillBlank(String raw) =>
+      raw.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }

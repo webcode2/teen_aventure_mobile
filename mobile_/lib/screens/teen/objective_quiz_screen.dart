@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../data/episodes.dart';
 import '../../models/game_controller.dart';
 import '../../models/puzzle.dart';
 import '../../theme.dart';
@@ -14,12 +13,17 @@ class ObjectiveQuizScreen extends StatefulWidget {
     this.questionsOverride,
     this.onSubmitLive,
     this.levelId,
+    this.alreadyCompleted = false,
   });
 
   final bool embedded;
+  /// Week quiz from the API. Empty list shows an unavailable state (no bundled sample quiz).
   final List<QuizQuestion>? questionsOverride;
-  final Future<void> Function(List<int> answers)? onSubmitLive;
+  /// Multiple-choice answers are ints; fill-in-the-blank answers are strings.
+  final Future<void> Function(List<Object> answers)? onSubmitLive;
   final int? levelId;
+  /// True when this week's quiz was already finished — practice only, no points.
+  final bool alreadyCompleted;
 
   @override
   State<ObjectiveQuizScreen> createState() => _ObjectiveQuizScreenState();
@@ -29,33 +33,74 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   late List<QuizQuestion> questions;
   int currentIndex = 0;
   int? selectedOption;
+  String fillBlankText = '';
   int score = 0;
   bool isSubmitted = false;
-  final List<int?> _answers = [];
+  final List<Object?> _answers = [];
+  late final TextEditingController _fillBlankController;
 
   @override
   void initState() {
     super.initState();
-    questions = widget.questionsOverride ?? SampleEpisodes.sampleQuiz;
-    _answers.addAll(List<int?>.filled(questions.length, null));
+    questions = widget.questionsOverride ?? const [];
+    _answers.addAll(List<Object?>.filled(questions.length, null));
+    _fillBlankController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _fillBlankController.dispose();
+    super.dispose();
   }
 
   QuizQuestion get current => questions[currentIndex];
-  bool get isCorrect => selectedOption == current.answerIndex;
+  bool get isFillBlank => current.isFillBlank;
+  bool get isCorrect {
+    if (isFillBlank) return current.matchesFillBlank(fillBlankText);
+    return selectedOption == current.answerIndex;
+  }
+
+  bool get canCheck {
+    if (isFillBlank) return fillBlankText.trim().isNotEmpty;
+    return selectedOption != null;
+  }
+
   bool get isLast => currentIndex >= questions.length - 1;
   double get quizProgress =>
       ((currentIndex + (isSubmitted ? 1 : 0)) / questions.length).clamp(0.0, 1.0);
 
   void _selectOption(int i) {
-    if (isSubmitted) return;
+    if (isSubmitted || isFillBlank) return;
     setState(() => selectedOption = i);
   }
 
+  void _restoreAnswerForIndex(int index) {
+    final saved = _answers[index];
+    if (questions[index].isFillBlank) {
+      fillBlankText = saved is String ? saved : '';
+      _fillBlankController.text = fillBlankText;
+      selectedOption = null;
+    } else {
+      selectedOption = saved is int ? saved : null;
+      fillBlankText = '';
+      _fillBlankController.clear();
+    }
+    isSubmitted = saved != null;
+  }
+
   void _checkAnswer() {
-    if (selectedOption == null || isSubmitted) return;
-    _answers[currentIndex] = selectedOption;
-    if (selectedOption == current.answerIndex) {
-      score += current.points;
+    if (!canCheck || isSubmitted) return;
+    if (isFillBlank) {
+      final typed = fillBlankText.trim();
+      _answers[currentIndex] = typed;
+      if (!widget.alreadyCompleted && current.matchesFillBlank(typed)) {
+        score += current.points;
+      }
+    } else {
+      _answers[currentIndex] = selectedOption;
+      if (!widget.alreadyCompleted && selectedOption == current.answerIndex) {
+        score += current.points;
+      }
     }
     setState(() => isSubmitted = true);
   }
@@ -64,8 +109,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
     if (currentIndex <= 0) return;
     setState(() {
       currentIndex--;
-      selectedOption = _answers[currentIndex];
-      isSubmitted = _answers[currentIndex] != null;
+      _restoreAnswerForIndex(currentIndex);
     });
   }
 
@@ -77,8 +121,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
     if (!isLast) {
       setState(() {
         currentIndex++;
-        selectedOption = _answers[currentIndex];
-        isSubmitted = _answers[currentIndex] != null;
+        _restoreAnswerForIndex(currentIndex);
       });
       return;
     }
@@ -86,8 +129,9 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   }
 
   Future<void> _showQuizResults() async {
-    final answers = [
-      for (var i = 0; i < _answers.length; i++) _answers[i] ?? 0,
+    final answers = <Object>[
+      for (var i = 0; i < _answers.length; i++)
+        _answers[i] ?? (questions[i].isFillBlank ? '' : 0),
     ];
     if (widget.onSubmitLive != null) {
       try {
@@ -101,9 +145,12 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
       }
     }
     if (!mounted) return;
-    try {
-      context.read<GameController>().completeWeekQuiz();
-    } catch (_) {}
+    if (!widget.alreadyCompleted) {
+      try {
+        context.read<GameController>().completeWeekQuiz();
+      } catch (_) {}
+    }
+    final practice = widget.alreadyCompleted;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -123,17 +170,17 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                 color: AppColors.gold.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.emoji_events_rounded,
+              child: Icon(
+                practice ? Icons.check_circle_rounded : Icons.emoji_events_rounded,
                 color: AppColors.gold,
                 size: 52,
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Quest Complete!',
+            Text(
+              practice ? 'Practice complete' : 'Quiz finished!',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 20,
                 color: AppColors.navy,
@@ -142,7 +189,9 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Great work. You earned +$score points.',
+              practice
+                  ? 'Nice review. No new points this time.'
+                  : 'Great work. You earned +$score points.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
@@ -163,6 +212,8 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                 setState(() {
                   currentIndex = 0;
                   selectedOption = null;
+                  fillBlankText = '';
+                  _fillBlankController.clear();
                   isSubmitted = false;
                   score = 0;
                   for (var i = 0; i < _answers.length; i++) {
@@ -192,6 +243,34 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (questions.isEmpty) {
+      final empty = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Quiz questions are not available for this week yet.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.navy.withValues(alpha: 0.75),
+              fontSize: 15,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+      if (widget.embedded) return empty;
+      return Scaffold(
+        backgroundColor: AppColors.cream,
+        appBar: AppBar(
+          backgroundColor: AppColors.cream,
+          foregroundColor: AppColors.navy,
+          elevation: 0,
+        ),
+        body: empty,
+      );
+    }
+
     final verse = current.verseReference?.trim();
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -275,14 +354,43 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                         ),
                       ),
                       const SizedBox(height: 28),
-                      for (var i = 0; i < current.options.length; i++) ...[
-                        if (i > 0) const SizedBox(height: 12),
-                        _AnswerTile(
-                          letter: String.fromCharCode(65 + i),
-                          text: current.options[i],
-                          state: _answerState(i),
-                          onTap: () => _selectOption(i),
+                      if (isFillBlank) ...[
+                        TextField(
+                          controller: _fillBlankController,
+                          enabled: !isSubmitted,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            hintText: 'Type your answer',
+                            filled: true,
+                            fillColor: AppColors.cream,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
+                            ),
+                          ),
+                          onChanged: (value) => setState(() => fillBlankText = value),
+                          onSubmitted: (_) {
+                            if (!isSubmitted && canCheck) _checkAnswer();
+                          },
                         ),
+                      ] else ...[
+                        for (var i = 0; i < current.options.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 12),
+                          _AnswerTile(
+                            letter: String.fromCharCode(65 + i),
+                            text: current.options[i],
+                            state: _answerState(i),
+                            onTap: () => _selectOption(i),
+                          ),
+                        ],
                       ],
                       if (isSubmitted) ...[
                         const SizedBox(height: 24),
@@ -295,9 +403,9 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                 _QuizFooter(
                   canGoPrevious: currentIndex > 0,
                   primaryLabel: !isSubmitted
-                      ? (selectedOption == null ? 'Select an answer' : 'Check')
+                      ? (canCheck ? 'Check' : (isFillBlank ? 'Type an answer' : 'Select an answer'))
                       : (isLast ? 'See results' : 'Next'),
-                  primaryEnabled: isSubmitted || selectedOption != null,
+                  primaryEnabled: isSubmitted || canCheck,
                   onPrevious: _previous,
                   onPrimary: _next,
                 ),
@@ -497,6 +605,13 @@ class _AnswerFeedback extends StatelessWidget {
             correct ? 'Correct' : 'Not quite',
             style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15),
           ),
+          if (!correct && question.isFillBlank && question.acceptedAnswers.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Accepted: ${question.acceptedAnswers.first}',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            ),
+          ],
           if (question.explanation != null) ...[
             const SizedBox(height: 6),
             Text(

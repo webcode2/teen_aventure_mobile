@@ -5,7 +5,6 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../adventure_assets.dart';
 import '../data/level_map_data.dart';
@@ -44,30 +43,35 @@ class _QuestMapViewState extends State<QuestMapView> {
         ..style.border = 'none'
         ..style.width = '100%'
         ..style.height = '100%'
-        ..style.backgroundColor = '#B9E6F4';
+        ..style.backgroundColor = '#073C43';
       _loads = iframe.onLoad.listen((_) {
         if (!mounted) return;
         _ready = true;
         _push(levels: true, reveal: true);
       });
       _iframe = iframe;
-      unawaited(_loadHtml());
+      // Serve the bundled document over the app's HTTP origin. about:srcdoc
+      // cannot be resolved by Flutter web's async stack-frame debugger.
+      iframe.src = Uri.base
+          .resolve('assets/${AdventureAssets.questMap}')
+          .replace(queryParameters: {'embed': '1'})
+          .toString();
       return iframe;
     });
     _messages = html.window.onMessage.listen(_onMessage);
   }
 
-  Future<void> _loadHtml() async {
-    final raw = await rootBundle.loadString(AdventureAssets.questMap);
-    if (!mounted) return;
-    _iframe?.srcdoc = raw.replaceFirst('<html', '<html class="embed"');
-  }
-
   void _onMessage(html.MessageEvent event) {
-    if (event.origin != _origin && event.origin != 'null') return;
+    if (event.origin != _origin) return;
     final data = _readMessage(event.data);
     if (data == null) return;
-    if (data['source'] != 'quest-map' || data['type'] != 'openLevel') return;
+    if (data['source'] != 'quest-map') return;
+    if (data['type'] == 'ready') {
+      _ready = true;
+      _push(levels: true, reveal: true);
+      return;
+    }
+    if (data['type'] != 'openLevel') return;
     final id = _asInt(data['id']);
     if (id != null && mounted) widget.onOpenLevel(id);
   }
@@ -130,7 +134,7 @@ class _QuestMapViewState extends State<QuestMapView> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFFB9E6F4),
+      color: const Color(0xFF073C43),
       child: HtmlElementView(viewType: _viewType),
     );
   }

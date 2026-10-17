@@ -232,23 +232,43 @@ function compileLayout(doc: LayoutEnvelope): CompileResult {
  * Compile WIP (CHAIN | LAYOUT) → canonical CROSSWORD.
  * Chain docs resolve to absolute coordinates; numbering is recomputed by position.
  */
+function schemaIssues(error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey> }> }): CompileResult {
+  return {
+    ok: false,
+    issues: error.issues.map((issue) => ({
+      code: 'SCHEMA' as const,
+      message: issue.message,
+      path: issue.path.filter((p): p is string | number => typeof p === 'string' || typeof p === 'number'),
+    })),
+  };
+}
+
 export function compile(input: unknown): CompileResult {
+  const type =
+    input && typeof input === 'object' && typeof (input as { type?: unknown }).type === 'string'
+      ? (input as { type: string }).type
+      : undefined;
+
+  // A placed grid is LAYOUT. Don't report it as a failed CHAIN (that surfaces
+  // "expected CHAIN" / unrecognized "entries" when a clue or ref is missing).
+  if (type === 'LAYOUT') {
+    const parsed = layoutEnvelopeSchema.safeParse(input);
+    if (!parsed.success) return schemaIssues(parsed.error);
+    return compileLayout(parsed.data);
+  }
+  if (type === 'CHAIN') {
+    const parsed = chainEnvelopeSchema.safeParse(input);
+    if (!parsed.success) return schemaIssues(parsed.error);
+    return compileChain(parsed.data);
+  }
+
   const asChain = chainEnvelopeSchema.safeParse(input);
   if (asChain.success) return compileChain(asChain.data);
 
   const asLayout = layoutEnvelopeSchema.safeParse(input);
   if (asLayout.success) return compileLayout(asLayout.data);
 
-  if (asChain.error) {
-    return {
-      ok: false,
-      issues: asChain.error.issues.map((issue) => ({
-        code: 'SCHEMA' as const,
-        message: issue.message,
-        path: issue.path.filter((p): p is string | number => typeof p === 'string' || typeof p === 'number'),
-      })),
-    };
-  }
+  if (asChain.error) return schemaIssues(asChain.error);
 
   return {
     ok: false,

@@ -30,16 +30,23 @@ const knownQuestMilestones = [
   ),
 ];
 
-QuestMilestone latestMilestone(int weeksCompleted) {
-  QuestMilestone latest = knownQuestMilestones.first;
-  for (final row in knownQuestMilestones) {
+List<QuestMilestone> milestonesOrFallback(List<QuestMilestone>? milestones) {
+  if (milestones == null || milestones.isEmpty) return knownQuestMilestones;
+  final rows = [...milestones]..sort((a, b) => a.weekComplete.compareTo(b.weekComplete));
+  return rows;
+}
+
+/// The badge already earned. A new explorer has none until the first level's weeks are finished.
+QuestMilestone? latestMilestone(int weeksCompleted, [List<QuestMilestone>? milestones]) {
+  QuestMilestone? latest;
+  for (final row in milestonesOrFallback(milestones)) {
     if (weeksCompleted >= row.weekComplete) latest = row;
   }
   return latest;
 }
 
-QuestMilestone? nextMilestone(int weeksCompleted) {
-  for (final row in knownQuestMilestones) {
+QuestMilestone? nextMilestone(int weeksCompleted, [List<QuestMilestone>? milestones]) {
+  for (final row in milestonesOrFallback(milestones)) {
     if (weeksCompleted < row.weekComplete) return row;
   }
   return null;
@@ -67,7 +74,9 @@ String nextBigWinLine({
 }
 
 String profileMilestoneLine({required String name, required int weeksCompleted}) {
-  return '$name, ${latestMilestone(weeksCompleted).title}';
+  final title = latestMilestone(weeksCompleted)?.title;
+  if (title == null) return name;
+  return '$name, $title';
 }
 
 String milestoneBrief({
@@ -75,7 +84,19 @@ String milestoneBrief({
   required int sessionsDone,
   int sessionsTotal = 5,
 }) {
-  final criteria = latestMilestone(weeksCompleted).criteria;
+  final earned = latestMilestone(weeksCompleted);
+  if (earned == null) {
+    final goal = nextMilestone(weeksCompleted)?.title ?? 'your first badge';
+    if (sessionsDone <= 0) {
+      return 'No badge yet. Finish this week’s activities to earn $goal.';
+    }
+    if (sessionsDone >= sessionsTotal) {
+      return 'This week is sealed. $goal unlocks when its weeks are finished.';
+    }
+    final left = sessionsTotal - sessionsDone;
+    return 'No badge yet. $left session${left == 1 ? '' : 's'} left this week toward $goal.';
+  }
+  final criteria = earned.criteria;
   if (sessionsDone >= sessionsTotal) {
     return '$criteria. This week is sealed — well done, Explorer!';
   }

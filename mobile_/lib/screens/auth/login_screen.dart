@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
-import '../shared/widgets/demo_account_actions.dart';
 import '../shared/widgets/double_back_exit.dart';
 import 'auth_chrome.dart';
 import 'register_adult_screen.dart';
@@ -69,46 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _demoLogin() async {
-    final auth = _auth;
-    if (auth == null) {
-      widget.onAuthenticated?.call();
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      await auth.loginDemoParent();
-      if (!mounted) return;
-      await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
-    } on ApiException catch (e) {
-      setState(() => _formError = e.message);
-    } catch (e) {
-      setState(() => _formError = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _demoTeenSolo() async {
-    final auth = _auth;
-    if (auth == null) {
-      widget.onAuthenticated?.call();
-      return;
-    }
-    setState(() => _busy = true);
-    try {
-      await auth.loginDemoTeenSolo();
-      if (!mounted) return;
-      await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
-    } on ApiException catch (e) {
-      setState(() => _formError = e.message);
-    } catch (e) {
-      setState(() => _formError = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return DoubleBackExit(
@@ -160,18 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               child: const Text('Create account'),
-            ),
-            DemoAccountActions(
-              label: 'Account 1 — Adult with family',
-              hint: 'Pat Peterson + teen subaccounts',
-              enabled: !_busy,
-              onUse: _demoLogin,
-            ),
-            DemoAccountActions(
-              label: 'Account 2 — Teen (solo)',
-              hint: 'Riley · no subaccounts attached',
-              enabled: !_busy,
-              onUse: _demoTeenSolo,
             ),
           ],
         ),

@@ -1,38 +1,23 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
-import { PageHeader, Alert, Spinner } from './ui';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Alert, Button } from './ui';
 import { api, ApiError } from './api';
 import {
   emptyDoc,
   initialState,
+  studioHistoryShortcut,
   studioReducer,
   type StudioDoc,
   type StudioStep,
 } from './studio/doc-store';
+import { compile } from '@askhub/puzzle-contracts';
+import { studioDocFromEnvelope, toPublishDoc, withPlacedCoordinates } from './studio/place-doc';
 import { useDebouncedDraftAutosave } from './studio/use-debounced-autosave';
 import { WordListEditor } from './studio/WordListEditor';
 import { PuzzleCanvas } from './studio/PuzzleCanvas';
 import { IssuesPanel } from './studio/IssuesPanel';
 
-type DraftMeta = { id: string; title: string; version: number; updatedAt: string };
-
-type StagedMeta = {
-  id: string;
-  puzzleId?: string;
-  puzzleKey: string;
-  version: number;
-  status: string;
-  title: string;
-  solvedAt?: string | null;
-};
-
-type QuestWeek = {
-  id: string;
-  weekNumber: number;
-  title: string;
-  scripture?: string;
-};
-
-/** Persist week as `Week N` so publish + mobile can auto-link quest video/quiz. */
+/** Used by quest list helpers that still parse week from older puzzle titles. */
 export function weekTitle(weekNumber: number): string {
   return `Week ${weekNumber}`;
 }
@@ -43,75 +28,85 @@ export function parseWeekNumber(title: string): number | null {
 }
 
 export function PuzzlesStudioPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
+  const editPuzzle = searchParams.get('editPuzzle');
+  const openDraftId = searchParams.get('draft');
+  const openVersionId = searchParams.get('version');
+  const startNew = searchParams.get('new') === '1';
+  const seedTitle = searchParams.get('title')?.trim() || '';
+  const openedEditPuzzle = useRef<string | null>(null);
+  const openedDraft = useRef<string | null>(null);
+  const openedVersion = useRef<string | null>(null);
+  const startedNew = useRef(false);
   const [state, dispatch] = useReducer(studioReducer, undefined, () => initialState());
-  const [drafts, setDrafts] = useState<DraftMeta[]>([]);
-  const [staged, setStaged] = useState<StagedMeta[]>([]);
-  const [loadingList, setLoadingList] = useState(true);
-  const [listError, setListError] = useState('');
+  const [openError, setOpenError] = useState('');
   const [highlight, setHighlight] = useState<{ row: number; col: number } | null>(null);
   const [publishError, setPublishError] = useState('');
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishVersion, setPublishVersion] = useState<number | null>(null);
-  const [showLibrary, setShowLibrary] = useState(false);
-  const [questWeeks, setQuestWeeks] = useState<QuestWeek[]>([]);
-
-  const refreshDrafts = useCallback((opts?: { quiet?: boolean }) => {
-    const quiet = opts?.quiet ?? false;
-    if (!quiet) setLoadingList(true);
-    Promise.all([
-      api<DraftMeta[]>('/api/puzzle-drafts'),
-      api<{ versions: StagedMeta[] }>('/api/puzzles').catch(() => ({ versions: [] as StagedMeta[] })),
-    ])
-      .then(([d, p]) => {
-        setListError('');
-        setDrafts(d);
-        setStaged(p.versions.filter((v) => v.status === 'STAGED' || v.status === 'LIVE'));
-      })
-      .catch((e: Error) => {
-        // Keep prior list; only surface error when the library panel is open.
-        setListError(e.message);
-      })
-      .finally(() => {
-        if (!quiet) setLoadingList(false);
-      });
-  }, []);
+  const [nextPublishVersion, setNextPublishVersion] = useState<number | null>(null);
+  const [editingLive, setEditingLive] = useState(false);
+  const [draftsPaused, setDraftsPaused] = useState(false);
+  const discardDraftSaves = useRef(false);
+  const draftHold = useRef(false);
+  const pausedVersion = useRef<number | null>(null);
 
   useEffect(() => {
-    // Initial load only — quiet thereafter so failed polls never flash the canvas.
-    refreshDrafts({ quiet: false });
-  }, [refreshDrafts]);
+    if (!draftsPaused) return;
+    if (pausedVersion.current == null) {
+      pausedVersion.current = state.version;
+      return;
+    }
+    if (state.version !== pausedVersion.current) {
+      pausedVersion.current = null;
+      discardDraftSaves.current = false;
+      draftHold.current = false;
+      setDraftsPaused(false);
+    }
+  }, [draftsPaused, state.version]);
 
   useEffect(() => {
-    api<QuestWeek[]>('/api/teen-quest/weeks')
-      .then(setQuestWeeks)
-      .catch(() => setQuestWeeks([]));
+    const onKey = (e: KeyboardEvent) => {
+      const shortcut = studioHistoryShortcut(e);
+      if (!shortcut) return;
+      e.preventDefault();
+      dispatch({ type: shortcut });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   const onDraftId = useCallback((id: string) => {
+    if (discardDraftSaves.current) {
+      void api(`/api/puzzle-drafts/${id}`, { method: 'DELETE' }).catch(() => {});
+      return;
+    }
     dispatch({ type: 'setDraftId', id });
-    // Refresh library quietly later — avoid flashing the main canvas.
-    window.setTimeout(() => refreshDrafts({ quiet: true }), 2000);
-  }, [refreshDrafts]);
+  }, []);
 
   const { status: saveStatus, error: saveError, conflict, clearConflict } = useDebouncedDraftAutosave({
     draftId: state.draftId,
     version: state.version,
     doc: state.present,
+    enabled: !draftsPaused,
+    holdRef: draftHold,
     onDraftId,
+    onDroppedEmpty: () => dispatch({ type: 'dropEmpty' }),
   });
 
-  const selectedWeek = parseWeekNumber(state.present.title);
-  const linkedWeek = questWeeks.find((w) => w.weekNumber === selectedWeek) ?? null;
-
-  function setWeekNumber(weekNumber: number) {
-    const week = questWeeks.find((w) => w.weekNumber === weekNumber);
-    dispatch({
-      type: 'setMeta',
-      title: weekTitle(weekNumber),
-      // Prefer the quest week's scripture when linking a new week.
-      scripture: week?.scripture?.trim() || state.present.scripture,
-    });
-  }
+  // Quest “Create new puzzle” → blank draft (optionally titled from the week).
+  useEffect(() => {
+    if (!startNew || editPuzzle || openDraftId || openVersionId || startedNew.current) return;
+    startedNew.current = true;
+    const title = seedTitle || 'Untitled puzzle';
+    dispatch({ type: 'replace', doc: emptyDoc(title), draftId: null, version: 1 });
+    setPublishVersion(null);
+    setNextPublishVersion(null);
+    setEditingLive(false);
+    clearConflict();
+  }, [startNew, editPuzzle, openDraftId, openVersionId, seedTitle, clearConflict]);
 
   function addStep() {
     const step: StudioStep = {
@@ -126,7 +121,6 @@ export function PuzzlesStudioPage() {
   }
 
   function startWordAt(row: number, col: number) {
-    // Reuse selected empty unplaced word if present; otherwise create one.
     const reuse = state.present.data.steps.find(
       (s) => s.id === state.selectedStepId && !s.answer.trim() && (s.row == null || s.col == null),
     );
@@ -148,28 +142,95 @@ export function PuzzlesStudioPage() {
     dispatch({ type: 'select', id: step.id });
   }
 
+  function loadOnGrid(doc: StudioDoc, draftId: string | null, version: number) {
+    const placed = withPlacedCoordinates(doc);
+    const first = placed.data.steps[0];
+    dispatch({
+      type: 'replace',
+      doc: placed,
+      draftId,
+      version,
+    });
+    if (first) dispatch({ type: 'select', id: first.id });
+    setPublishVersion(null);
+    clearConflict();
+  }
+
   async function openDraft(id: string) {
     try {
       const row = await api<{ id: string; version: number; doc: StudioDoc }>(
         `/api/puzzle-drafts/${id}`,
       );
-      dispatch({
-        type: 'replace',
-        doc: row.doc,
-        draftId: row.id,
-        version: row.version,
-      });
-      setPublishVersion(null);
-      clearConflict();
-      setShowLibrary(false);
+      setOpenError('');
+      setNextPublishVersion(null);
+      setEditingLive(false);
+      loadOnGrid(row.doc, row.id, row.version);
     } catch (e) {
-      setListError(e instanceof Error ? e.message : 'Failed to open draft');
+      setOpenError(e instanceof Error ? e.message : 'Failed to open draft');
     }
   }
+
+  async function openLivePuzzle(puzzleId: string) {
+    try {
+      const row = await api<{ id: string; version: number; status: string; title: string; doc: unknown }>(
+        `/api/puzzles/id/${puzzleId}/live`,
+      );
+      const doc = studioDocFromEnvelope(row.doc);
+      if (!doc) {
+        setOpenError('This puzzle has no grid to edit.');
+        return;
+      }
+      setOpenError('');
+      setNextPublishVersion(row.version + 1);
+      setEditingLive(row.status === 'LIVE');
+      loadOnGrid(doc, null, 1);
+    } catch (e) {
+      setOpenError(e instanceof Error ? e.message : 'Failed to open puzzle');
+    }
+  }
+
+  async function openPublished(versionId: string) {
+    try {
+      const row = await api<{ id: string; version: number; status: string; title: string; doc: unknown }>(
+        `/api/puzzles/versions/${versionId}`,
+      );
+      const doc = studioDocFromEnvelope(row.doc);
+      if (!doc) {
+        setOpenError('This published puzzle has no grid to edit.');
+        return;
+      }
+      setOpenError('');
+      setNextPublishVersion(row.version + 1);
+      setEditingLive(row.status === 'LIVE');
+      loadOnGrid(doc, null, 1);
+    } catch (e) {
+      setOpenError(e instanceof Error ? e.message : 'Failed to open puzzle');
+    }
+  }
+
+  useEffect(() => {
+    if (!editPuzzle || openedEditPuzzle.current === editPuzzle) return;
+    openedEditPuzzle.current = editPuzzle;
+    void openLivePuzzle(editPuzzle);
+  }, [editPuzzle]);
+
+  useEffect(() => {
+    if (!openDraftId || openedDraft.current === openDraftId) return;
+    openedDraft.current = openDraftId;
+    void openDraft(openDraftId);
+  }, [openDraftId]);
+
+  useEffect(() => {
+    if (!openVersionId || openedVersion.current === openVersionId) return;
+    openedVersion.current = openVersionId;
+    void openPublished(openVersionId);
+  }, [openVersionId]);
 
   function newDraft() {
     dispatch({ type: 'replace', doc: emptyDoc(), draftId: null, version: 1 });
     setPublishVersion(null);
+    setNextPublishVersion(null);
+    setEditingLive(false);
     clearConflict();
   }
 
@@ -205,27 +266,82 @@ export function PuzzlesStudioPage() {
       });
       clearConflict();
     } catch (e) {
-      setListError(e instanceof Error ? e.message : 'Keep mine failed');
+      setOpenError(e instanceof Error ? e.message : 'Keep mine failed');
     }
   }
 
   async function publishStaged() {
     setPublishBusy(true);
     setPublishError('');
-    const version = publishVersion ?? state.version;
+    const version = nextPublishVersion ?? publishVersion ?? state.version;
     setPublishVersion(version);
+    const doc = state.present.scripture.trim()
+      ? state.present
+      : { ...state.present, scripture: '—' };
+    if (doc !== state.present) {
+      dispatch({ type: 'setMeta', scripture: '—' });
+    }
+    const missingScripture = doc.data.steps.filter(
+      (step) => step.answer.replace(/[^A-Za-z]/g, '') && !step.ref.trim(),
+    );
+    if (missingScripture.length > 0) {
+      const names = missingScripture.map((step) => step.answer.trim() || 'A word').join(', ');
+      setPublishError(`Scripture reference is required. Add one for ${names}.`);
+      const first = missingScripture[0];
+      if (first) dispatch({ type: 'select', id: first.id });
+      setPublishBusy(false);
+      return;
+    }
+    const body = toPublishDoc(doc);
+    const checked = compile(body);
+    if (!checked.ok) {
+      const missingRef = checked.issues.some((issue) => /ref|scripture/i.test(issue.message));
+      const missingClue = checked.issues.some((issue) => /clue/i.test(issue.message));
+      setPublishError(
+        missingRef
+          ? 'Add a scripture reference for every word, then publish.'
+          : missingClue
+            ? 'Add a clue for every word, then publish.'
+            : checked.issues.map((issue) => issue.message).join(' '),
+      );
+      setPublishBusy(false);
+      return;
+    }
     try {
-      await api('/api/puzzles/publish', {
+      const published = await api<{
+        puzzle: { id: string };
+        version: { id: string; version: number };
+      }>('/api/puzzles/publish', {
         method: 'POST',
         body: JSON.stringify({
-          draftId: state.draftId ?? undefined,
-          doc: state.draftId ? undefined : state.present,
+          doc: body,
           version,
-          title: state.present.title,
+          title: body.title,
         }),
       });
+      if (editingLive) {
+        await api(`/api/puzzles/versions/${published.version.id}/promote`, { method: 'POST', body: '{}' });
+      }
+      discardDraftSaves.current = true;
+      draftHold.current = true;
+      const finishedDraftId = state.draftId;
+      if (finishedDraftId) {
+        try {
+          await api(`/api/puzzle-drafts/${finishedDraftId}`, { method: 'DELETE' });
+        } catch {
+          // Published copy is what matters.
+        }
+      }
+      dispatch({ type: 'setDraftId', id: null });
+      dispatch({ type: 'clearHistory' });
+      setDraftsPaused(true);
+      dispatch({ type: 'dropEmpty' });
+      setNextPublishVersion(published.version.version + 1);
       setPublishVersion(null);
-      refreshDrafts({ quiet: true });
+      if (returnTo && published.puzzle?.id) {
+        const sep = returnTo.includes('?') ? '&' : '?';
+        navigate(`${returnTo}${sep}puzzleId=${encodeURIComponent(published.puzzle.id)}`);
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         setPublishError(e.message);
@@ -236,23 +352,6 @@ export function PuzzlesStudioPage() {
       setPublishBusy(false);
     }
   }
-
-  async function promote(id: string) {
-    try {
-      await api(`/api/puzzles/versions/${id}/promote`, { method: 'POST', body: '{}' });
-      refreshDrafts({ quiet: true });
-    } catch (e) {
-      setPublishError(e instanceof Error ? e.message : 'Promote failed');
-    }
-  }
-
-  const saveStatusTone: Record<string, string> = {
-    idle: 'text-muted',
-    saving: 'text-orange',
-    saved: 'text-forest',
-    error: 'text-error',
-    conflict: 'text-error',
-  };
 
   const locateIssue = (path: Array<string | number>, stepId?: string) => {
     dispatch({ type: 'locate', path });
@@ -265,57 +364,79 @@ export function PuzzlesStudioPage() {
     }
   };
 
-  return (
-    <div className="flex flex-col gap-4 pb-16">
-      <PageHeader
-        title="Puzzle Studio"
-        subtitle="Link each puzzle to a Teen Quest week — teens get that week’s video, quiz, and this grid together."
-      />
+  const scriptureMissing = state.present.data.steps.some(
+    (step) => step.answer.replace(/[^A-Za-z]/g, '') && !step.ref.trim(),
+  );
+  const quietButton =
+    'cursor-pointer bg-transparent px-2 py-1 text-xs font-semibold text-navy hover:text-teal disabled:opacity-40';
 
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-card border border-border bg-surface shadow-xs">
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded-lg border border-border bg-cream hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer"
-          onClick={newDraft}
-        >
-          New puzzle
-        </button>
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded-lg border border-border bg-cream hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer disabled:opacity-50"
-          disabled={state.past.length === 0}
-          onClick={() => dispatch({ type: 'undo' })}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded-lg border border-border bg-cream hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer disabled:opacity-50"
-          disabled={state.future.length === 0}
-          onClick={() => dispatch({ type: 'redo' })}
-        >
-          Redo
-        </button>
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded-lg bg-navy hover:bg-teal text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
-          disabled={publishBusy}
-          onClick={() => void publishStaged()}
-        >
-          {publishBusy ? 'Publishing…' : 'Publish'}
-        </button>
-        <button
-          type="button"
-          className="px-3 py-1.5 rounded-lg border border-border bg-cream hover:bg-surface-2 text-xs font-semibold text-navy transition-colors cursor-pointer"
-          onClick={() => {
-            setShowLibrary((v) => !v);
-            if (!showLibrary) refreshDrafts({ quiet: true });
-          }}
-        >
-          {showLibrary ? 'Hide drafts' : 'Drafts & published'}
-        </button>
-        {publishError && <Alert kind="error">{publishError}</Alert>}
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 pb-12">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {returnTo ? (
+            <button
+              type="button"
+              className="mb-1 cursor-pointer bg-transparent p-0 text-xs font-semibold text-teal"
+              onClick={() => navigate(returnTo)}
+            >
+              ← Back to quest
+            </button>
+          ) : null}
+          <input
+            aria-label="Puzzle title"
+            value={state.present.title}
+            onChange={(e) => dispatch({ type: 'setMeta', title: e.target.value })}
+            placeholder="Untitled puzzle"
+            className="w-full bg-transparent text-2xl font-semibold tracking-tight text-navy outline-none placeholder:text-muted"
+          />
+          <p className="m-0 text-[11px] text-muted" role="status">
+            {saveStatus === 'error'
+              ? saveError || 'Offline'
+              : saveStatus === 'saving'
+                ? 'Saving…'
+                : saveStatus === 'saved'
+                  ? 'Saved'
+                  : 'Draft'}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button type="button" className={quietButton} onClick={newDraft}>
+            New
+          </button>
+          <button
+            type="button"
+            className={quietButton}
+            title="Ctrl+Z"
+            disabled={state.past.length === 0}
+            onClick={() => dispatch({ type: 'undo' })}
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className={quietButton}
+            title="Ctrl+Shift+Z"
+            disabled={state.future.length === 0}
+            onClick={() => dispatch({ type: 'redo' })}
+          >
+            Redo
+          </button>
+          <button
+            type="button"
+            className={quietButton}
+            onClick={() => navigate('/app/dashboard/puzzles/library')}
+          >
+            Library
+          </button>
+          <Button size="sm" type="button" disabled={publishBusy || scriptureMissing} title={scriptureMissing ? 'Every word needs a scripture reference' : undefined} onClick={() => void publishStaged()}>
+            {publishBusy ? 'Publishing…' : 'Publish'}
+          </Button>
+        </div>
       </div>
+
+      {openError ? <Alert kind="error">{openError}</Alert> : null}
+      {publishError ? <Alert kind="error">{publishError}</Alert> : null}
 
       {conflict ? (
         <div
@@ -349,112 +470,10 @@ export function PuzzlesStudioPage() {
         </div>
       ) : null}
 
-      {showLibrary ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section className="bg-surface border border-border rounded-card p-4 shadow-xs flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-navy m-0">Drafts</h3>
-            {loadingList ? (
-              <Spinner />
-            ) : listError ? (
-              <Alert kind="error">{listError}</Alert>
-            ) : drafts.length === 0 ? (
-              <p className="text-xs text-muted m-0">No drafts yet — edits autosave here.</p>
-            ) : (
-              <ul className="flex flex-col gap-2 list-none p-0 m-0">
-                {drafts.map((d) => (
-                  <li key={d.id}>
-                    <button
-                      type="button"
-                      className="w-full text-left p-2.5 rounded-lg border border-border bg-cream hover:border-teal transition-all flex flex-col gap-0.5 cursor-pointer"
-                      onClick={() => void openDraft(d.id)}
-                    >
-                      <strong className="text-xs font-bold text-navy">{d.title}</strong>
-                      <span className="text-[11px] text-muted">
-                        v{d.version} · {new Date(d.updatedAt).toLocaleString()}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section className="bg-surface border border-border rounded-card p-4 shadow-xs flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-navy m-0">Published</h3>
-            {staged.length === 0 ? (
-              <p className="text-xs text-muted m-0">No staged/live versions yet.</p>
-            ) : (
-              <ul className="flex flex-col gap-2 list-none p-0 m-0">
-                {staged.map((v) => (
-                  <li
-                    key={v.id}
-                    className="p-2.5 rounded-lg border border-border bg-cream flex flex-col gap-1.5"
-                  >
-                    <div>
-                      <strong className="text-xs font-bold text-navy block">
-                        {v.title} · {v.status}
-                      </strong>
-                      <span className="text-[11px] text-muted">
-                        pub v{v.version}
-                        {v.solvedAt ? ' · reviewed' : ''}
-                      </span>
-                    </div>
-                    {v.status === 'STAGED' ? (
-                      <button
-                        type="button"
-                        className="self-start px-2 py-1 rounded-md text-xs font-semibold bg-navy hover:bg-teal text-white transition-colors cursor-pointer"
-                        onClick={() => void promote(v.id)}
-                      >
-                        Promote to live
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-      ) : null}
+      <IssuesPanel doc={state.present} onLocate={locateIssue} />
 
-      <div className="bg-surface border border-border rounded-card p-3 shadow-xs max-w-md">
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted">
-          Week number
-          <select
-            value={selectedWeek ?? ''}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (Number.isFinite(n) && n > 0) setWeekNumber(n);
-            }}
-            aria-label="Week number"
-            className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-sm font-normal text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-          >
-            <option value="" disabled>
-              Select a Teen Quest week…
-            </option>
-            {questWeeks.length > 0
-              ? questWeeks.map((w) => (
-                  <option key={w.id} value={w.weekNumber}>
-                    Week {w.weekNumber} — {w.title}
-                  </option>
-                ))
-              : Array.from({ length: 52 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    Week {n}
-                  </option>
-                ))}
-          </select>
-          <span className="text-[11px] font-normal text-muted">
-            {linkedWeek
-              ? `Links to quest video & quiz for “${linkedWeek.title}”.`
-              : selectedWeek
-                ? `Will link to Week ${selectedWeek} video & quiz when that quest is published.`
-                : 'Required — every puzzle belongs to one weekly adventure.'}
-          </span>
-        </label>
-      </div>
-
-      {/* Large: Words | Grid | Checklist — stack on smaller screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <aside className="lg:col-span-3 flex flex-col gap-3 order-2 lg:order-1">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <aside className="lg:col-span-4">
           <WordListEditor
             steps={state.present.data.steps}
             selectedId={state.selectedStepId}
@@ -465,7 +484,7 @@ export function PuzzlesStudioPage() {
           />
         </aside>
 
-        <main className="lg:col-span-6 flex flex-col gap-3 order-1 lg:order-2">
+        <main className="lg:col-span-8">
           <PuzzleCanvas
             steps={state.present.data.steps}
             selectedId={state.selectedStepId}
@@ -483,32 +502,6 @@ export function PuzzlesStudioPage() {
             onStartWordAt={startWordAt}
           />
         </main>
-
-        <aside className="lg:col-span-3 flex flex-col gap-3 order-3">
-          <IssuesPanel doc={state.present} onLocate={locateIssue} />
-        </aside>
-      </div>
-
-      {/* Save status — pinned to bottom of the studio page */}
-      <div
-        className="sticky bottom-0 z-10 -mx-1 mt-2 px-3 py-2.5 rounded-card border border-border bg-surface/95 backdrop-blur-sm shadow-xs flex flex-wrap items-center gap-3"
-        role="status"
-        aria-live="polite"
-      >
-        <span
-          className={`px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-2 border border-border/60 ${saveStatusTone[saveStatus] || 'text-muted'}`}
-          data-status={saveStatus}
-          title={saveError ?? undefined}
-        >
-          v{state.version} · {saveStatus === 'error' ? 'offline' : saveStatus}
-        </span>
-        <span className="text-[11px] text-muted">
-          {selectedWeek ? weekTitle(selectedWeek) : 'No week selected'}
-          {state.draftId ? ' · draft autosaving' : ' · new draft'}
-        </span>
-        {saveError && saveStatus === 'error' ? (
-          <span className="text-[11px] text-error ml-auto">{saveError}</span>
-        ) : null}
       </div>
     </div>
   );

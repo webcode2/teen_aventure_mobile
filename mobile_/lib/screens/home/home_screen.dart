@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/game_controller.dart';
 import '../../theme.dart';
 import '../../config/store_config.dart';
@@ -18,6 +21,7 @@ import '../teen/explorer_home_tab.dart';
 import '../family/family_screen.dart';
 import '../groups/groups_screen.dart';
 import '../groups/join_invite_screen.dart';
+import '../teacher/teacher_home_tab.dart';
 import '../teen/quest_journey_screen.dart';
 import '../teen/bible_catalog_screen.dart';
 import '../teen/what_to_learn_screen.dart';
@@ -25,6 +29,8 @@ import 'notifications_screen.dart';
 import '../../models/api_models.dart';
 import '../../services/engagement_service.dart';
 import '../../services/family_service.dart';
+import '../../services/push_hooks.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,19 +39,95 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   AdventureTab _tab = AdventureTab.home;
+  /// Bumped after a successful join so the embedded Groups tab remounts fresh.
+  int _groupsEpoch = 0;
   List<Nudge> _nudges = const [];
   List<Map<String, dynamic>> _deletionNotices = const [];
+  StreamSubscription<PushNotice>? _pushReceived;
+  StreamSubscription<PushNotice>? _pushOpened;
+  bool _bellOpen = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _pushReceived = PushHooks.received.listen(_onPushReceived);
+    _pushOpened = PushHooks.opened.listen(_onPushOpened);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAskScore();
       _loadInbox();
+      final pending = PushHooks.takePendingOpen();
+      if (pending != null) _onPushOpened(pending);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pushReceived?.cancel();
+    _pushOpened?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadInbox();
+    }
+  }
+
+  void _onPushReceived(PushNotice notice) {
+    if (!mounted) return;
+    _loadInbox();
+    if (notice.type == 'nudge') _loadAskScore();
+    final text = [notice.title, notice.body].whereType<String>().where((t) => t.trim().isNotEmpty).join(' — ');
+    if (text.isEmpty || _bellOpen) return;
+    final actionLabel = (notice.actionLabel?.trim().isNotEmpty ?? false)
+        ? notice.actionLabel!.trim()
+        : (notice.hasActionUrl ? 'Open' : 'View');
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: actionLabel,
+          onPressed: () {
+            if (notice.hasActionUrl) {
+              unawaited(_openPushAction(notice));
+            } else {
+              _openBell();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onPushOpened(PushNotice notice) async {
+    if (!mounted) return;
+    if (notice.hasActionUrl) {
+      await _openPushAction(notice);
+      return;
+    }
+    if (_bellOpen) return;
+    await _loadInbox();
+    if (mounted) await _openBell();
+  }
+
+  Future<void> _openPushAction(PushNotice notice) async {
+    final raw = notice.actionUrl?.trim();
+    if (raw == null || raw.isEmpty) return;
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return;
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Could not open that link.')),
+      );
+    }
   }
 
   Future<void> _loadInbox() async {
@@ -53,10 +135,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final session = context.read<AuthSession>();
       final engagement = context.read<EngagementService>();
       List<Nudge> nudges = const [];
-      if (session.childId != null) {
-        nudges = await engagement.getNudges();
+      // Child JWT / explorer session — always poll the inbox (do not wait for push).
+      // Parents on Family home have no explorer inbox.
+      if (session.isChild || session.childId != null) {
+        try {
+          nudges = await engagement.getNudges();
+        } catch (_) {}
       }
       var deletions = const <Map<String, dynamic>>[];
+      if (!mounted) return;
       try {
         final memberships = await context.read<FamilyService>().getMemberships();
         final items = memberships['items'];
@@ -66,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (item is Map && item['deletionPending'] == true)
                 Map<String, dynamic>.from(item),
           ];
+          if (!mounted) return;
           try {
             final family = await context.read<FamilyService>().getMyFamily();
             final deletionAt = family['deletionAt'];
@@ -87,12 +175,29 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  int get _unreadInboxCount =>
-      _nudges.where((n) => n.readAt == null).length + _deletionNotices.length;
+  int get _unreadInboxCount => _nudges.where((n) => n.readAt == null).length;
 
   Future<void> _openBell() async {
+    if (_bellOpen) return;
     final session = context.read<AuthSession>();
-    await Navigator.push<void>(
+    final engagement = context.read<EngagementService>();
+    // Pull latest cheers before showing the list — push may be offline/unconfigured.
+    await _loadInbox();
+    if (!mounted) return;
+    final hadUnreadNudges = _nudges.any((n) => n.readAt == null);
+
+    // Clear the badge as soon as the inbox is opened.
+    if (hadUnreadNudges) {
+      setState(() {
+        _nudges = [for (final n in _nudges) n.markedRead()];
+      });
+      if (session.isChild || session.childId != null) {
+        unawaited(engagement.markNudgesRead().catchError((_) => null));
+      }
+    }
+
+    _bellOpen = true;
+    final result = await Navigator.push<NotificationsResult>(
       context,
       MaterialPageRoute(
         builder: (_) => NotificationsScreen(
@@ -101,25 +206,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    _bellOpen = false;
     if (!mounted) return;
-    try {
-      final engagement = context.read<EngagementService>();
-      if (session.childId != null) {
-        await engagement.markNudgesRead();
-      }
-      if (!mounted) return;
+    if (result != null) {
       setState(() {
-        _nudges = [
-          for (final n in _nudges)
-            Nudge(
-              id: n.id,
-              stickerKey: n.stickerKey,
-              createdAt: n.createdAt,
-              readAt: n.readAt ?? DateTime.now(),
-            ),
-        ];
+        _nudges = result.nudges;
       });
-    } catch (_) {}
+    } else {
+      await _loadInbox();
+    }
   }
 
   Future<void> _loadAskScore() async {
@@ -164,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
               bellBadge: _unreadInboxCount,
               actions: [
                 if (_tab == AdventureTab.groups &&
+                    !session.isTeacher &&
                     canIndependentlyAcceptInvite(
                       isUnderAgeExplorer: session.isUnderAgeExplorer,
                     ))
@@ -177,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: const Text(
-                      '+group',
+                      'Join Group',
                       style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                     ),
                   ),
@@ -189,6 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: AdventureBottomNav(
           current: _tab,
           onSelect: (tab) => setState(() => _tab = tab),
+          groupsLabel: session.isTeacher ? 'Classes' : 'Groups',
         ),
       ),
     );
@@ -205,11 +302,26 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         return const BibleCatalogScreen(embedded: true);
       case AdventureTab.quests:
-        return const QuestJourneyScreen(embedded: true);
+        return QuestJourneyScreen(
+          embedded: true,
+          onQuestOfDayChanged: (_) {
+            setState(() => _tab = AdventureTab.home);
+          },
+        );
       case AdventureTab.rewards:
         return const AchievementsScreen(embedded: true);
       case AdventureTab.groups:
-        return const GroupsScreen(embedded: true, showRanks: true);
+        if (session.isTeacher) {
+          return TeacherHomeTab(
+            key: ValueKey('classes-$_groupsEpoch'),
+            embedded: true,
+          );
+        }
+        return GroupsScreen(
+          key: ValueKey('groups-$_groupsEpoch'),
+          embedded: true,
+          showRanks: true,
+        );
       case AdventureTab.account:
         return const AccountScreen();
     }
@@ -232,10 +344,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
-    await Navigator.push<bool>(
+    final joined = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const JoinInviteScreen()),
     );
+    if (!mounted || joined != true) return;
+    await context.read<AuthSession>().refreshProfile();
+    if (!mounted) return;
+    setState(() {
+      _groupsEpoch++;
+      _tab = AdventureTab.groups;
+    });
   }
 
   Widget _buildRoleDrawer(AuthSession session) {
@@ -290,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.groups_rounded,
                         color: AppColors.orange),
-                    title: const Text('Groups'),
+                    title: Text(session.isTeacher ? 'Classes' : 'Groups'),
                     onTap: () => _goTab(AdventureTab.groups),
                   ),
                   ListTile(

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../config/demo_account.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
+import '../../providers/current_quest_provider.dart';
 import '../../quest_milestones.dart';
 import '../../services/api_client.dart';
+import '../../services/engagement_service.dart';
 import '../../theme.dart';
 import 'account_deletion_screen.dart';
+import 'devices_screen.dart';
 import 'profile_edit_screen.dart';
 import '../auth/child_pin_screen.dart';
+import '../auth/child_teen_login_screen.dart';
 import '../family/family_screen.dart';
 import '../groups/groups_screen.dart';
 import '../teen/achievements_screen.dart';
@@ -50,8 +53,7 @@ class _AccountScreenState extends State<AccountScreen> {
       session.accountKindLabel,
       if (session.email != null && session.email!.isNotEmpty) session.email!,
       if (session.ageBand != null) session.ageBand!,
-      if (session.familyId != null)
-        session.familyId == DemoAccount.familyId ? 'Peterson family' : 'Linked family',
+      if (session.familyId != null) 'Linked family',
     ];
     showModalBottomSheet<void>(
       context: context,
@@ -99,9 +101,11 @@ class _AccountScreenState extends State<AccountScreen> {
     var points = 0;
     try {
       final game = context.watch<GameController>();
-      weeksCompleted = game.completedVideoParts > 0 ? 1 : 0;
       sessionsDone = game.weekQuest.completed;
       points = game.score;
+    } catch (_) {}
+    try {
+      weeksCompleted = context.watch<CurrentQuestProvider>().current?.weeksCompleted ?? 0;
     } catch (_) {}
     final showQuestMilestone = session.isChild;
 
@@ -205,11 +209,17 @@ class _AccountScreenState extends State<AccountScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ChildPinScreen(
-                        childId: child.id,
-                        childName: child.name,
-                        useParentSwitch: child.isUnderAge,
-                      ),
+                      builder: (_) => child.usesEmailPasswordSwitch
+                          ? ChildTeenLoginScreen(
+                              childId: child.id,
+                              childName: child.name,
+                              email: child.email,
+                            )
+                          : ChildPinScreen(
+                              childId: child.id,
+                              childName: child.name,
+                              useParentSwitch: child.isUnderAge,
+                            ),
                     ),
                   );
                 },
@@ -234,8 +244,20 @@ class _AccountScreenState extends State<AccountScreen> {
               actionLabel: 'Edit',
               onTap: () => _openPersonalInfo(session),
             ),
+          if (session.canEditProfile) const SizedBox(height: 12),
+          _SettingsTile(
+            icon: Icons.devices_rounded,
+            title: 'Devices',
+            actionLabel: 'Manage',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DevicesScreen()),
+              );
+            },
+          ),
           if (session.isAdult) ...[
-            if (session.canEditProfile) const SizedBox(height: 12),
+            const SizedBox(height: 12),
             _SettingsTile(
               icon: Icons.family_restroom_rounded,
               title: session.needsFamilySetup ? 'Create or join a family' : 'Family',
@@ -393,7 +415,7 @@ class _ProfileHeroCard extends StatelessWidget {
             onViewAll: onViewAllAchievements,
           ),
           const SizedBox(height: 28),
-          _ProfileStatsPanel(points: points),
+          const _ProfileStatsPanel(),
         ],
       ),
     );
@@ -504,9 +526,7 @@ class _ProfileAchievementsRow extends StatelessWidget {
 enum _StatsRange { week, month, year }
 
 class _ProfileStatsPanel extends StatefulWidget {
-  const _ProfileStatsPanel({required this.points});
-
-  final int points;
+  const _ProfileStatsPanel();
 
   @override
   State<_ProfileStatsPanel> createState() => _ProfileStatsPanelState();
@@ -514,36 +534,58 @@ class _ProfileStatsPanel extends StatefulWidget {
 
 class _ProfileStatsPanelState extends State<_ProfileStatsPanel> {
   _StatsRange _range = _StatsRange.month;
+  final Map<String, ActivitySeries> _loaded = {};
+  bool _loading = true;
+  String? _error;
 
-  // ponytail: synthetic bars from current points until engagement history API exists
-  List<double> get _bars {
-    final base = widget.points.clamp(1, 10000).toDouble();
-    switch (_range) {
-      case _StatsRange.week:
-        return [base * 0.35, base * 0.55, base * 0.4, base * 0.75, base];
-      case _StatsRange.month:
-        return [base * 0.45, base * 0.7, base * 0.55, base * 0.85, base * 0.95];
-      case _StatsRange.year:
-        return [base * 0.3, base * 0.5, base * 0.65, base * 0.8, base];
-    }
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
-  List<String> get _labels {
-    switch (_range) {
-      case _StatsRange.week:
-        return const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-      case _StatsRange.month:
-        return const ['wk 1', 'wk 2', 'wk 3', 'wk 4', 'wk 5'];
-      case _StatsRange.year:
-        return const ['Q1', 'Q2', 'Q3', 'Q4', 'Now'];
+  Future<void> _load() async {
+    final range = _range.name;
+    if (_loaded.containsKey(range)) {
+      if (_loading || _error != null) {
+        setState(() {
+          _loading = false;
+          _error = null;
+        });
+      }
+      return;
+    }
+    if (!_loading || _error != null) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final series = await context.read<EngagementService>().getActivityStats(range);
+      if (!mounted || _range.name != range) return;
+      setState(() {
+        _loaded[range] = series;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted || _range.name != range) return;
+      setState(() {
+        _loading = false;
+        _error = 'Activity could not load';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final values = _bars;
-    final max = values.reduce((a, b) => a > b ? a : b);
-    final total = values.fold<double>(0, (sum, v) => sum + v).round();
+    final series = _loaded[_range.name];
+    final values = series?.points ?? const <int>[];
+    final labels = series?.labels ?? const <String>[];
+    final max = values.fold<int>(0, (top, n) => n > top ? n : top);
+    final total = series?.total ?? 0;
 
     return Column(
       children: [
@@ -570,7 +612,11 @@ class _ProfileStatsPanelState extends State<_ProfileStatsPanel> {
                   borderRadius: BorderRadius.circular(20),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () => setState(() => _range = range),
+                    onTap: () {
+                      if (_range == range) return;
+                      setState(() => _range = range);
+                      _load();
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
@@ -610,45 +656,64 @@ class _ProfileStatsPanelState extends State<_ProfileStatsPanel> {
         const SizedBox(height: 14),
         SizedBox(
           height: 120,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (var i = 0; i < values.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FractionallySizedBox(
-                            heightFactor: max <= 0 ? 0.08 : (values[i] / max).clamp(0.08, 1),
-                            widthFactor: 1,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: AppColors.orange,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
+          child: _loading && series == null
+              ? const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.orange),
+                  ),
+                )
+              : _error != null && series == null
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (var i = 0; i < values.length; i++) ...[
+                          if (i > 0) SizedBox(width: values.length > 7 ? 3 : 8),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: FractionallySizedBox(
+                                      heightFactor: values[i] <= 0 || max <= 0
+                                          ? 0
+                                          : (values[i] / max).clamp(0.08, 1).toDouble(),
+                                      widthFactor: 1,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.orange,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  labels[i],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: values.length > 7 ? 8 : 10,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _labels[i],
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
+                        ],
+                      ],
+                    ),
         ),
       ],
     );
@@ -771,9 +836,10 @@ class _ChildSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final signInLabel = child.usesEmailPasswordSwitch ? 'Sign in' : 'PIN';
     return AdventureListCard(
       title: child.name,
-      subtitle: child.isUnderAge ? 'Under-age explorer' : 'Teen explorer',
+      subtitle: child.explorerBandLabel,
       icon: Icons.person_rounded,
       accent: AdventureListAccent.green,
       onTap: busy ? null : onSwitch,
@@ -784,7 +850,7 @@ class _ChildSwitchTile extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
-        child: const Text('PIN'),
+        child: Text(signInLabel),
       ),
     );
   }

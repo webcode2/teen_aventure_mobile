@@ -15,6 +15,7 @@ void main() {
 
     test('rejects invalid ages', () {
       expect(explorerKindFromAge(-1), isNull);
+      expect(explorerKindFromAge(20), isNull);
       expect(explorerKindFromAge(120), isNull);
     });
   });
@@ -27,6 +28,37 @@ void main() {
 
     test('adult who already has a family must not create another', () {
       expect(canCreateOwnedFamily('fam-1'), isFalse);
+    });
+  });
+
+  group('group creation', () {
+    test('adults may create groups', () {
+      expect(
+        canCreateGroupsRule(isAdult: true, platformRole: 'MAIN_ACCOUNT'),
+        isTrue,
+      );
+    });
+
+    test('standalone teens cannot create groups', () {
+      expect(
+        canCreateGroupsRule(isAdult: false, platformRole: 'CHILD'),
+        isFalse,
+      );
+      expect(
+        canCreateGroupsRule(isAdult: true, platformRole: 'CHILD'),
+        isFalse,
+      );
+    });
+
+    test('adults missing birth year cannot create groups', () {
+      expect(
+        canCreateGroupsRule(
+          isAdult: true,
+          platformRole: 'MAIN_ACCOUNT',
+          needsBirthYear: true,
+        ),
+        isFalse,
+      );
     });
   });
 

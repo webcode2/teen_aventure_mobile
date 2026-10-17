@@ -103,12 +103,37 @@ export class ApiError extends Error {
   }
 }
 
+export async function apiUpload<T = unknown>(path: string, file: File, field: string): Promise<T> {
+  const body = new FormData();
+  body.append(field, file);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    body,
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const parsed = await res.json();
+      if (parsed && typeof parsed === 'object' && typeof parsed.message === 'string') message = parsed.message;
+    } catch { /* non-JSON */ }
+    throw new ApiError(res.status, message);
+  }
+  return res.json();
+}
+
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
-  const activeToken = token || getPastorToken();
+  const pastorTok = getPastorToken();
+  const isPastorPath =
+    path.startsWith('/api/churches') ||
+    path.startsWith('/api/classes') ||
+    path.startsWith('/api/safeguarding');
+  const activeToken = isPastorPath && pastorTok ? pastorTok : (token || pastorTok);
+  const hasBody = options.body != null && options.body !== '';
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(activeToken ? { authorization: `Bearer ${activeToken}` } : {}),
       ...(options.headers || {}),
     },
@@ -124,7 +149,10 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
     } catch { /* non-JSON */ }
     throw new ApiError(res.status, message, body);
   }
-  return res.json();
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 const DASHBOARD_ROLES = new Set(['APP_MANAGER', 'SUPER_ADMIN', 'SUPER_EDITOR', 'EDITOR']);
@@ -142,12 +170,20 @@ export async function login(email: string, password: string) {
 export async function pastorLogin(email: string, password: string) {
   const res = await api<{ token: string; user: PastorUser }>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, surface: 'portal' }),
   });
+  if (res.user.role === 'CHURCH_APPLICANT') {
+    throw new ApiError(403, 'This account cannot sign in to the pastor dashboard.');
+  }
   const churchRole = res.user.churchRole;
-  const isPastor = churchRole === 'PASTOR' || churchRole === 'PASTOR_NOMINEE' || churchRole === 'CHILDRENS_CHURCH_LEAD';
-  if (!isPastor) {
-    throw new ApiError(403, 'Church Pastor or Leadership role required. Please sign in with your pastoral credentials.');
+  const isAuthorized =
+    churchRole === 'PASTOR' ||
+    churchRole === 'PASTOR_NOMINEE' ||
+    churchRole === 'CHILDRENS_CHURCH_LEAD' ||
+    churchRole === 'TEACHER' ||
+    churchRole === 'CHAPERONE';
+  if (!isAuthorized) {
+    throw new ApiError(403, 'Church leadership or group leader credentials required to access this portal.');
   }
   setPastorSession(res.token, res.user);
   return res;
@@ -165,4 +201,87 @@ export async function resetPassword(resetToken: string, password: string) {
     method: 'POST',
     body: JSON.stringify({ token: resetToken, password }),
   });
+}
+
+const APPLICANT_TOKEN_KEY = 'askhub_church_applicant_token';
+
+export function getApplicantToken(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(APPLICANT_TOKEN_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function setApplicantToken(value: string | null) {
+  try {
+    if (value) localStorage.setItem(APPLICANT_TOKEN_KEY, value);
+    else localStorage.removeItem(APPLICANT_TOKEN_KEY);
+  } catch {
+    /* ignore missing localStorage in tests */
+  }
+}
+
+/** Calls that belong to a verified church-application account, not the mobile app. */
+export async function applicantApi<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const applicantToken = getApplicantToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      Accept: 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(applicantToken ? { authorization: `Bearer ${applicantToken}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const payload: unknown = await res.json();
+      if (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message: unknown }).message === 'string') {
+        message = (payload as { message: string }).message;
+      }
+    } catch { /* non-JSON */ }
+    throw new ApiError(res.status, message);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Unauthenticated POST for public forms (church applications). */
+export async function publicWrite<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const payload: unknown = await res.json();
+      if (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message: unknown }).message === 'string') {
+        message = (payload as { message: string }).message;
+      }
+    } catch { /* non-JSON */ }
+    throw new ApiError(res.status, message);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Unauthenticated GET for public pages (privacy / terms). */
+export async function publicApi<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const body: unknown = await res.json();
+      if (body && typeof body === 'object' && 'message' in body && typeof (body as { message: unknown }).message === 'string') {
+        message = (body as { message: string }).message;
+      }
+    } catch { /* non-JSON */ }
+    throw new ApiError(res.status, message);
+  }
+  return res.json() as Promise<T>;
 }

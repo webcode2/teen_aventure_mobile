@@ -1,0 +1,15 @@
+---
+description: Local development guardrails that must survive account switches
+alwaysApply: true
+---
+
+# Development guardrails
+
+- Do not commit unless asked. Do not commit `.env` or `backend/church-verify.log`.
+- Do not print `DATABASE_URL`, password hashes, or tokens.
+- Do not start a second API or Vite. Health is `GET /api/health`. On `EADDRINUSE`, kill only the child listening on 8080, then touch `backend/src/index.ts` so the existing watch rebinds.
+- Do not run seed. It overwrites scoring. Leave live scoring at video 7, quiz 3, puzzle 3, prayer 1, and award durations 1, 1, 4.
+- Do not remove Ardent Reader unless asked. Do not add `verseText` unless asked.
+- One puzzle type: scripture crossword. Weekly quizzes are Objective Quiz. Never re-add Word Scramble. See `.agents/rules/REMOVED_FEATURES.md`.
+- Admin typecheck and tests must run outside the sandbox with the local binaries, not npx: `admin/node_modules/.bin/tsc` and `admin/node_modules/.bin/vitest`. Flutter analyze also runs outside the sandbox.
+- Do not delete existing ministry accounts while testing. Create a temporary account and remove only that account afterward.

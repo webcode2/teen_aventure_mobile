@@ -1,23 +1,24 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Flutter",
-            "type": "dart",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/mobile_",
-            "program": "lib/main.dart",
-            "flutterMode": "debug"
-        },
-        {
-            "name": "Flutter Chrome",
-            "type": "dart",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/mobile_",
-            "program": "lib/main.dart",
-            "deviceId": "chrome",
-            "flutterMode": "debug",
-            "toolArgs": ["--web-port=7357"]
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Chrome",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile_",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "flutterMode": "debug",
+      "toolArgs": ["--web-port=7357"]
+    },
+    {
+      "name": "Flutter Linux",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile_",
+      "program": "lib/main.dart",
+      "deviceId": "linux",
+      "flutterMode": "debug"
+    }
+  ]
 }

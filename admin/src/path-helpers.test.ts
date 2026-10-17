@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { isDashboardTab, safeStaffNext, legacyHashToPath } from './path-helpers';
 
 describe('isDashboardTab', () => {
-  it('accepts people and rejects dashboard and junk', () => {
+  it('accepts people, pastors, staff and rejects dashboard and junk', () => {
     expect(isDashboardTab('people')).toBe(true);
+    expect(isDashboardTab('pastors')).toBe(true);
+    expect(isDashboardTab('staff')).toBe(true);
     expect(isDashboardTab('dashboard')).toBe(false);
     expect(isDashboardTab('nope')).toBe(false);
   });
@@ -14,6 +16,7 @@ describe('safeStaffNext', () => {
     expect(safeStaffNext('/app/dashboard')).toBe('/app/dashboard');
     expect(safeStaffNext('/app/dashboard/people')).toBe('/app/dashboard/people');
     expect(safeStaffNext('/app/dashboard/quests?week=3')).toBe('/app/dashboard/quests?week=3');
+    expect(safeStaffNext('/ministry')).toBe('/app/dashboard');
     expect(safeStaffNext('/groups')).toBe('/app/dashboard');
     expect(safeStaffNext('https://evil.example/')).toBe('/app/dashboard');
     expect(safeStaffNext(null)).toBe('/app/dashboard');
@@ -31,8 +34,11 @@ describe('legacyHashToPath', () => {
     expect(legacyHashToPath('#/reset?token=abc')).toBe('/app/reset?token=abc');
     expect(legacyHashToPath('#/dashboard')).toBe('/app/dashboard');
     expect(legacyHashToPath('#/people')).toBe('/app/dashboard/people');
-    expect(legacyHashToPath('#/pastor')).toBe('/groups');
-    expect(legacyHashToPath('#/church/ch_1')).toBe('/groups/ch_1');
+    expect(legacyHashToPath('#/pastor')).toBe('/ministry');
+    expect(legacyHashToPath('#/church/ch_1')).toBe('/ministry/ch_1/families');
+    expect(legacyHashToPath('#/groups')).toBe('/ministry');
+    expect(legacyHashToPath('#/ministry/ch_1')).toBe('/ministry/ch_1/families');
+    expect(legacyHashToPath('#/ministry/ch_1/groups')).toBe('/ministry/ch_1/groups');
     expect(legacyHashToPath('')).toBe(null);
     expect(legacyHashToPath('#/unknown-tab')).toBe('/app/dashboard');
   });

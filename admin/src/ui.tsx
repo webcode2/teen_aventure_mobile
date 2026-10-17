@@ -1,11 +1,62 @@
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export const APP_NAME = 'Teen Bible Adventures';
 export const DASHBOARD_TITLE = `${APP_NAME} Manager`;
 
-export function Brand({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export type ButtonVariant = 'primary' | 'teal' | 'soft' | 'secondary' | 'outline' | 'danger' | 'ghost';
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
+const BUTTON_VARIANT: Record<ButtonVariant, string> = {
+  primary: 'bg-navy text-white border-transparent hover:bg-teal shadow-xs',
+  teal: 'bg-teal text-white border-transparent hover:bg-navy shadow-xs',
+  soft: 'bg-teal-tint/50 text-teal border-teal/30 hover:bg-teal hover:text-white',
+  secondary: 'bg-surface text-navy border-border hover:bg-surface-2',
+  outline: 'bg-transparent text-navy border-border hover:bg-cream',
+  danger: 'bg-error-bg text-error border-error/30 hover:bg-error/15',
+  ghost: 'bg-transparent text-muted border-transparent hover:bg-surface-2 hover:text-navy',
+};
+
+const BUTTON_SIZE: Record<ButtonSize, string> = {
+  sm: 'px-3 py-1.5 text-xs font-semibold',
+  md: 'px-4 py-2 text-xs font-semibold',
+  lg: 'px-4 py-3 text-sm font-semibold',
+};
+
+/** Shared desk button — use variants instead of repeating navy/teal class strings. */
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  type = 'button',
+  children,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  children?: ReactNode;
+}) {
+  return (
+    <button
+      type={type}
+      className={[
+        'inline-flex items-center justify-center gap-1.5 rounded-md border transition-colors cursor-pointer disabled:opacity-50',
+        BUTTON_VARIANT[variant],
+        BUTTON_SIZE[size],
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Brand({ size = 'md' }: { size?: 'sm' | 'header' | 'md' | 'lg' }) {
   const sizeClasses = {
     sm: 'h-[44px]',
+    header: 'h-[56px]',
     md: 'h-[72px]',
     lg: 'h-[88px]',
   }[size];
@@ -226,6 +277,62 @@ export function Drawer({
             {children}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export const PAGE_SIZE = 40;
+
+export function slicePage<T>(items: readonly T[], page: number, size = PAGE_SIZE) {
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(Math.max(1, page), totalPages);
+  const start = (current - 1) * size;
+  return { page: current, totalPages, start, rows: items.slice(start, start + size), total };
+}
+
+export function Pager({
+  page,
+  total,
+  onPage,
+  pageSize = PAGE_SIZE,
+}: {
+  page: number;
+  total: number;
+  onPage: (page: number) => void;
+  pageSize?: number;
+}) {
+  if (total <= pageSize) return null;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(1, page), totalPages);
+  const from = (current - 1) * pageSize + 1;
+  const to = Math.min(current * pageSize, total);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+      <p className="m-0 text-[11px] text-muted">
+        Showing {from}–{to} of {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={current <= 1}
+          onClick={() => onPage(current - 1)}
+          className="cursor-pointer rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <span className="text-xs font-semibold tabular-nums text-muted">
+          {current} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={current >= totalPages}
+          onClick={() => onPage(current + 1)}
+          className="cursor-pointer rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
       </div>
     </div>
   );

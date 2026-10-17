@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../data/episodes.dart';
 import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
@@ -216,13 +215,10 @@ class _CurrentlyActiveWeekCardState extends State<CurrentlyActiveWeekCard> {
   @override
   Widget build(BuildContext context) {
     final game = context.watch<GameController>();
-    final sampleVideos = SampleEpisodes.week1Package.videos
-        .take(WeekVideoProgress.slotCount)
-        .toList();
     final week = _week;
     final videos = (week != null && week.videos.isNotEmpty)
         ? week.videos.take(WeekVideoProgress.slotCount).toList()
-        : sampleVideos;
+        : const <VideoLesson>[];
 
     var watchedCompleted = 0;
     try {

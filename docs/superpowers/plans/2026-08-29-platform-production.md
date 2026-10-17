@@ -1,4 +1,4 @@
-# ASK Hub MVP Implementation Plan (PRD-complete)
+# Teen Bible Adventures MVP Implementation Plan (PRD-complete)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -70,7 +70,7 @@ Existing clients to **use, not rewrite:** `mobile/lib/services/auth_service.dart
 
 ---
 
-## Milestone 2 — Core ASK Hub / PRD 2
+## Milestone 2 — Core Teen Bible Adventures / PRD 2
 
 **Already done (backend):** marinade, prayer steps, devotionals+reflect, BIY weeks, life prayers, bible-reading complete/progress/books. **Already done (admin):** devotionals + BIY YouTube week form. **Already done (Flutter services):** `ContentService` methods. **Missing:** Flutter screens + remaining admin CMS.
 

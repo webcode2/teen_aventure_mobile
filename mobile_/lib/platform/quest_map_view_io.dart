@@ -4,10 +4,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import '../adventure_assets.dart';
+import 'quest_map_document.dart';
 import '../data/level_map_data.dart';
 import '../theme.dart';
 
@@ -44,10 +43,10 @@ class _QuestMapViewState extends State<QuestMapView> {
   void initState() {
     super.initState();
     if (_webviewOk) {
-      rootBundle.loadString(AdventureAssets.questMap).then((raw) {
+      loadQuestMapDocument().then((raw) {
         if (!mounted) return;
         setState(() {
-          _html = raw.replaceFirst('<html', '<html class="embed"');
+          _html = raw;
         });
       });
     }
@@ -99,7 +98,7 @@ class _QuestMapViewState extends State<QuestMapView> {
 
   @override
   Widget build(BuildContext context) {
-    const sky = Color(0xFFB9E6F4);
+    const sky = Color(0xFF073C43);
     if (!_webviewOk || _failed) {
       return const ColoredBox(
         color: sky,

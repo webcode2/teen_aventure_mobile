@@ -1,6 +1,15 @@
 import 'puzzle.dart';
 import 'video_source.dart';
 
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .take(10)
+      .toList();
+}
+
 class VideoLesson {
   final String id;
   final int weekNumber;
@@ -51,10 +60,17 @@ class VideoLesson {
   }
 
   factory VideoLesson.fromJson(Map<String, dynamic> json, {int weekNumber = 0}) {
+    int? asInt(Object? value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
     return VideoLesson(
       id: json['id'] as String? ?? '',
-      weekNumber: json['weekNumber'] as int? ?? weekNumber,
-      partNumber: json['partNumber'] as int? ?? 1,
+      weekNumber: asInt(json['weekNumber']) ?? weekNumber,
+      partNumber: asInt(json['partNumber']) ?? 1,
       title: json['title'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
       duration: json['duration'] as String? ?? '',
@@ -64,13 +80,31 @@ class VideoLesson {
       keyVerse: json['keyVerse'] as String? ?? '',
       keyVerseText: json['keyVerseText'] as String? ?? '',
       bibleVersion: json['bibleVersion'] as String? ?? 'NIV',
-      takeaways: const [],
+      takeaways: _stringList(json['takeaways']),
       timestamps: const [],
       quizQuestions: const [],
       videoUrl: json['videoUrl'] as String? ?? '',
       downloadUrl: json['downloadUrl'] as String? ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'weekNumber': weekNumber,
+        'partNumber': partNumber,
+        'title': title,
+        'subtitle': subtitle,
+        'duration': duration,
+        'speaker': speaker,
+        'thumbnailEmoji': thumbnailEmoji,
+        'thumbnailUrl': thumbnailUrl,
+        'keyVerse': keyVerse,
+        'keyVerseText': keyVerseText,
+        'bibleVersion': bibleVersion,
+        'takeaways': takeaways,
+        'videoUrl': videoUrl,
+        'downloadUrl': downloadUrl,
+      };
 }
 
 class VideoTimestamp {

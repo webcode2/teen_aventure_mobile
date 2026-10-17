@@ -122,6 +122,23 @@ String? validatePassword(String value) {
   return null;
 }
 
+/// Explorers under this age are managed from a parent's device.
+const int teenMinAge = 15;
+/// From this age an account is an adult account.
+const int adultMinAge = 20;
+
+/// Only the birth year is collected; an age counts from 1 January of the year it is reached.
+int ageFromBirthYear(int year) => DateTime.now().year - year;
+
+String? validateBirthYear(String raw, {int minAge = 0, int? maxAge}) {
+  final year = int.tryParse(raw.trim());
+  if (year == null || year < 1900 || year > DateTime.now().year) return 'Enter the year you were born';
+  final age = ageFromBirthYear(year);
+  if (age < minAge) return 'You must be $minAge or older';
+  if (maxAge != null && age > maxAge) return 'Must be $maxAge or younger';
+  return null;
+}
+
 String? validatePin(String value) {
   if (value.length != 4) return 'PIN must be 4 digits';
   if (int.tryParse(value) == null) return 'PIN must be 4 digits';
@@ -129,7 +146,7 @@ String? validatePin(String value) {
 }
 
 /// After tokens are stored, refresh session and dismiss any auth sub-routes
-/// (e.g. Create account / Teen sign in) so [AuthGate] can show Home.
+/// (e.g. Create account) so [AuthGate] can show Home.
 Future<void> completeAuthFlow(
   BuildContext context, {
   VoidCallback? onAuthenticated,

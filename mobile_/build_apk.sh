@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Build a Flutter release APK and copy it to the project root for testing/sharing.
 #
+# Firebase client dart-defines are loaded from android/app/google-services.json.
+# Optional overrides / API_BASE_URL may be set in .env (KEY=value lines).
+#
 # Usage:
 #   ./build_apk.sh              # release APK -> ./teen_aventure-<version>-release.apk
 #   ./build_apk.sh --debug      # debug APK
@@ -15,10 +18,16 @@ cd "$ROOT_DIR"
 BUILD_MODE="release"
 SPLIT_PER_ABI=false
 RUN_CLEAN=false
+GOOGLE_SERVICES="$ROOT_DIR/android/app/google-services.json"
+ENV_FILE="$ROOT_DIR/.env"
 
 usage() {
   cat <<'EOF'
 Build APK and copy to project root.
+
+Loads FIREBASE_* dart-defines from android/app/google-services.json.
+Optional .env overrides: FIREBASE_API_KEY, FIREBASE_APP_ID,
+FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID, API_BASE_URL.
 
 Options:
   --debug       Build a debug APK instead of release
@@ -26,6 +35,72 @@ Options:
   --clean       Run "flutter clean" before building
   -h, --help    Show this help message
 EOF
+}
+
+# Load KEY=value from .env into the environment (no export of comments/blank lines).
+load_dotenv() {
+  local file="$1"
+  [[ -f "$file" ]] || return 0
+  echo "==> Loading overrides from .env"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      local key="${BASH_REMATCH[1]}"
+      local val="${BASH_REMATCH[2]}"
+      val="${val%\"}"
+      val="${val#\"}"
+      val="${val%\'}"
+      val="${val#\'}"
+      printf -v "$key" '%s' "$val"
+      export "$key"
+    fi
+  done <"$file"
+}
+
+# Populate FIREBASE_* from google-services.json when unset.
+load_firebase_from_google_services() {
+  if [[ ! -f "$GOOGLE_SERVICES" ]]; then
+    echo "Error: missing $GOOGLE_SERVICES" >&2
+    echo "Download it from Firebase Console into android/app/." >&2
+    exit 1
+  fi
+
+  local parsed
+  parsed="$(python3 - "$GOOGLE_SERVICES" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+info = data["project_info"]
+client = data["client"][0]
+api_key = client["api_key"][0]["current_key"]
+app_id = client["client_info"]["mobilesdk_app_id"]
+print(api_key)
+print(app_id)
+print(info["project_number"])
+print(info["project_id"])
+PY
+)"
+
+  local api_key app_id sender_id project_id
+  api_key="$(sed -n '1p' <<<"$parsed")"
+  app_id="$(sed -n '2p' <<<"$parsed")"
+  sender_id="$(sed -n '3p' <<<"$parsed")"
+  project_id="$(sed -n '4p' <<<"$parsed")"
+
+  FIREBASE_API_KEY="${FIREBASE_API_KEY:-$api_key}"
+  FIREBASE_APP_ID="${FIREBASE_APP_ID:-$app_id}"
+  FIREBASE_MESSAGING_SENDER_ID="${FIREBASE_MESSAGING_SENDER_ID:-$sender_id}"
+  FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-$project_id}"
+  export FIREBASE_API_KEY FIREBASE_APP_ID FIREBASE_MESSAGING_SENDER_ID FIREBASE_PROJECT_ID
+
+  if [[ -z "$FIREBASE_API_KEY" || -z "$FIREBASE_APP_ID" || -z "$FIREBASE_MESSAGING_SENDER_ID" || -z "$FIREBASE_PROJECT_ID" ]]; then
+    echo "Error: could not resolve Firebase dart-defines from google-services.json / .env" >&2
+    exit 1
+  fi
+
+  echo "==> Firebase dart-defines from google-services.json (project: $FIREBASE_PROJECT_ID)"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -67,6 +142,9 @@ echo "==> Project: $APP_NAME"
 echo "==> Version: $VERSION"
 echo "==> Mode:    $BUILD_MODE"
 
+load_dotenv "$ENV_FILE"
+load_firebase_from_google_services
+
 if [[ "$BUILD_MODE" == "release" && ! -f "$ROOT_DIR/android/key.properties" ]]; then
   echo "Warning: android/key.properties not found. Release APK will use debug signing."
   echo "         Add a keystore before Play Store submission."
@@ -86,8 +164,18 @@ BUILD_ARGS=(build apk --"$BUILD_MODE")
 if $SPLIT_PER_ABI; then
   BUILD_ARGS+=(--split-per-abi)
 fi
+BUILD_ARGS+=(
+  --dart-define="FIREBASE_API_KEY=${FIREBASE_API_KEY}"
+  --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}"
+  --dart-define="FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}"
+  --dart-define="FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}"
+)
+if [[ -n "${API_BASE_URL:-}" ]]; then
+  BUILD_ARGS+=(--dart-define="API_BASE_URL=${API_BASE_URL}")
+  echo "==> API_BASE_URL dart-define set"
+fi
 
-echo "==> flutter ${BUILD_ARGS[*]}"
+echo "==> flutter build apk --$BUILD_MODE (+ Firebase dart-defines)"
 flutter "${BUILD_ARGS[@]}"
 
 copy_apk() {

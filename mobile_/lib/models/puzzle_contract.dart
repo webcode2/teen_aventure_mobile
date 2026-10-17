@@ -6,8 +6,6 @@ import 'puzzle.dart';
 const int kSupportedPuzzleSchemaVersion = 1;
 
 /// Default bundled golden played by the existing puzzle screen.
-const String kDefaultCanonicalAsset = 'assets/puzzles/jael.canonical.json';
-
 /// Sealed puzzle payload under envelope `data`.
 sealed class PuzzleData {
   const PuzzleData();
@@ -25,6 +23,7 @@ final class CrosswordData extends PuzzleData {
   final List<CrosswordEntry> entries;
 }
 
+/// Match-pairs studio game: draw lines from left column to right column.
 final class MatchingData extends PuzzleData {
   const MatchingData({
     required this.prompt,
@@ -38,7 +37,14 @@ final class MatchingData extends PuzzleData {
   final String ref;
   final List<String> leftColumn;
   final List<String> rightColumn;
-  final List<({int left, int right})> correctPairs;
+  /// Each pair uses 0-based indexes into [leftColumn] / [rightColumn].
+  final List<MatchingPair> correctPairs;
+}
+
+final class MatchingPair {
+  const MatchingPair({required this.left, required this.right});
+  final int left;
+  final int right;
 }
 
 /// Unknown `type` or schemaVersion beyond what this build supports.
@@ -135,7 +141,39 @@ final class PuzzleEnvelope {
       );
     }
 
-    if (type != 'CROSSWORD' && type != 'MATCHING') {
+    final dataRaw = map['data'];
+    if (dataRaw is! Map) {
+      return const PuzzleRejected(
+        message: 'Puzzle data is missing or invalid.',
+        code: PuzzleRejectCode.invalidShape,
+      );
+    }
+    final dataMap = Map<String, dynamic>.from(dataRaw);
+
+    if (type == 'MATCHING') {
+      final matching = _parseMatching(dataMap);
+      if (matching == null) {
+        return const PuzzleRejected(
+          message: 'Match game data is incomplete.',
+          code: PuzzleRejectCode.invalidShape,
+        );
+      }
+      final guard = guardMatching(matching);
+      if (guard != null) return guard;
+      return PuzzleLoaded(
+        PuzzleEnvelope(
+          schemaVersion: schemaVersion,
+          id: id.isEmpty ? 'unknown' : id,
+          type: type,
+          title: title.isEmpty ? 'Match' : title,
+          scripture: scripture,
+          rewards: rewards,
+          data: matching,
+        ),
+      );
+    }
+
+    if (type != 'CROSSWORD') {
       return PuzzleLoaded(
         PuzzleEnvelope(
           schemaVersion: schemaVersion,
@@ -153,40 +191,10 @@ final class PuzzleEnvelope {
       );
     }
 
-    final dataRaw = map['data'];
-    if (dataRaw is! Map) {
-      return const PuzzleRejected(
-        message: 'Puzzle data is missing or invalid.',
-        code: PuzzleRejectCode.invalidShape,
-      );
-    }
-    final dataMap = Map<String, dynamic>.from(dataRaw);
-
-    if (type == 'MATCHING') {
-      final matching = _parseMatching(dataMap);
-      if (matching == null) {
-        return const PuzzleRejected(
-          message: 'Matching puzzle data is incomplete.',
-          code: PuzzleRejectCode.invalidShape,
-        );
-      }
-      return PuzzleLoaded(
-        PuzzleEnvelope(
-          schemaVersion: schemaVersion,
-          id: id,
-          type: type,
-          title: title,
-          scripture: scripture,
-          rewards: rewards,
-          data: matching,
-        ),
-      );
-    }
-
     final crossword = _parseCrossword(dataMap);
     if (crossword == null) {
       return const PuzzleRejected(
-        message: 'Crossword puzzle data is incomplete.',
+        message: 'Puzzle data is incomplete.',
         code: PuzzleRejectCode.invalidShape,
       );
     }
@@ -224,6 +232,90 @@ final class PuzzleRejected extends PuzzleLoadResult {
   const PuzzleRejected({required this.message, required this.code});
   final String message;
   final PuzzleRejectCode code;
+}
+
+MatchingData? _parseMatching(Map<String, dynamic> data) {
+  final prompt = (data['prompt'] as String?)?.trim() ?? '';
+  final ref = (data['ref'] as String?)?.trim() ?? '';
+  final leftRaw = data['leftColumn'];
+  final rightRaw = data['rightColumn'];
+  final pairsRaw = data['correctPairs'];
+  if (prompt.isEmpty ||
+      ref.isEmpty ||
+      leftRaw is! List ||
+      rightRaw is! List ||
+      pairsRaw is! List) {
+    return null;
+  }
+
+  final leftColumn = <String>[];
+  for (final item in leftRaw) {
+    final word = item?.toString().trim() ?? '';
+    if (word.isEmpty) return null;
+    leftColumn.add(word);
+  }
+  final rightColumn = <String>[];
+  for (final item in rightRaw) {
+    final word = item?.toString().trim() ?? '';
+    if (word.isEmpty) return null;
+    rightColumn.add(word);
+  }
+  if (leftColumn.length < 2 || rightColumn.length < 2) return null;
+
+  final correctPairs = <MatchingPair>[];
+  for (final item in pairsRaw) {
+    if (item is! Map) return null;
+    final m = Map<String, dynamic>.from(item);
+    final left = _asInt(m['left']);
+    final right = _asInt(m['right']);
+    if (left == null || right == null) return null;
+    correctPairs.add(MatchingPair(left: left, right: right));
+  }
+  if (correctPairs.isEmpty) return null;
+
+  return MatchingData(
+    prompt: prompt,
+    ref: ref,
+    leftColumn: leftColumn,
+    rightColumn: rightColumn,
+    correctPairs: correctPairs,
+  );
+}
+
+/// Thin client guard for match games.
+PuzzleRejected? guardMatching(MatchingData data) {
+  if (data.leftColumn.length != data.rightColumn.length) {
+    return const PuzzleRejected(
+      message: 'Match columns must be the same length.',
+      code: PuzzleRejectCode.invalidShape,
+    );
+  }
+  if (data.correctPairs.length != data.leftColumn.length) {
+    return const PuzzleRejected(
+      message: 'Match pairs must cover every left item.',
+      code: PuzzleRejectCode.invalidShape,
+    );
+  }
+  final lefts = <int>{};
+  final rights = <int>{};
+  for (final pair in data.correctPairs) {
+    if (pair.left < 0 ||
+        pair.left >= data.leftColumn.length ||
+        pair.right < 0 ||
+        pair.right >= data.rightColumn.length) {
+      return const PuzzleRejected(
+        message: 'Match pair index is out of range.',
+        code: PuzzleRejectCode.bounds,
+      );
+    }
+    if (!lefts.add(pair.left) || !rights.add(pair.right)) {
+      return const PuzzleRejected(
+        message: 'Match pairs must be unique on each side.',
+        code: PuzzleRejectCode.collision,
+      );
+    }
+  }
+  return null;
 }
 
 CrosswordData? _parseCrossword(Map<String, dynamic> data) {
@@ -274,36 +366,6 @@ CrosswordData? _parseCrossword(Map<String, dynamic> data) {
   }
 
   return CrosswordData(rows: rows, cols: cols, entries: entries);
-}
-
-MatchingData? _parseMatching(Map<String, dynamic> data) {
-  final prompt = data['prompt'] as String?;
-  final ref = data['ref'] as String?;
-  final left = data['leftColumn'];
-  final right = data['rightColumn'];
-  final pairs = data['correctPairs'];
-  if (prompt == null ||
-      ref == null ||
-      left is! List ||
-      right is! List ||
-      pairs is! List) {
-    return null;
-  }
-  final correctPairs = <({int left, int right})>[];
-  for (final p in pairs) {
-    if (p is! Map) return null;
-    final l = _asInt(p['left']);
-    final r = _asInt(p['right']);
-    if (l == null || r == null) return null;
-    correctPairs.add((left: l, right: r));
-  }
-  return MatchingData(
-    prompt: prompt,
-    ref: ref,
-    leftColumn: left.map((e) => '$e').toList(),
-    rightColumn: right.map((e) => '$e').toList(),
-    correctPairs: correctPairs,
-  );
 }
 
 /// Thin client guard: empty entries, bounds, letter collisions → reject (no throw).

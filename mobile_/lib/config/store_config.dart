@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'api_config.dart';
 
 /// Play Store / release gates.
-/// Demo roles stay enabled while we are still client-testing release APKs.
 class StoreConfig {
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static String get apiBaseUrl => ApiConfig.baseUrl;
   static const String firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const String firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
   static const String firebaseMessagingSenderId =
@@ -16,8 +16,8 @@ class StoreConfig {
       firebaseMessagingSenderId.isNotEmpty &&
       firebaseProjectId.isNotEmpty;
 
-  /// Keep demo login shortcuts visible in release until Play Store ship.
-  static bool showDemoRolesFor({required bool isRelease}) => true;
+  /// Offline demo login shortcuts are not shipped in the production app.
+  static bool showDemoRolesFor({required bool isRelease}) => false;
 
   static bool showOfflineDownloadFor({required bool isRelease}) => false;
 

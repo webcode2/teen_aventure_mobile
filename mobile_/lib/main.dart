@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,8 @@ import 'services/engagement_service.dart';
 import 'services/family_service.dart';
 import 'services/video_download_service.dart';
 import 'models/auth_session.dart';
+import 'providers/current_quest_provider.dart';
+import 'providers/hero_copy.dart';
 import 'providers/video_provider.dart';
 import 'models/game_controller.dart';
 import 'theme.dart';
@@ -60,13 +63,41 @@ class AskHubTeenApp extends StatelessWidget {
           )..loadContent(),
         ),
         ChangeNotifierProvider(
-          create: (_) => GameController()..loadDefaultCanonical(),
+          // Week puzzle is bound via GameController.startWeek / openPuzzle —
+          // do not preload the global catalogue puzzle (wrong pattern).
+          create: (_) => GameController(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => HeroCopyController(
+            context.read<ApiClient>(),
+            ServiceLocator.instance.prefs,
+          )..refresh(),
+        ),
+        ChangeNotifierProxyProvider<AuthSession, CurrentQuestProvider>(
+          create: (context) => CurrentQuestProvider(
+            context.read<ContentService>(),
+            prefs: ServiceLocator.instance.prefs,
+          ),
+          update: (_, session, quest) => quest!
+            ..syncIdentity(
+              authenticated: session.ready && session.authenticated,
+              userId: session.userId,
+              childId: session.effectiveChildId,
+            ),
         ),
       ],
       child: MaterialApp(
         title: 'Teen Bible Adventures',
         debugShowCheckedModeBanner: false,
         theme: TeenAppTheme.themeData,
+        // Chrome/trackpad need mouse drag so home pull-to-refresh works on web.
+        scrollBehavior: const MaterialScrollBehavior().copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
         builder: (context, child) {
           final media = MediaQuery.of(context);
           final bumped = AppTextScaler(

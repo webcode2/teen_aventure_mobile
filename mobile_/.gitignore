@@ -46,3 +46,12 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Secrets & Firebase client/local config
+.env
+.env.*
+!.env.example
+**/google-services.json
+**/GoogleService-Info.plist
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json

@@ -1,0 +1,20 @@
+---
+description: Ministry account product rules for Teen Bible Adventures
+alwaysApply: true
+---
+
+# Ministry account
+
+Applicant-facing name is **ministry**. Keep the Church model, admin Churches page, and join codes. The operating portal lives under `/ministry` (not a separate `/groups` URL).
+
+- Routes: `/ministry`, `/ministry/verify`, `/ministry/guide`, `/ministry/:churchId`. `/apply` and legacy `/groups` redirect to `/ministry`.
+- One entry: `/ministry` is account → verify → apply until approved. After approval (pastor session), the same route shows the ministry operations portal.
+- Titles: Pastor, Ministry leader, Youth worker, Children's ministry lead, Teacher. Store on `User.leadershipTitle`. Approval still grants church role PASTOR.
+- `CHURCH_APPLICANT` cannot use the mobile app or the ministry portal until approved.
+- Unverified home: welcome, no activities, apply, setup guide. Hide empty KPIs, groups, and safeguarding until approved.
+- Profile opens from the header into the right Drawer. Edit name, title, and phone. Email is read-only. Do not show a password row on profile read views.
+- The apply form stays inside the ministry dashboard, not the public nav. Show the Teen Bible Adventures logo on the ministry header, welcome, and apply form.
+- Dashboard copy says ministry. Put the ministry description directly under the ministry name.
+- Say Teen Bible Adventures reviews the application. Do not say an administrator does.
+- Review shows every application field. Approve creates the ministry, sets `MAIN_ACCOUNT`, `appLogin` false, and the PASTOR role, then emails the decision. The person opens the ministry and can create groups. Reject emails the reason and does not open groups.
+- Do not email a plaintext password. Verification is a 5-letter code, hashed, logged only to `backend/church-verify.log`. Never return the code in the API.

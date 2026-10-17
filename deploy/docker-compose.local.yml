@@ -1,0 +1,72 @@
+# Local full stack: Postgres (+ teentest) and API.
+# Usage from repo root:
+#   docker compose -f deploy/docker-compose.local.yml up -d --build
+# Host tools (vitest / vite) talk to Postgres on localhost:5433.
+# The API container reaches Postgres as hostname `postgres`.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: teen-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: teen
+      POSTGRES_PASSWORD: teenlocal
+      POSTGRES_DB: teen
+    ports:
+      - "5433:5432"
+    volumes:
+      - teen-postgres-local-data:/var/lib/postgresql/data
+      - ./local-postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teen -d teen"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: teen-api:local
+    container_name: teen-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ../backend/.env
+    environment:
+      NODE_ENV: development
+      # Inside the compose network, use the service name (not 127.0.0.1).
+      DATABASE_URL: postgresql://teen:teenlocal@postgres:5432/teen?schema=public
+      DIRECT_URL: postgresql://teen:teenlocal@postgres:5432/teen?schema=public
+      TEST_DATABASE_URL: postgresql://teen:teenlocal@postgres:5432/teentest?schema=public
+      PRIVATE_UPLOAD_DRIVER: local
+      PORT: "8080"
+      # Host .env often points GOOGLE_APPLICATION_CREDENTIALS at a Mac/Linux path
+      # that does not exist inside the container — force the mounted file below.
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../backend/private-uploads:/app/backend/private-uploads
+      # Firebase Admin SDK JSON (same file referenced by backend/.env on the host).
+      - ../backend/tbadventure-f712a-firebase-adminsdk-fbsvc-b7ed721544.json:/run/secrets/firebase-admin.json:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 40s
+
+volumes:
+  teen-postgres-local-data:
+    name: teen-postgres-local-data
+    external: true

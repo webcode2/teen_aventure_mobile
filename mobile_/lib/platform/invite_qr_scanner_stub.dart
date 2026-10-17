@@ -10,6 +10,11 @@ class InviteQrScannerController {
   Future<void> dispose() async {}
   Future<void> toggleTorch() async {}
   bool get torchOn => false;
+  bool get isRunning => false;
+  bool get hasCameraPermission => false;
+  bool get hasError => false;
+  bool get isStarting => false;
+  String? get errorMessage => null;
 }
 
 InviteQrScannerController? createInviteQrScannerController() => null;
@@ -21,6 +26,8 @@ Widget buildInviteQrScanner({
   required InviteQrDetected onDetect,
   required bool busy,
   required bool paused,
+  VoidCallback? onRetry,
+  Key? key,
 }) {
   return ClipRRect(
     borderRadius: AppRadii.cardRadius,

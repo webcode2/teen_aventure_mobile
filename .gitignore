@@ -28,6 +28,11 @@ Desktop.ini
 **/google-services.json
 **/GoogleService-Info.plist
 **/key.properties
+# Firebase Admin SDK private keys (FCM send credentials)
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+**/serviceAccount*.json
+**/firebase-service-account.json
 
 # Logs & temp
 *.log
@@ -88,3 +93,5 @@ __pycache__/
 
 # Cursor / agent local state (keep rules if committed elsewhere)
 .cursor/projects/
+.vercel
+.db-backups/

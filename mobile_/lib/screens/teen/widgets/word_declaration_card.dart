@@ -10,12 +10,11 @@ import '../../../theme.dart';
 class WordDeclarationCard extends StatefulWidget {
   const WordDeclarationCard({
     super.key,
+    required this.declaration,
+    required this.reference,
+    required this.refKey,
     this.title = 'Word Declaration',
-    this.declaration =
-        'I declare: I am strong and courageous. The Lord my God is with me wherever I go.',
-    this.reference = 'Joshua 1:9',
     this.targetTaps = 10,
-    this.refKey = 'word-declaration-joshua-1-9',
   });
 
   final String title;
@@ -83,15 +82,23 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
     if (_awarded) return;
     _awarded = true;
     try {
-      context.read<GameController>().addScoreAndGems(QuestPoints.prayer, 1);
-    } catch (_) {}
-    try {
-      final childId = context.read<AuthSession>().childId;
-      context.read<ContentService>().markPrayerDeclared(
-            refKey: widget.refKey,
-            childId: childId,
-          );
-    } catch (_) {}
+      final childId = context.read<AuthSession>().effectiveChildId;
+      final game = context.read<GameController>();
+      context
+          .read<ContentService>()
+          .markPrayerDeclared(refKey: widget.refKey, childId: childId)
+          .then((award) {
+        if (award.awardedFresh) {
+          game.applyActivityPoints(award.points);
+        } else if (!award.ok) {
+          game.addScoreAndGems(QuestPoints.prayer, 1);
+        }
+      });
+    } catch (_) {
+      try {
+        context.read<GameController>().addScoreAndGems(QuestPoints.prayer, 1);
+      } catch (_) {}
+    }
   }
 
   @override

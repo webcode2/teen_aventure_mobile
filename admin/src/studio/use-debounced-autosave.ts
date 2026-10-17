@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api';
-import type { StudioDoc } from './doc-store';
+import { withoutEmptySteps, type StudioDoc } from './doc-store';
 
 type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
@@ -26,6 +26,10 @@ export function useDebouncedDraftAutosave(opts: {
   debounceMs?: number;
   onDraftId?: (id: string) => void;
   onConflict?: (conflict: DraftConflict) => void;
+  /** Fired after a save that omitted blank word cards. */
+  onDroppedEmpty?: () => void;
+  /** Set true the moment a publish finishes, before React re-renders. */
+  holdRef?: { readonly current: boolean };
 }) {
   const {
     draftId,
@@ -35,20 +39,27 @@ export function useDebouncedDraftAutosave(opts: {
     debounceMs = 1200,
     onDraftId,
     onConflict,
+    onDroppedEmpty,
+    holdRef,
   } = opts;
   const [status, setStatus] = useState<AutosaveStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<DraftConflict | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latest = useRef({ draftId, version, doc, onDraftId, onConflict });
-  latest.current = { draftId, version, doc, onDraftId, onConflict };
+  const latest = useRef({ draftId, version, doc, onDraftId, onConflict, onDroppedEmpty });
+  latest.current = { draftId, version, doc, onDraftId, onConflict, onDroppedEmpty };
   const lastSavedVersion = useRef<number | null>(null);
   const backoffUntil = useRef(0);
   const inFlight = useRef(false);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+  const hold = useRef(holdRef);
+  hold.current = holdRef;
+  const savingHeld = () => !enabledRef.current || Boolean(hold.current?.current);
   const scheduleSave = useRef<() => void>(() => {});
 
   scheduleSave.current = () => {
-    if (!enabled) return;
+    if (!enabled || hold.current?.current) return;
     const cur = latest.current;
     if (lastSavedVersion.current === cur.version && cur.draftId) return;
     if (inFlight.current) return;
@@ -57,6 +68,7 @@ export function useDebouncedDraftAutosave(opts: {
     const wait = Math.max(debounceMs, backoffUntil.current - Date.now());
     timer.current = setTimeout(async () => {
       const snap = latest.current;
+      if (savingHeld()) return;
       if (lastSavedVersion.current === snap.version && snap.draftId) return;
       if (inFlight.current) return;
 
@@ -66,22 +78,26 @@ export function useDebouncedDraftAutosave(opts: {
       if (!quietOffline) setStatus('saving');
 
       try {
+        const savedDoc = withoutEmptySteps(snap.doc);
         const saved = await api<{ id: string; version: number }>('/api/puzzle-drafts', {
           method: 'PUT',
           body: JSON.stringify({
             id: snap.draftId ?? undefined,
             version: snap.version,
-            title: snap.doc.title,
-            doc: snap.doc,
+            title: savedDoc.title,
+            doc: savedDoc,
           }),
         });
         lastSavedVersion.current = snap.version;
         backoffUntil.current = 0;
+        if (savedDoc !== snap.doc) snap.onDroppedEmpty?.();
         if (!snap.draftId) snap.onDraftId?.(saved.id);
+        if (savingHeld()) return;
         setConflict(null);
         setError(null);
         setStatus('saved');
       } catch (e) {
+        if (savingHeld()) return;
         if (e instanceof ApiError && e.status === 409) {
           const body = (e.body ?? {}) as {
             serverVersion?: number;
@@ -104,6 +120,7 @@ export function useDebouncedDraftAutosave(opts: {
         }
       } finally {
         inFlight.current = false;
+        if (savingHeld()) return;
         // Edits that landed during the PUT — schedule one more quiet pass.
         const again = latest.current;
         if (lastSavedVersion.current !== again.version || !again.draftId) {
@@ -114,7 +131,10 @@ export function useDebouncedDraftAutosave(opts: {
   };
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setStatus((current) => (current === 'saving' || current === 'error' ? 'saved' : current));
+      return;
+    }
     scheduleSave.current();
     return () => {
       if (timer.current) clearTimeout(timer.current);

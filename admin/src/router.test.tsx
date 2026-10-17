@@ -30,6 +30,31 @@ vi.mock('./api', async () => {
       if (path === '/api/admin/scoring-rules') return {};
       return [];
     }),
+    publicApi: vi.fn(async (path: string) => {
+      if (path === '/api/site-pages/privacy-policy') {
+        return {
+          id: '1',
+          slug: 'privacy-policy',
+          title: 'Privacy Policy',
+          html: '<h2>Audience &amp; Age Eligibility</h2><p>Teen Bible Adventures privacy policy for Nigeria.</p>',
+          published: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        };
+      }
+      if (path === '/api/site-pages/terms-of-service') {
+        return {
+          id: '2',
+          slug: 'terms-of-service',
+          title: 'Terms of Service',
+          html: '<h2>Agreement</h2><p>Terms for Nigeria.</p>',
+          published: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        };
+      }
+      throw new Error(`Unexpected publicApi path: ${path}`);
+    }),
     login: vi.fn(),
     pastorLogin: vi.fn(),
     forgotPassword: vi.fn(),
@@ -100,9 +125,14 @@ describe('AppRoutes', () => {
     expect(await screen.findByText('Community snapshot')).toBeTruthy();
   });
 
-  it('renders pastor portal at /groups', async () => {
+  it('renders ministry entry at /ministry', async () => {
+    renderAt('/ministry');
+    expect(await screen.findByRole('heading', { name: /Ministry Sign In/i })).toBeTruthy();
+  });
+
+  it('redirects /groups to /ministry', async () => {
     renderAt('/groups');
-    expect(await screen.findByText('Church Sign In')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Ministry Sign In/i })).toBeTruthy();
   });
 
   it('renders about page at /about', async () => {
@@ -116,9 +146,14 @@ describe('AppRoutes', () => {
   it('renders privacy policy at /privacy', async () => {
     renderAt('/privacy');
     expect(await screen.findByRole('heading', { name: 'Privacy Policy' })).toBeTruthy();
-    expect(screen.getByText('100% Ad-Free')).toBeTruthy();
-    expect(screen.getByText('No Data Selling')).toBeTruthy();
-    expect(screen.getAllByText(/Parental Oversight/i).length).toBeGreaterThan(0);
+    expect(await screen.findByText(/Audience & Age Eligibility/i)).toBeTruthy();
+    expect(screen.getByText(/Teen Bible Adventures privacy policy for Nigeria/i)).toBeTruthy();
+  });
+
+  it('renders terms of service at /terms', async () => {
+    renderAt('/terms');
+    expect(await screen.findByRole('heading', { name: 'Terms of Service' })).toBeTruthy();
+    expect(await screen.findByText(/Terms for Nigeria/i)).toBeTruthy();
   });
 
   it('renders contact page at /contact', async () => {

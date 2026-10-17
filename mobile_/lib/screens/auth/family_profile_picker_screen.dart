@@ -4,21 +4,28 @@ import '../../models/auth_session.dart';
 import '../../theme.dart';
 import '../shared/widgets/adventure_logo.dart';
 import 'child_pin_screen.dart';
+import 'child_teen_login_screen.dart';
 
 class FamilyProfilePickerScreen extends StatelessWidget {
   const FamilyProfilePickerScreen({super.key});
 
   void _openChildProfile(BuildContext context, FamilyChildProfile child) {
-    // Always open through the parent-switch PIN flow so we stash the parent
-    // token and Switch account can restore it from the drawer.
+    // Independent-login teens: email/password and end the parent session.
+    // Younger explorers: PIN (or parent switch) and keep a restore stash.
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChildPinScreen(
-          childId: child.id,
-          childName: child.name,
-          useParentSwitch: child.isUnderAge,
-        ),
+        builder: (_) => child.usesEmailPasswordSwitch
+            ? ChildTeenLoginScreen(
+                childId: child.id,
+                childName: child.name,
+                email: child.email,
+              )
+            : ChildPinScreen(
+                childId: child.id,
+                childName: child.name,
+                useParentSwitch: child.isUnderAge,
+              ),
       ),
     );
   }
@@ -86,7 +93,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
                         final child = session.children[i];
                         return _WatcherCard(
                           name: child.name,
-                          subtitle: child.isUnderAge ? 'Under-age' : 'Teen',
+                          subtitle: child.isUnderAge ? 'Explorer' : 'Teen',
                           color: _avatarColors[i % _avatarColors.length],
                           onTap: () => _openChildProfile(context, child),
                         );

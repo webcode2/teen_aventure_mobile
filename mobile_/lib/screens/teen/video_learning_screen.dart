@@ -7,23 +7,24 @@ import '../../models/video_lesson.dart';
 import '../../models/game_controller.dart';
 import '../../models/video_source.dart';
 import '../../platform/local_fs.dart';
+import '../../providers/current_quest_provider.dart';
 import '../../providers/video_provider.dart';
 import '../../theme.dart';
 import '../../config/store_config.dart';
 import 'widgets/lesson_video_player.dart';
 import '../shared/offline_videos_screen.dart';
 import '../../services/video_download_service.dart';
-import '../../services/content_service.dart';
-import '../../models/auth_session.dart';
 
 class VideoLearningScreen extends StatefulWidget {
   final VideoLesson lesson;
+  final int? videoIndex;
   final String? weekLabel;
   final String? lessonTitle;
 
   const VideoLearningScreen({
     super.key,
     required this.lesson,
+    this.videoIndex,
     this.weekLabel,
     this.lessonTitle,
   });
@@ -117,18 +118,24 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     if (_lessonMarked) return;
     _lessonMarked = true;
     if (mounted) setState(() {});
+    final index = widget.videoIndex ?? widget.lesson.partNumber - 1;
+    GameController? game;
     try {
-      context
-          .read<GameController>()
-          .completeVideoPart(widget.lesson.partNumber - 1);
+      game = context.read<GameController>();
+      game.completeVideoPart(index);
     } catch (_) {}
     try {
-      final childId = context.read<AuthSession>().childId;
-      context.read<ContentService>().markVideoWatched(
-            weekNumber: widget.lesson.weekNumber,
+      final quests = context.read<CurrentQuestProvider>();
+      // One POST awards points and returns the admin table — no follow-up /current.
+      quests
+          .recordVideoWatched(
             videoId: widget.lesson.id,
-            childId: childId,
-          );
+            weekNumber: widget.lesson.weekNumber,
+          )
+          .then((points) {
+            if (points > 0) game?.applyActivityPoints(points);
+            if (mounted) setState(() {});
+          });
     } catch (_) {}
   }
 
@@ -136,9 +143,9 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     if (_continuing) return;
     _continuing = true;
     _markLessonWatched();
-    await _leaveVideoPlayback();
-    if (!mounted) return;
-    if (Navigator.canPop(context)) Navigator.pop(context);
+    final leave = _leaveVideoPlayback();
+    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
+    await leave;
   }
 
   Future<void> _loadPlaybackSource() async {
@@ -312,6 +319,11 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     final lesson = widget.lesson;
     final weekLabel = widget.weekLabel ?? 'Week ${lesson.weekNumber} Quest';
     final lessonTitle = widget.lessonTitle ?? lesson.title;
+    var videoPoints = 0;
+    try {
+      videoPoints = context.watch<CurrentQuestProvider>().current?.videoPoints ?? 0;
+    } catch (_) {}
+    final pointsLabel = videoPoints > 0 ? '+$videoPoints PTS' : null;
 
     return PopScope(
       canPop: !isFullScreen,
@@ -363,30 +375,35 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                 ],
               ),
               actions: [
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.gold, width: 1),
-                  ),
-                  child: const Row(
-                    children: [
-                      Text('⭐', style: TextStyle(fontSize: 12)),
-                      SizedBox(width: 4),
-                      Text(
-                        '+200 PTS',
-                        style: TextStyle(
+                if (pointsLabel != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.gold, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _lessonMarked ? Icons.check_circle : Icons.stars_rounded,
+                          size: 14,
                           color: AppColors.gold,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          _lessonMarked ? 'Earned $pointsLabel' : pointsLabel,
+                          style: const TextStyle(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
       body: SafeArea(
@@ -491,8 +508,12 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                           ),
                           child: Text(
                             _lessonMarked
-                                ? 'Continue to next'
-                                : 'Finished — continue',
+                                ? (pointsLabel != null
+                                    ? 'Continue · earned $pointsLabel'
+                                    : 'Continue to next')
+                                : (pointsLabel != null
+                                    ? 'Finished — continue · $pointsLabel'
+                                    : 'Finished — continue'),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
@@ -500,59 +521,63 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                           ),
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(32, 4, 32, 4),
-                        child: Text(
-                          'Things to expect',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.45,
-                            height: 1.15,
-                            color: AppColors.navy,
+                      if (lesson.takeaways.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(32, 4, 32, 4),
+                          child: Text(
+                            'Things to expect',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.45,
+                              height: 1.15,
+                              color: AppColors.navy,
+                            ),
                           ),
                         ),
-                      ),
-                      CupertinoListSection.insetGrouped(
-                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        backgroundColor: AppColors.cream,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                        CupertinoListSection.insetGrouped(
+                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                          backgroundColor: AppColors.cream,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          separatorColor:
+                              const Color(0xFFC6C6C8).withValues(alpha: 0.55),
+                          additionalDividerMargin: 52,
+                          children: [
+                            for (var i = 0; i < lesson.takeaways.length; i++)
+                              CupertinoListTile(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    16, 12, 16, 12),
+                                leadingSize: 28,
+                                leadingToTitle: 10,
+                                leading: Text(
+                                  '${i + 1}'.padLeft(2, '0'),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.2,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures()
+                                    ],
+                                    color: AppColors.orange,
+                                  ),
+                                ),
+                                title: Text(
+                                  lesson.takeaways[i],
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: -0.4,
+                                    height: 1.25,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        separatorColor:
-                            const Color(0xFFC6C6C8).withValues(alpha: 0.55),
-                        additionalDividerMargin: 52,
-                        children: [
-                          for (var i = 0; i < lesson.takeaways.length; i++)
-                            CupertinoListTile(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  16, 12, 16, 12),
-                              leadingSize: 28,
-                              leadingToTitle: 10,
-                              leading: Text(
-                                '${i + 1}'.padLeft(2, '0'),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: -0.2,
-                                  fontFeatures: [FontFeature.tabularFigures()],
-                                  color: AppColors.orange,
-                                ),
-                              ),
-                              title: Text(
-                                lesson.takeaways[i],
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: -0.4,
-                                  height: 1.25,
-                                  color: AppColors.navy,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
                 ),

@@ -5,15 +5,25 @@ import 'level_map_screen.dart';
 
 /// Adventure map opened from the Quest tab or Home quiz row.
 class QuestJourneyScreen extends StatelessWidget {
-  const QuestJourneyScreen({super.key, this.embedded = false});
+  const QuestJourneyScreen({
+    super.key,
+    this.embedded = false,
+    this.onQuestOfDayChanged,
+  });
 
   final bool embedded;
 
-  static const Color sky = Color(0xFFB9E6F4);
+  /// Fired after a map level updates quest-of-the-day (highest level unchanged).
+  final ValueChanged<int>? onQuestOfDayChanged;
+
+  static const Color sky = Color(0xFF073C43);
 
   @override
   Widget build(BuildContext context) {
-    const map = ColoredBox(color: sky, child: LevelMapScreen());
+    final map = ColoredBox(
+      color: sky,
+      child: LevelMapScreen(onQuestOfDayChanged: onQuestOfDayChanged),
+    );
     if (embedded) return map;
     return Scaffold(
       backgroundColor: sky,

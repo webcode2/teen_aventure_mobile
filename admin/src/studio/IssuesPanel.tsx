@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { validateChain, type PuzzleIssue } from '@askhub/puzzles/validate.ts';
+import { validateChain, type PuzzleIssue } from '@askhub/puzzle-contracts';
 import type { StudioDoc, StudioStep } from './doc-store';
+import { clueNumberById } from './clue-numbers';
 
 type Props = {
   doc: StudioDoc;
@@ -13,11 +14,12 @@ function letters(answer: string) {
 
 function wordLabel(doc: StudioDoc, stepId: string | undefined): string {
   if (!stepId) return 'a word';
-  const idx = doc.data.steps.findIndex((s) => s.id === stepId);
-  if (idx < 0) return 'a word';
-  const step = doc.data.steps[idx]!;
+  const step = doc.data.steps.find((s) => s.id === stepId);
+  if (!step) return 'a word';
+  const number = clueNumberById(doc.data.steps).get(stepId);
+  const name = number != null ? `Word ${number}` : 'Word';
   const ans = letters(step.answer);
-  return ans ? `Word ${idx + 1} (${ans})` : `Word ${idx + 1}`;
+  return ans ? `${name} (${ans})` : name;
 }
 
 /** Project studio doc → CHAIN shape for validate() (drop canvas row/col). */
@@ -27,7 +29,7 @@ function toChainForValidate(doc: StudioDoc) {
     id: doc.id,
     type: 'CHAIN' as const,
     title: doc.title,
-    scripture: doc.scripture || '—',
+    scripture: doc.scripture,
     rewards: doc.rewards,
     data: {
       steps: doc.data.steps.map((s) => ({
@@ -83,12 +85,16 @@ function isActionable(doc: StudioDoc, issue: PuzzleIssue): boolean {
       : doc.data.steps.find((s) => s.id === issue.toId || s.id === issue.fromId);
 
   if (!step) return true;
+  // A word already sitting on the grid does not also need a chain link.
+  if (issue.code === 'LINK' && step.row != null && step.col != null) return false;
   const ans = letters(step.answer);
   // Empty brand-new chips: don't spam "answer has no letters" / empty clue.
   if (!ans && (issue.message.includes('no letters') || issue.code === 'CLUE_REF')) {
     return false;
   }
-  // Clue/ref tips only after the word is placed on the grid.
+  // A scripture reference is required as soon as the word has an answer.
+  if (issue.code === 'CLUE_REF' && issue.message.includes('ref') && ans) return true;
+  // Other clue tips wait until the word is on the grid.
   if (issue.code === 'CLUE_REF' && (step.row == null || step.col == null)) {
     return false;
   }
@@ -103,38 +109,22 @@ export function IssuesPanel({ doc, onLocate }: Props) {
     return result.issues.filter((i) => isActionable(doc, i));
   }, [doc]);
 
+  if (issues.length === 0) return null;
+
   return (
-    <div className="bg-surface border border-border rounded-card p-4 shadow-xs flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
-        <h3 className="text-sm font-bold text-navy">Checklist</h3>
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${
-            issues.length
-              ? 'bg-error-bg text-error border-error/20'
-              : 'bg-sage text-forest border-forest/20'
-          }`}
-        >
-          {issues.length === 0 ? 'Ready' : `${issues.length} to fix`}
-        </span>
-      </div>
-      {issues.length === 0 ? (
-        <p className="text-xs text-muted m-0">Looking good — place words, add clues, then publish.</p>
-      ) : (
-        <ul className="flex flex-col gap-2 list-none p-0 m-0">
-          {issues.map((issue, i) => (
-            <li key={`${issue.code}-${i}`}>
-              <button
-                type="button"
-                className="w-full text-left p-2.5 rounded-lg border border-border bg-cream hover:border-orange text-xs text-navy transition-colors cursor-pointer text-pretty"
-                onClick={() => locate(issue, onLocate, doc)}
-              >
-                {humanMessage(doc, issue)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      {issues.map((issue, i) => (
+        <li key={`${issue.code}-${i}`}>
+          <button
+            type="button"
+            className="cursor-pointer bg-transparent p-0 text-left text-xs text-orange"
+            onClick={() => locate(issue, onLocate, doc)}
+          >
+            {humanMessage(doc, issue)}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme.dart';
@@ -7,6 +9,9 @@ typedef InviteQrDetected = void Function(String raw);
 class InviteQrScannerController {
   InviteQrScannerController()
       : _inner = MobileScannerController(
+          // autoStart stays false — JoinInviteScreen starts after the first frame
+          // so the Activity / texture are ready (release CameraX is picky).
+          autoStart: false,
           detectionSpeed: DetectionSpeed.normal,
           facing: CameraFacing.back,
           formats: const [BarcodeFormat.qrCode],
@@ -14,17 +19,58 @@ class InviteQrScannerController {
 
   final MobileScannerController _inner;
   bool _torchOn = false;
+  Future<void>? _startInFlight;
 
-  Future<void> start() => _inner.start();
-  Future<void> stop() => _inner.stop();
-  Future<void> dispose() => _inner.dispose();
+  Future<void> start() async {
+    if (_inner.value.isRunning) return;
+    final inFlight = _startInFlight;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+    final done = Completer<void>();
+    _startInFlight = done.future;
+    try {
+      if (_inner.value.error != null) return;
+      await _inner.start();
+    } on MobileScannerException catch (error) {
+      if (error.errorCode == MobileScannerErrorCode.controllerAlreadyInitialized) {
+        return;
+      }
+      rethrow;
+    } finally {
+      if (!done.isCompleted) done.complete();
+      _startInFlight = null;
+    }
+  }
+
+  Future<void> stop() async {
+    if (_startInFlight != null) return;
+    if (!_inner.value.isInitialized || !_inner.value.isRunning) return;
+    try {
+      await _inner.stop();
+    } catch (_) {}
+  }
+
+  Future<void> dispose() async {
+    try {
+      await stop();
+    } catch (_) {}
+    await _inner.dispose();
+  }
 
   Future<void> toggleTorch() async {
+    if (!_inner.value.isRunning) return;
     await _inner.toggleTorch();
     _torchOn = !_torchOn;
   }
 
   bool get torchOn => _torchOn;
+  bool get isRunning => _inner.value.isRunning;
+  bool get hasCameraPermission => _inner.value.hasCameraPermission;
+  bool get hasError => _inner.value.error != null;
+  bool get isStarting => _startInFlight != null;
+  String? get errorMessage => _inner.value.error?.errorDetails?.message;
 
   MobileScannerController get raw => _inner;
 }
@@ -39,9 +85,12 @@ Widget buildInviteQrScanner({
   required InviteQrDetected onDetect,
   required bool busy,
   required bool paused,
+  VoidCallback? onRetry,
+  Key? key,
 }) {
   if (controller == null) return const SizedBox.shrink();
   return _QrScannerFrame(
+    key: key,
     controller: controller.raw,
     onDetect: (capture) {
       for (final barcode in capture.barcodes) {
@@ -53,21 +102,25 @@ Widget buildInviteQrScanner({
     },
     busy: busy,
     paused: paused,
+    onRetry: onRetry,
   );
 }
 
 class _QrScannerFrame extends StatelessWidget {
   const _QrScannerFrame({
+    super.key,
     required this.controller,
     required this.onDetect,
     required this.busy,
     required this.paused,
+    this.onRetry,
   });
 
   final MobileScannerController controller;
   final void Function(BarcodeCapture capture) onDetect;
   final bool busy;
   final bool paused;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +137,9 @@ class _QrScannerFrame extends StatelessWidget {
                 controller: controller,
                 onDetect: onDetect,
                 errorBuilder: (context, error, child) {
+                  final denied =
+                      error.errorCode == MobileScannerErrorCode.permissionDenied;
+                  final detail = error.errorDetails?.message?.trim();
                   return ColoredBox(
                     color: AppColors.navy,
                     child: Padding(
@@ -104,7 +160,10 @@ class _QrScannerFrame extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Allow camera access in settings, or paste the invite code below.\n(${error.errorCode.name})',
+                            denied
+                                ? 'Camera permission was denied. Enable it in system settings, or paste the invite code below.'
+                                : 'Could not open the camera. Tap try again, or paste the invite code below.'
+                                    '${detail != null && detail.isNotEmpty ? '\n($detail)' : '\n(${error.errorCode.name})'}',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AppColors.cream.withValues(alpha: 0.85),
@@ -112,6 +171,14 @@ class _QrScannerFrame extends StatelessWidget {
                               fontSize: 13,
                             ),
                           ),
+                          if (onRetry != null) ...[
+                            const SizedBox(height: 14),
+                            TextButton(
+                              onPressed: onRetry,
+                              style: TextButton.styleFrom(foregroundColor: AppColors.gold),
+                              child: const Text('Try camera again'),
+                            ),
+                          ],
                         ],
                       ),
                     ),

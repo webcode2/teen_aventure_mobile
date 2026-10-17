@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../data/youtube_lesson_urls.dart';
-import '../../../models/video_source.dart';
 import '../../../models/week_quest_progress.dart';
 import '../../../theme.dart';
 import '../../shared/widgets/adventure_list_card.dart';
@@ -16,18 +14,31 @@ class TodaysQuestSlide extends StatelessWidget {
     required this.onPuzzle,
     required this.progress,
     this.sidePadding = 16,
+    this.weekLabel,
+    this.thumbnailUrl,
+    this.allWeeksDone = false,
+    this.stepsOpen = false,
+    this.gameStepTitle = 'Puzzle',
   });
 
   final String passage;
   final String subtitle;
   final List<String> videoSubtitles;
+  final String? thumbnailUrl;
   final void Function(int index) onOpenVideo;
   final VoidCallback onQuiz;
   final VoidCallback onPuzzle;
   final WeekQuestProgress progress;
   final double sidePadding;
+  /// e.g. "Week 4" — the explorer's own place in the 52 weeks.
+  final String? weekLabel;
+  final bool allWeeksDone;
 
-  static const int cardCount = 3;
+  /// Map browse: quiz and puzzle open even before the videos are watched.
+  final bool stepsOpen;
+
+  /// Home row label for the week's studio game ("Puzzle" or "Match").
+  final String gameStepTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -36,10 +47,10 @@ class TodaysQuestSlide extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            "Today's Quest",
+          Text(
+            weekLabel == null ? "Today's Quest" : "Today's Quest · $weekLabel",
             maxLines: 2,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.navy,
               fontWeight: FontWeight.w600,
               fontSize: 20,
@@ -65,27 +76,14 @@ class TodaysQuestSlide extends StatelessWidget {
   }
 
   List<Widget> _rows(BuildContext context) {
-    final videosOpen = progress.videosCompleted >= WeekQuestProgress.videoCount;
+    final videosOpen = stepsOpen || progress.videosFinished;
     final active = progress.nextVideoIndex;
-    final count = videoSubtitles.length < cardCount ? videoSubtitles.length : cardCount;
+    final count = videoSubtitles.length < progress.videoCount ? videoSubtitles.length : progress.videoCount;
     final rows = <Widget>[];
     for (var index = 0; index < count; index++) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
       final title = videoSubtitles[index];
-      if (active == index) {
-        rows.add(
-          SizedBox(
-            key: ValueKey('home-video-$index'),
-            height: 178,
-            child: TodaysQuestCard(
-              label: 'Video ${index + 1}',
-              passage: passage,
-              subtitle: title,
-              onStart: () => onOpenVideo(index),
-            ),
-          ),
-        );
-      } else if (active == null || index < active) {
+      if (progress.watchedAt(index)) {
         rows.add(
           AdventureListCard(
             key: ValueKey('home-video-$index'),
@@ -94,6 +92,20 @@ class TodaysQuestSlide extends StatelessWidget {
             subtitle: 'Watched',
             accent: AdventureListAccent.green,
             onTap: () => onOpenVideo(index),
+          ),
+        );
+      } else if (active == index) {
+        rows.add(
+          SizedBox(
+            key: ValueKey('home-video-$index'),
+            height: 178,
+            child: TodaysQuestCard(
+              label: 'Video ${index + 1}',
+              passage: passage,
+              subtitle: title,
+              thumbnailUrl: thumbnailUrl,
+              onStart: () => onOpenVideo(index),
+            ),
           ),
         );
       } else {
@@ -111,34 +123,54 @@ class TodaysQuestSlide extends StatelessWidget {
     rows.add(const SizedBox(height: 10));
     rows.add(
       Opacity(
-        opacity: videosOpen ? 1 : 0.45,
-        child: AdventureListCard(
-          key: const ValueKey('home-quiz'),
-          icon: Icons.quiz_rounded,
-          title: 'Quiz',
-          accent: AdventureListAccent.navy,
-          onTap: videosOpen ? onQuiz : () => _lockedTap(context, puzzle: false),
-        ),
+        opacity: videosOpen || progress.quizDone ? 1 : 0.45,
+        child: progress.quizDone
+            ? AdventureListCard(
+                key: const ValueKey('home-quiz'),
+                icon: Icons.check_rounded,
+                title: 'Quiz',
+                subtitle: 'Finished',
+                accent: AdventureListAccent.green,
+                onTap: onQuiz,
+              )
+            : AdventureListCard(
+                key: const ValueKey('home-quiz'),
+                icon: Icons.quiz_rounded,
+                title: 'Quiz',
+                accent: AdventureListAccent.navy,
+                onTap: videosOpen ? onQuiz : () => _lockedTap(context, puzzle: false),
+              ),
       ),
     );
     rows.add(const SizedBox(height: 10));
     rows.add(
       Opacity(
-        opacity: videosOpen ? 1 : 0.45,
-        child: AdventureListCard(
-          key: const ValueKey('home-puzzle'),
-          icon: Icons.extension_rounded,
-          title: 'Puzzle',
-          accent: AdventureListAccent.teal,
-          onTap: videosOpen ? onPuzzle : () => _lockedTap(context, puzzle: true),
-        ),
+        opacity: videosOpen || progress.puzzleDone ? 1 : 0.45,
+        child: progress.puzzleDone
+            ? AdventureListCard(
+                key: const ValueKey('home-puzzle'),
+                icon: Icons.check_rounded,
+                title: gameStepTitle,
+                subtitle: 'Finished',
+                accent: AdventureListAccent.green,
+                onTap: onPuzzle,
+              )
+            : AdventureListCard(
+                key: const ValueKey('home-puzzle'),
+                icon: gameStepTitle == 'Match'
+                    ? Icons.timeline_rounded
+                    : Icons.extension_rounded,
+                title: gameStepTitle,
+                accent: AdventureListAccent.teal,
+                onTap: videosOpen ? onPuzzle : () => _lockedTap(context, puzzle: true),
+              ),
       ),
     );
     if (progress.isCaughtUp) {
       rows.add(const SizedBox(height: 12));
       rows.add(
-        const Text(
-          "You're caught up",
+        Text(
+          allWeeksDone ? "You've finished every week!" : "You're caught up",
           style: TextStyle(
             color: AppColors.navy,
             fontWeight: FontWeight.w700,
@@ -155,8 +187,8 @@ class TodaysQuestSlide extends StatelessWidget {
       SnackBar(
         content: Text(
           puzzle
-              ? 'Finish all 3 videos to open the puzzle.'
-              : 'Finish all 3 videos to open the quiz.',
+              ? 'Finish all ${progress.videoCount} videos to open the puzzle.'
+              : 'Finish all ${progress.videoCount} videos to open the quiz.',
         ),
         backgroundColor: AppColors.navy,
       ),
@@ -171,6 +203,7 @@ class TodaysQuestCard extends StatelessWidget {
     required this.subtitle,
     required this.onStart,
     this.label = "Today's Quest",
+    this.thumbnailUrl,
     this.showPlay = true,
   });
 
@@ -178,14 +211,12 @@ class TodaysQuestCard extends StatelessWidget {
   final String passage;
   final String subtitle;
   final VoidCallback onStart;
+  final String? thumbnailUrl;
   final bool showPlay;
-
-  static final VideoSource _backdrop =
-      VideoSource.parse(YoutubeLessonUrls.todaysQuestBackdrop);
 
   @override
   Widget build(BuildContext context) {
-    final thumbUrl = _backdrop.youtubeThumbnailUrl;
+    final thumbUrl = thumbnailUrl?.trim();
     return Container(
       width: double.infinity,
       height: 178,
@@ -203,16 +234,8 @@ class TodaysQuestCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          if (thumbUrl != null)
-            Positioned.fill(
-              child: Image.network(
-                thumbUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight,
-                errorBuilder: (_, __, ___) =>
-                    const ColoredBox(color: AppColors.navy),
-              ),
-            ),
+          if (thumbUrl != null && thumbUrl.isNotEmpty)
+            Positioned.fill(child: _QuestThumb(url: thumbUrl)),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -331,6 +354,31 @@ class TodaysQuestCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _QuestThumb extends StatelessWidget {
+  const _QuestThumb({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    const fallback = ColoredBox(color: AppColors.navy);
+    if (url.startsWith('http')) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        alignment: Alignment.centerRight,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+    return Image.asset(
+      url,
+      fit: BoxFit.cover,
+      alignment: Alignment.centerRight,
+      errorBuilder: (_, __, ___) => fallback,
     );
   }
 }

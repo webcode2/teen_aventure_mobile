@@ -61,27 +61,34 @@ class _ChildPinScreenState extends State<ChildPinScreen> {
     });
     try {
       final session = context.read<AuthSession>();
-      if (widget.useParentSwitch) {
-        if (!session.isParent) {
-          setState(() {
-            _busy = false;
-            _formError = 'A parent must be signed in to open this profile.';
-          });
-          return;
-        }
-        await session.switchToUnderageChild(childId);
-      } else {
-        if (!session.isParent) {
-          setState(() {
-            _busy = false;
-            _formError = 'Use Teen sign in f you have your email and PIN.';
-          });
-          return;
-        }
-        await auth.loginChildPin(childId: childId, pin: _pin.text);
-        if (!mounted) return;
-        await session.afterLogin();
+      if (!session.isParent) {
+        setState(() {
+          _busy = false;
+          _formError = widget.useParentSwitch
+              ? 'A parent must be signed in to open this profile.'
+              : 'Sign in with your email and password instead.';
+        });
+        return;
       }
+      // Prefer PIN verification (stashes parent token). Under-age profiles with no
+      // PIN yet fall back to the parent switch endpoint.
+      try {
+        await auth.loginChildPin(childId: childId, pin: _pin.text);
+      } on ApiException catch (e) {
+        // Under-age profiles may not have a PIN yet — only then use the switch route.
+        final noPin = widget.useParentSwitch &&
+            e.message.toLowerCase().contains('pin not set');
+        if (!noPin) rethrow;
+        await session.switchToUnderageChild(childId);
+        if (!mounted) return;
+        widget.onAuthenticated?.call();
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        return;
+      }
+      if (!mounted) return;
+      await session.afterLogin();
       widget.onAuthenticated?.call();
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).popUntil((route) => route.isFirst);

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
-import '../../nudge_copy.dart';
+import '../../models/api_models.dart';
 import '../auth/auth_chrome.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
@@ -12,8 +12,6 @@ import '../../theme.dart';
 import '../../family/family_account_rules.dart';
 import '../groups/groups_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
-
-final predefinedNudges = nudgeMessages.entries.map((e) => (e.key, e.value)).toList();
 
 const _avatarPalette = [
   AppColors.navy,
@@ -33,12 +31,13 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
   Map<String, dynamic>? _family;
   FamilySummary? _summary;
   GroupJar? _groupJar;
+  List<NudgeTemplate> _cheers = const [];
   String? _error;
   bool _loading = true;
   final _childName = TextEditingController();
   final _childAge = TextEditingController();
   final _teenEmail = TextEditingController();
-  final _teenPin = TextEditingController();
+  final _teenPassword = TextEditingController();
 
   @override
   void initState() {
@@ -51,7 +50,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     _childName.dispose();
     _childAge.dispose();
     _teenEmail.dispose();
-    _teenPin.dispose();
+    _teenPassword.dispose();
     super.dispose();
   }
 
@@ -65,6 +64,11 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       final engagement = context.read<EngagementService>();
       _family = await family.getMyFamily();
       _summary = await engagement.getFamilySummary();
+      try {
+        _cheers = await engagement.getNudgeTemplates();
+      } catch (_) {
+        _cheers = const [];
+      }
       try {
         _groupJar = await engagement.getGroupJar();
       } catch (_) {
@@ -99,92 +103,55 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
 
   Future<void> _ensureOwnedFamily() async {
     final session = context.read<AuthSession>();
-    if (!canCreateOwnedFamily(session.familyId)) return;
+    if (!session.canCreateGroups || !canCreateOwnedFamily(session.familyId)) return;
     final name = defaultFamilyName(session.displayName);
     await context.read<FamilyService>().createFamily(name);
     await session.refreshProfile();
   }
 
-  Future<void> _addChild({bool allowWithoutEmail = false}) async {
+  Future<void> _addChild() async {
     final name = _childName.text.trim();
     if (name.isEmpty) return;
     final age = int.tryParse(_childAge.text.trim());
     final kind = age == null ? null : explorerKindFromAge(age);
     if (!mounted) return;
-    if (kind == null) {
+    if (age == null || kind == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter an age from 0 to 25.')),
+        const SnackBar(content: Text(explorerAgeHint)),
       );
       return;
     }
 
     String? email;
-    String? pin;
-    var independent = false;
-
+    String? password;
     if (kind == ExplorerAgeKind.teen) {
       email = _teenEmail.text.trim();
-      pin = _teenPin.text.trim();
-      if (email.isEmpty) {
-        if (!allowWithoutEmail) {
-          final proceed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Continue without email?'),
-              content: Text(
-                () {
-                  final typed = _childName.text.trim();
-                  final who = typed.isEmpty ? 'This explorer' : typed;
-                  return 'Without an email, $who stays under your account and will not receive an independent Teen login.\n\n'
-                      'You can add login details later from Access.';
-                }(),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Go back')),
-                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
-              ],
-            ),
-          );
-          if (proceed != true || !mounted) return;
-        }
-      } else {
-        final emailError = validateEmail(email);
-        final pinError = validatePin(pin);
-        if (emailError != null || pinError != null) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(emailError ?? pinError ?? 'Email and PIN required for independent login')),
-          );
-          return;
-        }
-        independent = true;
+      password = _teenPassword.text;
+      final error = validateEmail(email) ?? validatePassword(password);
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        return;
       }
     }
 
     try {
       await _ensureOwnedFamily();
       if (!mounted) return;
-      final created = await context.read<FamilyService>().addChild(
+      await context.read<FamilyService>().addChild(
             name: name,
-            // Teens without email still use TEEN label but stay on parent account.
-            ageBand: kind == ExplorerAgeKind.teen ? 'TEEN' : 'CHILD',
+            birthYear: DateTime.now().year - age,
+            email: email,
+            password: password,
           );
-      final childId = created['id'] as String?;
-      if (independent && childId != null) {
-        if (!mounted) return;
-        await context.read<FamilyService>().enableIndependentLogin(
-              childId: childId,
-              enabled: true,
-              email: email,
-              pin: pin,
-            );
-      }
       _childName.clear();
       _childAge.clear();
       _teenEmail.clear();
-      _teenPin.clear();
+      _teenPassword.clear();
+      if (!mounted) return;
       await context.read<AuthSession>().refreshProfile();
       await _load();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -244,7 +211,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
 
   Future<void> _teenActions(Map<String, dynamic> child) async {
     final email = TextEditingController(text: child['email'] as String? ?? '');
-    final pin = TextEditingController();
+    final password = TextEditingController();
     final adultEmail = TextEditingController();
     final adultPassword = TextEditingController();
     if (!mounted) return;
@@ -290,19 +257,27 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
-                  controller: pin,
+                  controller: password,
                   obscureText: true,
-                  decoration: _fieldDecoration('4-digit PIN'),
+                  decoration: _fieldDecoration('Password (8+ characters)'),
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () async {
+                    final pwd = password.text;
+                    final pwdError = validatePassword(pwd);
+                    if (pwdError != null) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pwdError)));
+                      }
+                      return;
+                    }
                     try {
                       await context.read<FamilyService>().enableIndependentLogin(
                             childId: child['id'] as String,
                             enabled: true,
                             email: email.text.trim(),
-                            pin: pin.text.trim().length == 4 ? pin.text.trim() : null,
+                            password: pwd,
                           );
                       if (ctx.mounted) Navigator.pop(ctx);
                       await _load();
@@ -350,14 +325,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       },
     );
     email.dispose();
-    pin.dispose();
+    password.dispose();
     adultEmail.dispose();
     adultPassword.dispose();
   }
 
-  Future<void> _nudge(String childId, String key) async {
+  Future<void> _nudge(String childId, String templateId) async {
     try {
-      await context.read<EngagementService>().sendNudge(childId: childId, stickerKey: key);
+      await context.read<EngagementService>().sendNudge(childId: childId, templateId: templateId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cheer sent'), backgroundColor: AppColors.navy),
@@ -407,7 +382,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
             name: _childName,
             age: _childAge,
             email: _teenEmail,
-            pin: _teenPin,
+            password: _teenPassword,
             onAdd: () => _addChild(),
           ),
         ],
@@ -495,8 +470,9 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               color: _avatarPalette[i % _avatarPalette.length],
               askScore: _scoreFor(kids[i]['id'] as String)?.askScore ?? 0,
               streakDays: _scoreFor(kids[i]['id'] as String)?.streak ?? 0,
+              cheers: _cheers,
               onCheer: (key) => _nudge(kids[i]['id'] as String, key),
-              onPin: () => _setPin(kids[i]),
+              onPin: kids[i]['ageBand'] == 'CHILD' ? () => _setPin(kids[i]) : null,
               onManageTeen: kids[i]['ageBand'] == 'TEEN' && kids[i]['transitionedToUserId'] == null
                   ? () => _teenActions(kids[i])
                   : null,
@@ -508,7 +484,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
           name: _childName,
           age: _childAge,
           email: _teenEmail,
-          pin: _teenPin,
+          password: _teenPassword,
           onAdd: () => _addChild(),
         ),
         const SizedBox(height: 8),
@@ -740,7 +716,8 @@ class _ChildCard extends StatelessWidget {
     required this.child,
     required this.color,
     required this.onCheer,
-    required this.onPin,
+    this.cheers = const [],
+    this.onPin,
     this.onManageTeen,
     this.askScore = 0,
     this.streakDays = 0,
@@ -749,7 +726,8 @@ class _ChildCard extends StatelessWidget {
   final Map<String, dynamic> child;
   final Color color;
   final ValueChanged<String> onCheer;
-  final VoidCallback onPin;
+  final List<NudgeTemplate> cheers;
+  final VoidCallback? onPin;
   final VoidCallback? onManageTeen;
   final int askScore;
   final int streakDays;
@@ -759,7 +737,7 @@ class _ChildCard extends StatelessWidget {
     final name = child['name'] as String? ?? 'Explorer';
     final ageBand = child['ageBand'] as String? ?? 'CHILD';
     final initial = name.isEmpty ? '?' : name[0].toUpperCase();
-    final ageLabel = ageBand == 'TEEN' ? 'Teen' : 'Under-age';
+    final ageLabel = ageBand == 'TEEN' ? 'Teen' : 'Explorer';
 
     return _Surface(
       padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
@@ -811,23 +789,25 @@ class _ChildCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              PopupMenuButton<String>(
-                onSelected: onCheer,
-                itemBuilder: (_) => [
-                  for (final n in predefinedNudges)
-                    PopupMenuItem(value: n.$1, child: Text(n.$2)),
-                ],
-                child: const _MiniAction(
-                  icon: Icons.favorite_outline,
-                  label: 'Send cheers',
-                  emphasized: true,
+              if (cheers.isNotEmpty)
+                PopupMenuButton<String>(
+                  onSelected: onCheer,
+                  itemBuilder: (_) => [
+                    for (final n in cheers)
+                      PopupMenuItem(value: n.id, child: Text(n.message)),
+                  ],
+                  child: const _MiniAction(
+                    icon: Icons.favorite_outline,
+                    label: 'Send cheers',
+                    emphasized: true,
+                  ),
                 ),
-              ),
-              _MiniAction(
-                icon: Icons.pin,
-                label: 'Set PIN',
-                onTap: onPin,
-              ),
+              if (onPin != null)
+                _MiniAction(
+                  icon: Icons.pin,
+                  label: 'Set PIN',
+                  onTap: onPin,
+                ),
               if (onManageTeen != null)
                 _MiniAction(
                   icon: Icons.manage_accounts_outlined,
@@ -906,14 +886,14 @@ class _AddChildCard extends StatefulWidget {
     required this.name,
     required this.age,
     required this.email,
-    required this.pin,
+    required this.password,
     required this.onAdd,
   });
 
   final TextEditingController name;
   final TextEditingController age;
   final TextEditingController email;
-  final TextEditingController pin;
+  final TextEditingController password;
   final VoidCallback onAdd;
 
   @override
@@ -921,7 +901,7 @@ class _AddChildCard extends StatefulWidget {
 }
 
 class _AddChildCardState extends State<_AddChildCard> {
-  /// 0 = name, 1 = age, 2 = email/pin (15+ only)
+  /// 0 = name, 1 = age, 2 = email/password (15+ only)
   int _step = 0;
 
   void _resetSteps() {
@@ -945,7 +925,7 @@ class _AddChildCardState extends State<_AddChildCard> {
       final kind = age == null ? null : explorerKindFromAge(age);
       if (kind == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter an age from 0 to 25.')),
+          const SnackBar(content: Text(explorerAgeHint)),
         );
         return;
       }
@@ -958,7 +938,7 @@ class _AddChildCardState extends State<_AddChildCard> {
       return;
     }
 
-    // Step 2: optional email for 15+
+    // Step 3: email + password for 15+
     widget.onAdd();
     // Parent clears fields on success; reset step after a short delay isn't needed —
     // if validation fails fields stay. Reset step when fields are cleared.
@@ -978,7 +958,6 @@ class _AddChildCardState extends State<_AddChildCard> {
       });
     }
 
-    final emailFilled = widget.email.text.trim().isNotEmpty;
 
     return _Surface(
       child: Column(
@@ -991,10 +970,10 @@ class _AddChildCardState extends State<_AddChildCard> {
           const SizedBox(height: 6),
           Text(
             _step == 0
-                ? 'Step 1 of 2 — name'
+                ? 'Step 1 — name'
                 : _step == 1
-                    ? 'Step 2 of 2 — age'
-                    : 'Optional — independent login for ages 15+',
+                    ? 'Step 2 — age'
+                    : 'Step 3 — their own login (ages 15+)',
             style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 14),
@@ -1021,7 +1000,7 @@ class _AddChildCardState extends State<_AddChildCard> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Ages 0–14 stay under your account. Ages 15+ can use an independent login, or remain under your account if email is skipped.',
+              'Ages 0–14 stay under your account. Ages 15–19 get their own login with email and password. Ages 20+ need their own adult account.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
             ),
           ] else ...[
@@ -1033,30 +1012,20 @@ class _AddChildCardState extends State<_AddChildCard> {
             TextField(
               controller: widget.email,
               keyboardType: TextInputType.emailAddress,
-              decoration: _fieldDecoration('Email (optional)'),
+              decoration: _fieldDecoration('Email'),
               onChanged: (_) => setState(() {}),
             ),
-            if (emailFilled) ...[
-              const SizedBox(height: 10),
-              TextField(
-                controller: widget.pin,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 4,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: _fieldDecoration('4-digit PIN').copyWith(counterText: ''),
-              ),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                () {
-                  final typed = widget.name.text.trim();
-                  final who = typed.isEmpty ? 'this explorer' : typed;
-                  return 'Skip email to keep $who under your account.';
-                }(),
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
-              ),
-            ],
+            const SizedBox(height: 10),
+            TextField(
+              controller: widget.password,
+              obscureText: true,
+              decoration: _fieldDecoration('Password (8+ characters)'),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'They sign in with this email and password on their own device.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
+            ),
           ],
           const SizedBox(height: 14),
           Row(
@@ -1083,7 +1052,7 @@ class _AddChildCardState extends State<_AddChildCard> {
                         if (kind == ExplorerAgeKind.child) return 'Create explorer';
                         return 'Next';
                       }
-                      return emailFilled ? 'Create with login' : 'Create without email';
+                      return 'Create with login';
                     }(),
                   ),
                 ),

@@ -41,10 +41,10 @@ class AppRadii {
 }
 
 /// Global bump for hardcoded `fontSize`s that skip the theme.
-const double kAppTextScale = 1.15;
+const double kAppTextScale = 1.0;
 
 /// Extra logical pixels added to every font size after [kAppTextScale].
-const double kAppFontBump = 1;
+const double kAppFontBump = 0;
 
 /// Applies [kAppTextScale], then adds [kAppFontBump] to the result.
 class AppTextScaler extends TextScaler {

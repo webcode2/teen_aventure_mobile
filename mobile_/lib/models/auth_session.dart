@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../family/family_account_rules.dart';
 import 'game_controller.dart';
+
+import '../services/api_client.dart';
 
 import '../services/auth_service.dart';
 
@@ -10,7 +13,7 @@ import '../services/push_hooks.dart';
 
 
 
-enum AppShell { loggedOut, parent, teen }
+enum AppShell { loggedOut, parent, teen, teacher }
 
 
 
@@ -46,7 +49,11 @@ class FamilyChildProfile {
 
   bool get isUnderAge => ageBand == 'CHILD';
 
+  /// Family teen with their own login — switch uses email/password and ends the parent session.
+  bool get usesEmailPasswordSwitch => independentLogin && !isUnderAge;
 
+  /// Short label for lists (never "Under-age").
+  String get explorerBandLabel => isUnderAge ? 'Explorer' : 'Teen explorer';
 
   factory FamilyChildProfile.fromJson(Map<String, dynamic> json) {
 
@@ -122,13 +129,22 @@ class AssignedClass {
 
     if (id is! String || id.isEmpty) return null;
 
+    // /me uses kind=CLASS + groupKind=FAMILY|CHURCH|CUSTOM; prefer groupKind when present.
+    final rawKind = (json['groupKind'] as String? ??
+            json['kind'] as String? ??
+            'FAMILY')
+        .toUpperCase();
+
+    // ClassGroup rows may still arrive as CUSTOM; membership APIs expect CLASS.
+    final kind = rawKind == 'CUSTOM' ? 'CLASS' : rawKind;
+
     return AssignedClass(
 
       id: id,
 
       name: json['name'] as String? ?? 'Class',
 
-      kind: json['kind'] as String? ?? 'FAMILY',
+      kind: kind,
 
       ownerUserId: json['ownerUserId'] as String?,
 
@@ -236,6 +252,8 @@ class AuthSession extends ChangeNotifier {
 
     bool profilePicked = false,
 
+    bool mustChangePassword = false,
+
   }) {
 
     final resolvedFamilyId = familyId == null
@@ -282,6 +300,8 @@ class AuthSession extends ChangeNotifier {
 
     session.childId = childId ?? (shell == AppShell.teen ? 'child-test' : null);
 
+    session.mustChangePassword = mustChangePassword;
+
     return session;
 
   }
@@ -306,6 +326,9 @@ class AuthSession extends ChangeNotifier {
 
   String? childId;
 
+  /// When a parent stays on the family profile, quest awards still need an explorer.
+  String? scoringChildId;
+
   String? familyId;
 
   String? displayName;
@@ -313,6 +336,16 @@ class AuthSession extends ChangeNotifier {
   String? email;
 
   String? ageBand;
+
+  int? birthYear;
+
+  /// Adult app account without a birth year: adult features are blocked until it is set.
+
+  bool needsBirthYear = false;
+
+  /// Pastor-created staff must replace the temporary password before using the app.
+
+  bool mustChangePassword = false;
 
   String? platformRole;
 
@@ -373,6 +406,7 @@ class AuthSession extends ChangeNotifier {
 
     if (userType == 'child' || shell == AppShell.teen) return const [UserRole.student];
 
+    // Teachers use the adult shell; assigned groups live under Groups.
     return const [UserRole.parent];
 
   }
@@ -390,6 +424,8 @@ class AuthSession extends ChangeNotifier {
       return 'Explorer';
 
     }
+
+    if (shell == AppShell.teacher || roles.contains('TEACHER')) return 'Teacher';
 
     return '';
 
@@ -409,6 +445,13 @@ class AuthSession extends ChangeNotifier {
 
   bool get isParent => hasParentRole && userType != 'child';
 
+  /// Church TEACHER role on the adult shell (assigned classes under Classes).
+  bool get isTeacher =>
+      !isChild && (shell == AppShell.teacher || roles.contains('TEACHER'));
+
+  /// Child JWT id, or the explorer a parent awards quest points to.
+  String? get effectiveChildId => childId ?? scoringChildId;
+
   bool get canSwitchHomes => false;
 
   bool get isChild => userType == 'child' || shell == AppShell.teen;
@@ -420,6 +463,15 @@ class AuthSession extends ChangeNotifier {
   bool get isUnderAgeExplorer => isChild && !isAdultTeen;
 
   bool get needsFamilySetup => isAdult && familyId == null;
+
+  /// Adults only. Standalone teens join groups; they do not create them.
+  bool get canCreateGroups =>
+      authenticated &&
+      canCreateGroupsRule(
+        isAdult: isAdult,
+        platformRole: platformRole,
+        needsBirthYear: needsBirthYear,
+      );
 
   bool get canEditProfile => authenticated && !isUnderAgeExplorer;
 
@@ -433,7 +485,43 @@ class AuthSession extends ChangeNotifier {
 
     profilePicked = true;
 
+    // Family home is the adult shell — do not credit the first child by default.
+    // /me.childId on a parent JWT is only a scoring alias; never treat it as a child session.
+    childId = null;
+
+    scoringChildId = null;
+
     notifyListeners();
+
+  }
+
+  void _ensureScoringChild() {
+
+    if (childId != null) {
+
+      scoringChildId = childId;
+
+      return;
+
+    }
+
+    // Parent JWT without an active child profile: keep scoring unbound so
+    // Family-home activities cannot silently land on a subaccount.
+    if (userType != 'child' && shell != AppShell.teen) {
+
+      scoringChildId = null;
+
+      return;
+
+    }
+
+    if (scoringChildId != null && children.any((c) => c.id == scoringChildId)) {
+
+      return;
+
+    }
+
+    scoringChildId = children.isNotEmpty ? children.first.id : null;
 
   }
 
@@ -465,6 +553,8 @@ class AuthSession extends ChangeNotifier {
 
     if (role == UserRole.student) shell = AppShell.teen;
 
+    if (role == UserRole.teacher) shell = AppShell.teacher;
+
     notifyListeners();
 
   }
@@ -481,6 +571,7 @@ class AuthSession extends ChangeNotifier {
 
     }
 
+    // Teachers keep the adult shell; assigned church groups appear under Groups.
     shell = AppShell.parent;
 
   }
@@ -559,15 +650,36 @@ class AuthSession extends ChangeNotifier {
 
       userId = me['userId'] as String?;
 
-      childId = me['childId'] as String?;
+      // Parent /me may include childId as the adult's transitioned scoring row.
+      // That must not become AuthSession.childId (child JWT identity) or Family
+      // home will keep awarding the explorer after chooseParentProfile.
+      final meChildId = me['childId'] as String?;
+
+      if (userType == 'child') {
+
+        childId = meChildId;
+
+      } else {
+
+        childId = null;
+
+      }
 
       familyId = me['familyId'] as String?;
+
+      if (profilePicked || childId != null) _ensureScoringChild();
 
       displayName = me['name'] as String?;
 
       email = me['email'] as String?;
 
       ageBand = me['ageBand'] as String?;
+
+      birthYear = (me['birthYear'] as num?)?.toInt();
+
+      needsBirthYear = me['needsBirthYear'] == true;
+
+      mustChangePassword = me['mustChangePassword'] == true;
 
       platformRole = me['platformRole'] as String?;
 
@@ -647,7 +759,11 @@ class AuthSession extends ChangeNotifier {
 
 
 
-  /// Applies locally always. Uploads when online; otherwise queues for re-upload.
+  /// Name-only edits apply locally and queue for upload when offline.
+
+  /// Email, password, PIN and birth-year changes go straight to the server and
+
+  /// throw [ApiException] when refused (e.g. wrong current password).
 
   /// Returns true when the server accepted the update.
 
@@ -659,37 +775,35 @@ class AuthSession extends ChangeNotifier {
 
     String? password,
 
+    String? currentPassword,
+
+    int? birthYear,
+
   }) async {
-
-    displayName = name.trim();
-
-    this.email = email.trim();
-
-    notifyListeners();
-
-
 
     final auth = _auth;
 
+    final sensitive = email.trim() != (this.email ?? '') ||
+
+        (password?.isNotEmpty ?? false) ||
+
+        birthYear != null;
+
     if (auth == null) {
+
+      displayName = name.trim();
+
+      this.email = email.trim();
+
+      notifyListeners();
 
       return true;
 
     }
 
-
-
     try {
 
-      await auth.updateProfile(name: name, email: email, password: password);
-
-      await auth.clearPendingProfileUpdate();
-
-      return true;
-
-    } catch (_) {
-
-      await auth.savePendingProfileUpdate(
+      await auth.updateProfile(
 
         name: name,
 
@@ -697,11 +811,49 @@ class AuthSession extends ChangeNotifier {
 
         password: password,
 
+        currentPassword: currentPassword,
+
+        birthYear: birthYear,
+
       );
+
+      await auth.clearPendingProfileUpdate();
+
+    } on ApiException catch (e) {
+
+      if (sensitive || e.statusCode != null) rethrow;
+
+      displayName = name.trim();
+
+      notifyListeners();
+
+      await auth.savePendingProfileUpdate(name: name, email: this.email ?? email);
 
       return false;
 
     }
+
+    displayName = name.trim();
+
+    this.email = email.trim();
+
+    if (birthYear != null) {
+
+      this.birthYear = birthYear;
+
+      needsBirthYear = false;
+
+    }
+
+    if (password?.isNotEmpty ?? false) {
+
+      mustChangePassword = false;
+
+    }
+
+    notifyListeners();
+
+    return true;
 
   }
 
@@ -791,6 +943,8 @@ class AuthSession extends ChangeNotifier {
 
     childId = null;
 
+    scoringChildId = null;
+
     familyId = null;
 
     displayName = null;
@@ -798,6 +952,12 @@ class AuthSession extends ChangeNotifier {
     email = null;
 
     ageBand = null;
+
+    birthYear = null;
+
+    needsBirthYear = false;
+
+    mustChangePassword = false;
 
     platformRole = null;
 

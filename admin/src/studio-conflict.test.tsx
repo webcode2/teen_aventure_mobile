@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { PuzzlesStudioPage } from './pages-puzzles';
 import { api, ApiError, setToken } from './api';
 
@@ -24,12 +25,6 @@ describe('Puzzle Studio WIP conflict dialog', () => {
       if (path === '/api/puzzles') {
         return { versions: [] };
       }
-      if (path === '/api/teen-quest/weeks') {
-        return [
-          { id: 'w1', weekNumber: 1, title: 'Week 1: Genesis', scripture: 'Gen 1' },
-          { id: 'w2', weekNumber: 2, title: 'Week 2: Exodus', scripture: 'Ex 1' },
-        ];
-      }
       if (path === '/api/puzzle-drafts' && options?.method === 'PUT') {
         throw new ApiError(409, 'Stale draft version', {
           statusCode: 409,
@@ -50,8 +45,14 @@ describe('Puzzle Studio WIP conflict dialog', () => {
       return [];
     });
 
-    render(<PuzzlesStudioPage />);
-    await userEvent.selectOptions(screen.getByLabelText('Week number'), '2');
+    render(
+      <MemoryRouter>
+        <PuzzlesStudioPage />
+      </MemoryRouter>,
+    );
+    const title = screen.getByRole('textbox', { name: 'Puzzle title' });
+    await userEvent.clear(title);
+    await userEvent.type(title, 'Conflict test');
 
     await waitFor(
       () => {

@@ -6,12 +6,14 @@ import {
   snapToCrossing,
   type GhostAnchor,
   type PlacedWord,
-} from '@askhub/puzzles/snap.ts';
+} from '@askhub/puzzle-contracts';
 import type { StudioStep } from './doc-store';
+import { clueNumberById } from './clue-numbers';
 import './studio.css';
 
 const CELL = 36;
-const MIN_GRID = 12;
+const MIN_GRID_ROWS = 12;
+const MIN_GRID_COLS = 16;
 
 type Props = {
   steps: StudioStep[];
@@ -62,7 +64,9 @@ export function PuzzleCanvas({
   const [cursor, setCursor] = useState(0);
 
   const ghosts: GhostAnchor[] = useMemo(() => {
-    if (!selected || !prev || prev.row == null || prev.col == null) return [];
+    // Ghosts are only for a word that is not on the grid yet. On a placed word they
+    // draw a second box on a letter the word already shares.
+    if (!selected || selected.row != null || !prev || prev.row == null || prev.col == null) return [];
     if (!lettersOnly(selected.answer)) return [];
     const prevPlaced: PlacedWord = {
       id: prev.id,
@@ -86,19 +90,19 @@ export function PuzzleCanvas({
   const [preview, setPreview] = useState<{ id: string; row: number; col: number } | null>(null);
 
   const gridNeedRows = Math.max(
-    MIN_GRID,
+    MIN_GRID_ROWS,
     ...board.map((w) => w.row + lettersOnly(w.answer).length + 1),
     ...(preview ? [preview.row + 8] : []),
     ...(ghosts.map((g) => g.row + 2)),
   );
   const gridNeedCols = Math.max(
-    MIN_GRID,
+    MIN_GRID_COLS,
     ...board.map((w) => w.col + lettersOnly(w.answer).length + 1),
     ...(preview ? [preview.col + 8] : []),
     ...(ghosts.map((g) => g.col + 2)),
   );
   // Grow-only — resizing the grid on every keystroke remounts cells and looks like flicker.
-  const gridSize = useRef({ rows: MIN_GRID, cols: MIN_GRID });
+  const gridSize = useRef({ rows: MIN_GRID_ROWS, cols: MIN_GRID_COLS });
   if (gridNeedRows > gridSize.current.rows) gridSize.current.rows = gridNeedRows;
   if (gridNeedCols > gridSize.current.cols) gridSize.current.cols = gridNeedCols;
   const gridRows = gridSize.current.rows;
@@ -216,7 +220,7 @@ export function PuzzleCanvas({
   }
 
   const occupancy = useMemo(() => {
-    const map = new Map<string, { letter: string; number?: number; wordId?: string }>();
+    const map = new Map<string, { letter: string; number?: number; wordIds: string[]; conflict: boolean }>();
     for (const w of board) {
       const answer = lettersOnly(w.answer);
       for (let i = 0; i < answer.length; i++) {
@@ -224,22 +228,28 @@ export function PuzzleCanvas({
         const c = w.direction === 'across' ? w.col + i : w.col;
         const key = `${r}:${c}`;
         const prevCell = map.get(key);
+        const letter = answer[i]!;
+        if (!prevCell) {
+          map.set(key, { letter, wordIds: [w.id], conflict: false });
+          continue;
+        }
+        // Same letter is one shared cell. A different letter is a real clash.
         map.set(key, {
-          letter: answer[i]!,
-          number: i === 0 ? (prevCell?.number ?? undefined) : prevCell?.number,
-          wordId: w.id,
+          letter: prevCell.letter,
+          number: prevCell.number,
+          wordIds: prevCell.wordIds.includes(w.id) ? prevCell.wordIds : [...prevCell.wordIds, w.id],
+          conflict: prevCell.conflict || prevCell.letter !== letter,
         });
       }
     }
-    const numbered = steps
-      .filter((x) => x.row != null && x.col != null && lettersOnly(x.answer))
-      .slice()
-      .sort((a, b) => a.row! - b.row! || a.col! - b.col!);
-    for (let i = 0; i < numbered.length; i++) {
-      const s = numbered[i]!;
-      const key = `${s.row}:${s.col}`;
+    const numbers = clueNumberById(steps);
+    for (const step of steps) {
+      if (step.row == null || step.col == null) continue;
+      const number = numbers.get(step.id);
+      if (number == null) continue;
+      const key = `${step.row}:${step.col}`;
       const cell = map.get(key);
-      if (cell) map.set(key, { ...cell, number: i + 1 });
+      if (cell) map.set(key, { ...cell, number });
     }
     if (preview) {
       const step = steps.find((s) => s.id === preview.id);
@@ -248,10 +258,19 @@ export function PuzzleCanvas({
         for (let i = 0; i < answer.length; i++) {
           const r = step.direction === 'down' ? preview.row + i : preview.row;
           const c = step.direction === 'across' ? preview.col + i : preview.col;
-          map.set(`${r}:${c}`, {
-            letter: answer[i]!,
-            number: i === 0 ? map.get(`${r}:${c}`)?.number : undefined,
-            wordId: step.id,
+          const key = `${r}:${c}`;
+          const prevCell = map.get(key);
+          const letter = answer[i]!;
+          const shared = Boolean(prevCell && prevCell.letter === letter);
+          map.set(key, {
+            letter: shared && prevCell ? prevCell.letter : letter,
+            number: prevCell?.number,
+            wordIds: prevCell
+              ? prevCell.wordIds.includes(step.id)
+                ? prevCell.wordIds
+                : [...prevCell.wordIds, step.id]
+              : [step.id],
+            conflict: Boolean(prevCell && prevCell.letter !== letter),
           });
         }
       }
@@ -310,25 +329,6 @@ export function PuzzleCanvas({
 
   return (
     <div className="studio-board">
-      <div className="studio-board__hint">
-        {typingReady ? (
-          <>
-            Click the grid and <strong>type letters</strong> for{' '}
-            <strong>{selectedLetters || 'this word'}</strong> ({selected!.direction}). Backspace
-            erases. Drag the word to move it.
-          </>
-        ) : canPlace && (selected?.row == null || selected?.col == null) ? (
-          <>
-            Click a square to place <strong>{lettersOnly(selected!.answer)}</strong> (
-            {selected!.direction}).
-          </>
-        ) : (
-          <>
-            Click any empty square and type — the word appears on the board like the game screen.
-          </>
-        )}
-      </div>
-
       <div
         ref={boardRef}
         className="studio-canvas studio-canvas--play"
@@ -352,8 +352,8 @@ export function PuzzleCanvas({
           const cell = occupancy.get(`${r}:${c}`);
           const isGhost = ghosts.some((g) => g.row === r && g.col === c);
           const isHi = highlightCell?.row === r && highlightCell?.col === c;
-          const isSelectedWord = cell?.wordId != null && cell.wordId === selectedId;
-          const isPreview = preview != null && cell?.wordId === preview.id;
+          const isSelectedWord = Boolean(selectedId && cell?.wordIds.includes(selectedId));
+          const isPreview = preview != null && Boolean(cell?.wordIds.includes(preview.id));
           const isCursor = cursorCell?.row === r && cursorCell?.col === c;
 
           const cellClasses = [
@@ -363,6 +363,7 @@ export function PuzzleCanvas({
             isHi ? 'is-locate' : '',
             isSelectedWord ? 'is-selected-word' : '',
             isPreview ? 'is-preview' : '',
+            cell?.conflict ? 'is-conflict' : '',
             isCursor ? 'is-cursor' : '',
             !cell && canPlace && (selected?.row == null || selected?.col == null) ? 'is-placeable' : '',
             !cell && !canPlace ? 'is-writable' : '',
@@ -382,10 +383,16 @@ export function PuzzleCanvas({
                   focusBoard();
                   return;
                 }
-                if (cell?.wordId) {
-                  onSelect(cell.wordId);
-                  const step = steps.find((s) => s.id === cell.wordId);
-                  setCursor(step ? lettersOnly(step.answer).length : 0);
+                if (cell && cell.wordIds.length > 0) {
+                  const wordId = cell.wordIds.includes(selectedId ?? '')
+                    ? selectedId!
+                    : cell.wordIds[cell.wordIds.length - 1]!;
+                  onSelect(wordId);
+                  const step = steps.find((s) => s.id === wordId);
+                  if (step && step.row != null && step.col != null) {
+                    const along = step.direction === 'down' ? r - step.row : c - step.col;
+                    setCursor(Math.max(0, Math.min(lettersOnly(step.answer).length, along)));
+                  }
                   focusBoard();
                   return;
                 }
@@ -401,14 +408,19 @@ export function PuzzleCanvas({
                 requestAnimationFrame(focusBoard);
               }}
               onPointerDown={(e) => {
-                if (!cell?.wordId) return;
-                const step = steps.find((s) => s.id === cell.wordId);
+                if (!cell || cell.wordIds.length === 0) return;
+                const wordId = cell.wordIds.includes(selectedId ?? '')
+                  ? selectedId!
+                  : cell.wordIds[cell.wordIds.length - 1]!;
+                const step = steps.find((s) => s.id === wordId);
                 if (step) onPointerDown(e, step);
               }}
               title={
-                isGhost
-                  ? `Snap here (${ghosts.find((g) => g.row === r && g.col === c)?.letter})`
-                  : cell?.letter || 'Type here'
+                cell?.conflict
+                  ? 'These words use different letters in this square'
+                  : isGhost
+                    ? `Snap here (${ghosts.find((g) => g.row === r && g.col === c)?.letter})`
+                    : cell?.letter
               }
             >
               {cell?.number != null ? (

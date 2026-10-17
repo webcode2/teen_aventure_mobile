@@ -8,21 +8,23 @@ class AdventureBottomNav extends StatelessWidget {
     super.key,
     required this.current,
     required this.onSelect,
+    this.groupsLabel = 'Groups',
   });
 
   final AdventureTab current;
   final ValueChanged<AdventureTab> onSelect;
-
-  static const _items = <({AdventureTab tab, String label, IconData icon})>[
-    (tab: AdventureTab.home, label: 'Home', icon: Icons.home_rounded),
-    (tab: AdventureTab.rewards, label: 'Achievements', icon: Icons.emoji_events_rounded),
-    (tab: AdventureTab.quests, label: 'Quest', icon: Icons.explore_rounded),
-    (tab: AdventureTab.groups, label: 'Groups', icon: Icons.groups_rounded),
-    (tab: AdventureTab.account, label: 'Profile', icon: Icons.person_outline_rounded),
-  ];
+  /// Teachers see "Classes"; everyone else keeps "Groups".
+  final String groupsLabel;
 
   @override
   Widget build(BuildContext context) {
+    final items = <({AdventureTab tab, String label, IconData icon})>[
+      (tab: AdventureTab.home, label: 'Home', icon: Icons.home_rounded),
+      (tab: AdventureTab.rewards, label: 'Achievements', icon: Icons.emoji_events_rounded),
+      (tab: AdventureTab.quests, label: 'Quest', icon: Icons.explore_rounded),
+      (tab: AdventureTab.groups, label: groupsLabel, icon: Icons.groups_rounded),
+      (tab: AdventureTab.account, label: 'Profile', icon: Icons.person_outline_rounded),
+    ];
     return Container(
       key: const ValueKey('nav-color-v3'),
       color: AppColors.navy,
@@ -32,7 +34,7 @@ class AdventureBottomNav extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            for (final item in _items)
+            for (final item in items)
               _NavItem(
                 tab: item.tab,
                 label: item.label,

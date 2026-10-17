@@ -1,26 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/demo_account.dart';
-import '../config/store_config.dart';
+import '../config/api_config.dart';
 
-/// API Client using Dio with interceptors for auth, error handling, and logging
-/// IPv4 loopback so Chrome does not hit Docker's IPv6 bind on :8080.
-const String debugWebApiBaseUrl = 'http://127.0.0.1:8080';
-
+/// API Client using Dio with interceptors for auth, error handling, and logging.
+/// The backend address comes from [ApiConfig.baseUrl].
 class ApiClient {
-  static String get _baseUrl {
-    if (StoreConfig.apiBaseUrl.isNotEmpty) return StoreConfig.apiBaseUrl;
-    if (kReleaseMode) return '';
-    // Android emulator loopback. Chrome/desktop cannot reach 10.0.2.2.
-    // 127.0.0.1, not localhost: on Windows, localhost often resolves to ::1,
-    // and Docker Desktop already owns IPv6 :8080 (returns 404 to the browser).
-    if (kIsWeb) return debugWebApiBaseUrl;
-    return 'http://10.0.2.2:8080';
-  }
 
-  static Duration get _connectTimeout =>
-      kIsWeb ? const Duration(seconds: 3) : const Duration(seconds: 15);
+  // Chrome aborts before headers arrive. Achievements takes ~8s and the
+  // current week ~3s on this database, so web uses the same limit as a phone.
+  static Duration get _connectTimeout => const Duration(seconds: 15);
   static const Duration _receiveTimeout = Duration(seconds: 30);
 
   late final Dio _dio;
@@ -28,7 +17,7 @@ class ApiClient {
 
   ApiClient._(this._prefs) {
     _dio = Dio(BaseOptions(
-      baseUrl: _baseUrl.isEmpty ? 'https://localhost' : _baseUrl,
+      baseUrl: ApiConfig.baseUrl,
       connectTimeout: _connectTimeout,
       receiveTimeout: _receiveTimeout,
       headers: {
@@ -51,22 +40,34 @@ class ApiClient {
     // Auth interceptor - attaches token to requests
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
+        if (options.path.startsWith('/api/') && !options.path.startsWith('/api/v1/')) {
+          options.path = options.path.replaceFirst('/api/', '/api/v1/');
+        }
         final token = _prefs.getString('auth_token');
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        // Global Content-Type: application/json + empty body is rejected by Fastify
+        // ("Body cannot be empty when content-type is set to application/json").
+        // Strip the header for any method with no body (incl. parent→child switch POST).
+        final noBody = options.data == null ||
+            (options.data is String && (options.data as String).isEmpty);
+        if (noBody) {
+          options.headers.remove(Headers.contentTypeHeader);
+        }
         handler.next(options);
       },
       onError: (error, handler) async {
-        // Handle 401 - token expired or invalid
-        if (error.response?.statusCode == 401) {
-          // Clear stored auth
+        // Handle 401 - token expired or invalid.
+        // Child PIN checks use the parent JWT and return 401 for wrong/missing PIN;
+        // clearing auth here would soft-logout the parent and break the no-PIN switch fallback.
+        if (error.response?.statusCode == 401 &&
+            !_isExpectedAuthChallenge(error.requestOptions.path)) {
           await _prefs.remove('auth_token');
           await _prefs.remove('user_id');
           await _prefs.remove('user_role');
           await _prefs.remove('family_id');
           await _prefs.remove('child_id');
-          // Could emit an event here for auth state change
         }
         handler.next(error);
       },
@@ -118,6 +119,14 @@ class ApiClient {
     return false;
   }
 
+  /// Paths where 401 means "bad credentials for this action", not a dead session.
+  bool _isExpectedAuthChallenge(String path) {
+    final p = path.toLowerCase();
+    return p.contains('/auth/child-pin') ||
+        p.contains('/auth/login') ||
+        p.contains('/auth/teen-login');
+  }
+
   /// Set auth token (called after login)
   Future<void> setAuthToken(String token) async {
     await _prefs.setString('auth_token', token);
@@ -137,7 +146,8 @@ class ApiClient {
     return _prefs.getString('auth_token');
   }
 
-  bool get isDemoSession => DemoAccount.isDemoToken(getAuthToken());
+  /// Demo offline accounts were removed from the production app.
+  bool get isDemoSession => false;
 
   /// Check if user is authenticated
   bool get isAuthenticated => _prefs.getString('auth_token') != null;
@@ -152,33 +162,63 @@ class ApiClient {
 class ApiException implements Exception {
   final int? statusCode;
   final String message;
+  final String? code;
   final Map<String, dynamic>? errors;
 
   ApiException({
     this.statusCode,
     required this.message,
+    this.code,
     this.errors,
   });
 
   factory ApiException.fromDioError(DioException error) {
     if (error.response != null) {
       final data = error.response!.data;
-      if (data is Map<String, dynamic>) {
+      if (data is Map) {
         return ApiException(
           statusCode: error.response!.statusCode,
-          message: data['message']?.toString() ?? 'An error occurred',
-          errors: data['errors'] as Map<String, dynamic>?,
+          message: _friendlyApiMessage(data['message']),
+          code: data['code'] is String ? data['code'] as String : null,
+          errors: data['errors'] is Map<String, dynamic>
+              ? data['errors'] as Map<String, dynamic>
+              : null,
         );
       }
       return ApiException(
         statusCode: error.response!.statusCode,
-        message: data?.toString() ?? 'An error occurred',
+        message: _friendlyApiMessage(data),
       );
     }
     return ApiException(
       statusCode: null,
       message: _friendlyNetworkMessage(error),
     );
+  }
+
+  /// Turns Zod dumps and other raw payloads into a short line for the UI.
+  static String _friendlyApiMessage(Object? raw) {
+    if (raw == null) return 'Something went wrong. Please try again.';
+    if (raw is List && raw.isNotEmpty) {
+      final first = raw.first;
+      if (first is Map && first['message'] is String) {
+        return (first['message'] as String).trim();
+      }
+    }
+    final text = raw.toString().trim();
+    if (text.isEmpty) return 'Something went wrong. Please try again.';
+    if (text.startsWith('[') || text.startsWith('{')) {
+      try {
+        final decoded = raw is String ? raw : text;
+        // Zod issue dumps include "message":"…" — pull the first one.
+        final match = RegExp(r'"message"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"').firstMatch(decoded);
+        if (match != null) {
+          return match.group(1)!.replaceAll(r'\"', '"').trim();
+        }
+      } catch (_) {}
+      return 'Please check your details and try again.';
+    }
+    return text;
   }
 
   static String _friendlyNetworkMessage(DioException error) {

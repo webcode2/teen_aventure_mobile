@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../config/demo_account.dart';
 import '../join_payload.dart';
+import '../models/api_models.dart';
 import 'api_client.dart';
 
 /// Family, session profile, and invites.
@@ -10,9 +10,6 @@ class FamilyService {
   final ApiClient _apiClient;
 
   Future<Map<String, dynamic>> getSession() async {
-    if (_apiClient.isDemoSession) {
-      return DemoAccount.sessionForToken(_apiClient.getAuthToken());
-    }
     try {
       final response = await _apiClient.dio.get('/api/auth/me');
       return Map<String, dynamic>.from(response.data as Map);
@@ -22,9 +19,6 @@ class FamilyService {
   }
 
   Future<Map<String, dynamic>> createFamily(String name) async {
-    if (_apiClient.isDemoSession) {
-      return DemoAccount.createDemoFamily(name);
-    }
     try {
       final response = await _apiClient.dio.post('/api/families', data: {'name': name});
       return Map<String, dynamic>.from(response.data as Map);
@@ -33,22 +27,14 @@ class FamilyService {
     }
   }
 
-  Future<Map<String, dynamic>> createGroup(String name) async {
-    if (_apiClient.isDemoSession) return DemoAccount.createDemoGroup(name);
+  Future<Map<String, dynamic>> createGroup(String name, {String? description}) async {
+    final trimmedDescription = description?.trim();
     try {
-      final response = await _apiClient.dio.post('/api/classes', data: {'name': name});
-      return Map<String, dynamic>.from(response.data as Map);
-    } on DioException catch (e) {
-      throw ApiException.fromDioError(e);
-    }
-  }
-
-  Future<Map<String, dynamic>> joinChurch(String joinCode) async {
-    if (_apiClient.isDemoSession) {
-      return DemoAccount.joinDemoChurch(joinCode);
-    }
-    try {
-      final response = await _apiClient.dio.post('/api/families/join-church', data: {'joinCode': joinCode});
+      final response = await _apiClient.dio.post('/api/classes', data: {
+        'name': name,
+        if (trimmedDescription != null && trimmedDescription.isNotEmpty)
+          'description': trimmedDescription,
+      });
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -56,7 +42,6 @@ class FamilyService {
   }
 
   Future<Map<String, dynamic>> getMyFamily() async {
-    if (_apiClient.isDemoSession) return DemoAccount.familyJson();
     try {
       final response = await _apiClient.dio.get('/api/families/my');
       return Map<String, dynamic>.from(response.data as Map);
@@ -65,11 +50,19 @@ class FamilyService {
     }
   }
 
-  Future<Map<String, dynamic>> addChild({required String name, String ageBand = 'CHILD'}) async {
+  /// Explorers aged 15+ must come with an [email] and [password] so they can sign in on their own.
+  Future<Map<String, dynamic>> addChild({
+    required String name,
+    required int birthYear,
+    String? email,
+    String? password,
+  }) async {
     try {
       final response = await _apiClient.dio.post('/api/families/children', data: {
         'name': name,
-        'ageBand': ageBand,
+        'birthYear': birthYear,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (password != null && password.isNotEmpty) 'password': password,
       });
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
@@ -77,9 +70,12 @@ class FamilyService {
     }
   }
 
-  Future<void> requestDeletion() async {
+  Future<void> requestDeletion({required String reason}) async {
     try {
-      await _apiClient.dio.post('/api/families/request-deletion');
+      await _apiClient.dio.post(
+        '/api/families/request-deletion',
+        data: {'reason': reason},
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
@@ -87,7 +83,10 @@ class FamilyService {
 
   Future<void> cancelDeletion() async {
     try {
-      await _apiClient.dio.post('/api/families/cancel-deletion');
+      await _apiClient.dio.post(
+        '/api/families/cancel-deletion',
+        data: <String, dynamic>{},
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
@@ -105,7 +104,7 @@ class FamilyService {
     required String childId,
     required bool enabled,
     String? email,
-    String? pin,
+    String? password,
     String? phone,
   }) async {
     try {
@@ -114,7 +113,7 @@ class FamilyService {
         data: {
           'enabled': enabled,
           if (email != null) 'email': email,
-          if (pin != null) 'pin': pin,
+          if (password != null) 'password': password,
           if (phone != null) 'phone': phone,
         },
       );
@@ -168,12 +167,20 @@ class FamilyService {
   }
 
   Future<Map<String, dynamic>> getMemberships() async {
-    if (_apiClient.isDemoSession) {
-      return DemoAccount.membershipsForToken(_apiClient.getAuthToken());
-    }
     try {
       final response = await _apiClient.dio.get('/api/memberships');
       return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Description, creator, member count, total points and ranked standings for one group.
+  Future<GroupDetail> getGroupDetail({required String kind, required String id}) async {
+    try {
+      final apiKind = membershipApiKind(kind);
+      final response = await _apiClient.dio.get('/api/memberships/$apiKind/$id');
+      return GroupDetail.fromJson(Map<String, dynamic>.from(response.data as Map));
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
@@ -186,21 +193,6 @@ class FamilyService {
     String? classId,
     String? email,
   }) async {
-    if (_apiClient.isDemoSession) {
-      if (kind == 'FAMILY') {
-        throw ApiException(statusCode: 403, message: 'Family groups do not use invites');
-      }
-      final token = 'demoinvite${DateTime.now().millisecondsSinceEpoch}';
-      return {
-        'id': 'demo-invite',
-        'kind': kind,
-        'token': token,
-        'payload': encodeJoinToken(token),
-        'email': email,
-        'name': 'Peterson Family',
-        'expiresAt': DateTime.now().add(const Duration(days: 14)).toIso8601String(),
-      };
-    }
     try {
       final response = await _apiClient.dio.post('/api/invites', data: {
         'kind': kind,
@@ -225,46 +217,47 @@ class FamilyService {
     }
   }
 
-  Future<void> acceptInvite(String raw) async {
-    if (_apiClient.isDemoSession) return;
+  Future<void> acceptInvite(String raw, {String? childId}) async {
     final token = parseJoinToken(raw) ?? raw.trim();
     try {
-      await _apiClient.dio.post('/api/invites/accept', data: {'token': token});
+      await _apiClient.dio.post('/api/invites/accept', data: {
+        'token': token,
+        if (childId != null && childId.isNotEmpty) 'childId': childId,
+      });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 
   Future<void> leaveMembership({required String kind, required String id}) async {
-    if (_apiClient.isDemoSession) {
-      DemoAccount.leaveDemoMembership(kind: kind, id: id);
-      return;
-    }
     try {
-      await _apiClient.dio.post('/api/memberships/leave', data: {'kind': kind, 'id': id});
+      await _apiClient.dio.post('/api/memberships/leave', data: {
+        'kind': membershipApiKind(kind),
+        'id': id,
+      });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 
   Future<Map<String, dynamic>> deleteGroup({required String kind, required String id}) async {
-    if (_apiClient.isDemoSession) {
-      return DemoAccount.deleteDemoGroup(kind: kind, id: id);
-    }
     try {
-      final response =
-          await _apiClient.dio.post('/api/memberships/delete', data: {'kind': kind, 'id': id});
+      final response = await _apiClient.dio.post('/api/memberships/delete', data: {
+        'kind': membershipApiKind(kind),
+        'id': id,
+      });
       return Map<String, dynamic>.from(response.data as Map? ?? {'pending': true});
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 
-  /// App-authority report. [anonymous] hides the reporter from public views;
-  /// reporter fields are still stored for super-admin review and group linkage.
+  /// Report intake. [destination] `app` = Teen Bible Adventures only;
+  /// `church` = ministry must respond and app admins also see it.
   Future<void> submitAppReport({
     required String message,
     required bool anonymous,
+    String destination = 'app',
     String? followUpEmail,
     String? targetType,
     String? targetId,
@@ -279,9 +272,11 @@ class FamilyService {
     if (trimmed.isEmpty) {
       throw ApiException(statusCode: 400, message: 'Describe what happened');
     }
+    final dest = destination == 'church' ? 'church' : 'app';
     final payload = <String, dynamic>{
       'message': trimmed,
       'anonymous': anonymous,
+      'destination': dest,
       if (followUpEmail != null && followUpEmail.trim().isNotEmpty) 'followUpEmail': followUpEmail.trim(),
       if (targetType != null) 'targetType': targetType,
       if (targetId != null) 'targetId': targetId,
@@ -294,10 +289,6 @@ class FamilyService {
         'familyId': reporterFamilyId,
       },
     };
-    if (_apiClient.isDemoSession) {
-      DemoAccount.recordAppReport(payload);
-      return;
-    }
     try {
       await _apiClient.dio.post('/api/reports', data: payload);
     } on DioException catch (e) {

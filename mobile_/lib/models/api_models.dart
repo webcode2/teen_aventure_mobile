@@ -2,6 +2,14 @@ import 'dart:convert';
 import 'puzzle.dart';
 import 'video_lesson.dart';
 
+/// JSON numbers are `int` on VM and often `double` on web — never cast with `as int`.
+int? _jsonInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
 /// Platform roles
 enum PlatformRole { MAIN_ACCOUNT, APP_MANAGER }
 
@@ -11,8 +19,7 @@ enum AgeBand { CHILD, TEEN }
 /// Activity types for Teen Quest scoring
 enum ActivityType {
   TEEN_QUEST_OBJS,
-  @Deprecated('Word scramble is permanently removed')
-  TEEN_QUEST_SCRAMBLE,
+  PUZZLE_SOLVE,
   VIDEO_WATCH,
   PRAYER_DECLARATION,
 }
@@ -181,9 +188,12 @@ class Streak {
 /// Quiz question for Teen Quest
 class TeenQuestQuizItem {
   final String id;
+  /// Backend type name: `MULTIPLE_CHOICE` | `FILL_BLANK`.
+  final String type;
   final String question;
   final List<String> options;
   final int answerIndex;
+  final List<String> acceptedAnswers;
   final int points;
 
   TeenQuestQuizItem({
@@ -192,31 +202,46 @@ class TeenQuestQuizItem {
     required this.options,
     required this.answerIndex,
     required this.points,
+    this.type = 'MULTIPLE_CHOICE',
+    this.acceptedAnswers = const [],
   });
 
   factory TeenQuestQuizItem.fromJson(Map<String, dynamic> json) {
+    final typeRaw = '${json['type'] ?? 'MULTIPLE_CHOICE'}';
+    final type = typeRaw == 'FILL_BLANK' ? 'FILL_BLANK' : 'MULTIPLE_CHOICE';
     return TeenQuestQuizItem(
-      id: json['id'] as String,
-      question: json['question'] as String,
-      options: List<String>.from(json['options'] as List),
-      answerIndex: json['answerIndex'] as int,
-      points: json['points'] as int? ?? 5,
+      id: json['id'] as String? ?? '',
+      type: type,
+      question: json['question'] as String? ?? '',
+      options: [
+        for (final option in (json['options'] as List? ?? const [])) '$option',
+      ],
+      // Web JSON numbers arrive as double; never use `as int` here.
+      answerIndex: _jsonInt(json['answerIndex']) ?? 0,
+      acceptedAnswers: [
+        for (final answer in (json['acceptedAnswers'] as List? ?? const [])) '$answer',
+      ],
+      points: _jsonInt(json['points']) ?? 5,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'type': type,
     'question': question,
     'options': options,
     'answerIndex': answerIndex,
+    'acceptedAnswers': acceptedAnswers,
     'points': points,
   };
 
   QuizQuestion toQuizQuestion() => QuizQuestion(
     id: id,
+    type: type == 'FILL_BLANK' ? QuizItemType.fillBlank : QuizItemType.multipleChoice,
     question: question,
     options: options,
     answerIndex: answerIndex,
+    acceptedAnswers: acceptedAnswers,
     points: points,
   );
 }
@@ -246,6 +271,13 @@ class BiblePortion {
       text: json['text'] as String? ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'reference': reference,
+        'passage': passage,
+        'text': text,
+      };
 }
 
 class LearningTrackView {
@@ -260,6 +292,9 @@ class LearningTrackView {
   });
 }
 
+/// Playable studio game attached to a quest week.
+enum QuestGameType { puzzle, matching }
+
 /// Teen Quest week model
 class TeenQuest {
   final String id;
@@ -267,9 +302,13 @@ class TeenQuest {
   final String title;
   final String scripture;
   final String content;
+  final String declarationText;
   final List<TeenQuestQuizItem> objectiveQuiz;
   final List<BiblePortion> biblePortions;
   final List<VideoLesson> videos;
+  final QuestGameType gameType;
+  final String? puzzleId;
+  final String? matchingId;
   final DateTime? createdAt;
 
   const TeenQuest({
@@ -278,24 +317,45 @@ class TeenQuest {
     required this.title,
     required this.scripture,
     required this.content,
+    this.declarationText = '',
     required this.objectiveQuiz,
     this.biblePortions = const [],
     this.videos = const [],
+    this.gameType = QuestGameType.puzzle,
+    this.puzzleId,
+    this.matchingId,
     this.createdAt,
   });
 
+  bool get isMatchingGame =>
+      gameType == QuestGameType.matching ||
+      (matchingId != null && matchingId!.trim().isNotEmpty);
+
+  String get gameStepTitle => isMatchingGame ? 'Match' : 'Puzzle';
+
   factory TeenQuest.fromJson(Map<String, dynamic> json) {
+    final weekNumber = _jsonInt(json['weekNumber']) ?? 0;
     final objQuiz = json['objectiveQuiz'];
+    final matchingId = json['matchingId'] as String?;
+    final rawType = (json['gameType'] as String?)?.toUpperCase();
+    final gameType = rawType == 'MATCHING' ||
+            (matchingId != null && matchingId.trim().isNotEmpty)
+        ? QuestGameType.matching
+        : QuestGameType.puzzle;
 
     return TeenQuest(
-      id: json['id'] as String,
-      weekNumber: json['weekNumber'] as int,
-      title: json['title'] as String,
+      id: json['id'] as String? ?? '',
+      weekNumber: weekNumber,
+      title: json['title'] as String? ?? '',
       scripture: json['scripture'] as String? ?? '',
       content: json['content'] as String? ?? '',
+      declarationText: (json['declarationText'] as String? ?? '').trim(),
       objectiveQuiz: _parseQuizItems(objQuiz),
       biblePortions: _parsePortions(json['biblePortions']),
-      videos: _parseVideos(json['videos'], weekNumber: json['weekNumber'] as int? ?? 0),
+      videos: _parseVideos(json['videos'], weekNumber: weekNumber),
+      gameType: gameType,
+      puzzleId: json['puzzleId'] as String?,
+      matchingId: matchingId,
       createdAt: json['createdAt'] != null
           ? ScoreLedgerEntry._parseDate(json['createdAt'])
           : null,
@@ -304,22 +364,23 @@ class TeenQuest {
 
   static List<TeenQuestQuizItem> _parseQuizItems(dynamic data) {
     if (data == null) return [];
+    List<dynamic> raw;
     if (data is List) {
-      return data
-          .map((e) => TeenQuestQuizItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    if (data is String) {
+      raw = data;
+    } else if (data is String) {
       try {
-        final decoded = jsonDecode(data);
-        return (decoded as List)
-            .map((e) => TeenQuestQuizItem.fromJson(e as Map<String, dynamic>))
-            .toList();
+        raw = jsonDecode(data) as List;
       } catch (_) {
         return [];
       }
+    } else {
+      return [];
     }
-    return [];
+    return [
+      for (final item in raw)
+        if (item is Map)
+          TeenQuestQuizItem.fromJson(Map<String, dynamic>.from(item)),
+    ];
   }
 
   static List<VideoLesson> _parseVideos(dynamic data, {int weekNumber = 0}) {
@@ -355,8 +416,242 @@ class TeenQuest {
     'title': title,
     'scripture': scripture,
     'content': content,
+    'declarationText': declarationText,
     'createdAt': createdAt?.toIso8601String(),
   };
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'weekNumber': weekNumber,
+        'title': title,
+        'scripture': scripture,
+        'content': content,
+        'declarationText': declarationText,
+        'objectiveQuiz': objectiveQuiz.map((item) => item.toJson()).toList(),
+        'biblePortions': biblePortions.map((portion) => portion.toJson()).toList(),
+        'videos': videos.map((video) => video.toJson()).toList(),
+        'gameType': gameType == QuestGameType.matching ? 'MATCHING' : 'PUZZLE',
+        'puzzleId': puzzleId,
+        'matchingId': matchingId,
+        'createdAt': createdAt?.toIso8601String(),
+      };
+}
+
+/// Finished activities for one week from `GET /api/teen-quest/weeks/:n/progress`.
+class WeekActivityProgress {
+  const WeekActivityProgress({
+    required this.weekNumber,
+    required this.watchedVideoIds,
+    required this.quizDone,
+    required this.puzzleDone,
+    required this.tracked,
+  });
+
+  final int weekNumber;
+  final List<String> watchedVideoIds;
+  final bool quizDone;
+  final bool puzzleDone;
+  final bool tracked;
+
+  factory WeekActivityProgress.fromJson(Map<String, dynamic> json) {
+    final progress = Map<String, dynamic>.from(json['progress'] as Map? ?? const {});
+    return WeekActivityProgress(
+      weekNumber: _jsonInt(json['weekNumber']) ?? 0,
+      watchedVideoIds: [
+        for (final id in (progress['watchedVideoIds'] as List? ?? const [])) id.toString(),
+      ],
+      quizDone: progress['quizDone'] == true,
+      puzzleDone: progress['puzzleDone'] == true,
+      tracked: json['tracked'] == true,
+    );
+  }
+}
+
+/// The explorer's self-paced week from `GET /api/teen-quest/current`.
+class CurrentQuest {
+  const CurrentQuest({
+    required this.quest,
+    required this.weekNumber,
+    required this.totalWeeks,
+    required this.weeksCompleted,
+    required this.caughtUp,
+    required this.tracked,
+    required this.watchedVideoIds,
+    required this.quizDone,
+    required this.puzzleDone,
+    this.videoPoints = 0,
+    this.quizPoints = 0,
+    this.puzzlePoints = 0,
+    this.prayerPoints = 0,
+    this.awaitingNextWeek = false,
+    this.nextWeekOpensAt,
+  });
+
+  final TeenQuest quest;
+  final int weekNumber;
+  final int totalWeeks;
+  final int weeksCompleted;
+  /// Every published week finished.
+  final bool caughtUp;
+  /// False when the signed-in account has no explorer profile to record progress on.
+  final bool tracked;
+  final List<String> watchedVideoIds;
+  final bool quizDone;
+  final bool puzzleDone;
+  /// Admin points for one finished video (`VIDEO_WATCH`).
+  final int videoPoints;
+  final int quizPoints;
+  final int puzzlePoints;
+  final int prayerPoints;
+  /// Home default is held on a finished week until next Sunday 00:00.
+  final bool awaitingNextWeek;
+  /// When the home default may advance (ISO from API).
+  final DateTime? nextWeekOpensAt;
+
+  /// Week title without the "Week N:" prefix, e.g. "Genesis 1–8".
+  String get passage => quest.title.replaceFirst(RegExp(r'^Week\s*\d+\s*[:\-–]\s*'), '');
+
+  static Map<String, int> _activityPoints(Map<String, dynamic> json) {
+    final raw = json['activityPoints'];
+    if (raw is! Map) return const {};
+    return {
+      for (final e in raw.entries)
+        if (e.key is String && e.value is num) e.key as String: (e.value as num).toInt(),
+    };
+  }
+
+  factory CurrentQuest.fromJson(Map<String, dynamic> json) {
+    final progress = Map<String, dynamic>.from(json['progress'] as Map? ?? const {});
+    final questRaw = json['quest'];
+    if (questRaw is! Map) {
+      throw const FormatException('Current quest is missing week content');
+    }
+    final points = _activityPoints(json);
+    DateTime? opensAt;
+    final rawOpens = json['nextWeekOpensAt'];
+    if (rawOpens is String && rawOpens.isNotEmpty) {
+      opensAt = DateTime.tryParse(rawOpens)?.toUtc();
+    }
+    return CurrentQuest(
+      quest: TeenQuest.fromJson(Map<String, dynamic>.from(questRaw)),
+      weekNumber: _jsonInt(json['weekNumber']) ?? 0,
+      totalWeeks: _jsonInt(json['totalWeeks']) ?? 0,
+      weeksCompleted: _jsonInt(json['weeksCompleted']) ?? 0,
+      caughtUp: json['caughtUp'] == true,
+      tracked: json['tracked'] == true,
+      watchedVideoIds: [
+        for (final id in (progress['watchedVideoIds'] as List? ?? const [])) id.toString(),
+      ],
+      quizDone: progress['quizDone'] == true,
+      puzzleDone: progress['puzzleDone'] == true,
+      videoPoints: points['VIDEO_WATCH'] ?? 0,
+      quizPoints: points['TEEN_QUEST_OBJS'] ?? 0,
+      puzzlePoints: points['PUZZLE_SOLVE'] ?? 0,
+      prayerPoints: points['PRAYER_DECLARATION'] ?? 0,
+      awaitingNextWeek: json['awaitingNextWeek'] == true,
+      nextWeekOpensAt: opensAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'weekNumber': weekNumber,
+        'totalWeeks': totalWeeks,
+        'weeksCompleted': weeksCompleted,
+        'caughtUp': caughtUp,
+        'tracked': tracked,
+        'awaitingNextWeek': awaitingNextWeek,
+        if (nextWeekOpensAt != null) 'nextWeekOpensAt': nextWeekOpensAt!.toIso8601String(),
+        'quest': quest.toJson(),
+        'progress': {
+          'watchedVideoIds': watchedVideoIds,
+          'quizDone': quizDone,
+          'puzzleDone': puzzleDone,
+        },
+        'activityPoints': {
+          'VIDEO_WATCH': videoPoints,
+          'TEEN_QUEST_OBJS': quizPoints,
+          'PUZZLE_SOLVE': puzzlePoints,
+          'PRAYER_DECLARATION': prayerPoints,
+        },
+      };
+
+  /// Merges activity flags when the server week matches. Server owns home-default
+  /// week number, Sunday hold, and cross-device completion (no local timer).
+  static CurrentQuest preferLocalProgress(CurrentQuest? local, CurrentQuest remote) {
+    if (local == null) return remote;
+    // Different week or Sunday hold → always trust the DB-backed API.
+    if (remote.weekNumber != local.weekNumber || remote.awaitingNextWeek) {
+      return remote;
+    }
+    final watched = <String>{
+      ...local.watchedVideoIds,
+      ...remote.watchedVideoIds,
+    }.toList();
+    return CurrentQuest(
+      quest: remote.quest,
+      weekNumber: remote.weekNumber,
+      totalWeeks: remote.totalWeeks,
+      weeksCompleted: remote.weeksCompleted >= local.weeksCompleted
+          ? remote.weeksCompleted
+          : local.weeksCompleted,
+      caughtUp: remote.caughtUp || local.caughtUp,
+      tracked: remote.tracked,
+      watchedVideoIds: watched,
+      quizDone: local.quizDone || remote.quizDone,
+      puzzleDone: local.puzzleDone || remote.puzzleDone,
+      videoPoints: remote.videoPoints > 0 ? remote.videoPoints : local.videoPoints,
+      quizPoints: remote.quizPoints > 0 ? remote.quizPoints : local.quizPoints,
+      puzzlePoints: remote.puzzlePoints > 0 ? remote.puzzlePoints : local.puzzlePoints,
+      prayerPoints: remote.prayerPoints > 0 ? remote.prayerPoints : local.prayerPoints,
+      awaitingNextWeek: remote.awaitingNextWeek,
+      nextWeekOpensAt: remote.nextWeekOpensAt ?? local.nextWeekOpensAt,
+    );
+  }
+
+  CurrentQuest withStep(String step) {
+    return CurrentQuest(
+      quest: quest,
+      weekNumber: weekNumber,
+      totalWeeks: totalWeeks,
+      weeksCompleted: weeksCompleted,
+      caughtUp: caughtUp,
+      tracked: tracked,
+      watchedVideoIds: watchedVideoIds,
+      quizDone: step == 'QUIZ' ? true : quizDone,
+      puzzleDone: step == 'PUZZLE' ? true : puzzleDone,
+      videoPoints: videoPoints,
+      quizPoints: quizPoints,
+      puzzlePoints: puzzlePoints,
+      prayerPoints: prayerPoints,
+      awaitingNextWeek: awaitingNextWeek,
+      nextWeekOpensAt: nextWeekOpensAt,
+    );
+  }
+
+  CurrentQuest withActivityPoints({
+    int? videoPoints,
+    int? quizPoints,
+    int? puzzlePoints,
+    int? prayerPoints,
+  }) {
+    return CurrentQuest(
+      quest: quest,
+      weekNumber: weekNumber,
+      totalWeeks: totalWeeks,
+      weeksCompleted: weeksCompleted,
+      caughtUp: caughtUp,
+      tracked: tracked,
+      watchedVideoIds: watchedVideoIds,
+      quizDone: quizDone,
+      puzzleDone: puzzleDone,
+      videoPoints: videoPoints ?? this.videoPoints,
+      quizPoints: quizPoints ?? this.quizPoints,
+      puzzlePoints: puzzlePoints ?? this.puzzlePoints,
+      prayerPoints: prayerPoints ?? this.prayerPoints,
+      awaitingNextWeek: awaitingNextWeek,
+      nextWeekOpensAt: nextWeekOpensAt,
+    );
+  }
 }
 
 /// Family points Entry model
@@ -422,30 +717,137 @@ class LeaderboardEntry {
   }
 }
 
+/// One family, church or class group with its ranked standings.
+class GroupDetail {
+  final String id;
+  final String kind;
+  final String name;
+  final String? description;
+  final String? creatorName;
+  final String? creatorEmail;
+  final int memberCount;
+  final int points;
+  final List<LeaderboardEntry> standings;
+
+  const GroupDetail({
+    required this.id,
+    required this.kind,
+    this.name = '',
+    this.description,
+    this.creatorName,
+    this.creatorEmail,
+    this.memberCount = 0,
+    this.points = 0,
+    this.standings = const [],
+  });
+
+  factory GroupDetail.fromJson(Map<String, dynamic> json) {
+    return GroupDetail(
+      id: json['id'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'CLASS',
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String?,
+      creatorName: json['creatorName'] as String?,
+      creatorEmail: json['creatorEmail'] as String?,
+      memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      points: (json['points'] as num?)?.toInt() ?? 0,
+      standings: (json['standings'] as List? ?? [])
+          .map((e) => LeaderboardEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+    );
+  }
+
+  /// Fields the group screens read from a membership row, filled from the server.
+  Map<String, dynamic> mergeInto(Map<String, dynamic>? membership) {
+    return {
+      ...?membership,
+      if (description != null) 'description': description,
+      if (creatorName != null) 'creatorName': creatorName,
+      if (creatorEmail != null) 'creatorEmail': creatorEmail,
+      'memberCount': memberCount,
+      'points': points,
+    };
+  }
+}
+
+/// One admin-approved cheer template for the picker (send by id only).
+class NudgeTemplate {
+  final String id;
+  final String key;
+  final String message;
+
+  const NudgeTemplate({
+    required this.id,
+    required this.key,
+    required this.message,
+  });
+
+  factory NudgeTemplate.fromJson(Map<String, dynamic> json) {
+    return NudgeTemplate(
+      id: json['id'] as String? ?? '',
+      key: json['key'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+    );
+  }
+}
+
 /// Nudge model
 class Nudge {
   final String id;
   final String stickerKey;
+  final String? message;
   final DateTime createdAt;
   final DateTime? readAt;
+  final String? fromName;
+  final String? groupName;
+  final String? classId;
 
   const Nudge({
     required this.id,
     required this.stickerKey,
     required this.createdAt,
+    this.message,
     this.readAt,
+    this.fromName,
+    this.groupName,
+    this.classId,
   });
+
+  /// "Ada · Youth Circle" or fallback "Encouragement".
+  String get sourceLabel {
+    final from = fromName?.trim() ?? '';
+    final group = groupName?.trim() ?? '';
+    if (from.isNotEmpty && group.isNotEmpty) return '$from · $group';
+    if (from.isNotEmpty) return from;
+    if (group.isNotEmpty) return group;
+    return 'Encouragement';
+  }
 
   factory Nudge.fromJson(Map<String, dynamic> json) {
     return Nudge(
       id: json['id'] as String,
       stickerKey: json['stickerKey'] as String,
+      message: json['message'] as String?,
       createdAt: ScoreLedgerEntry._parseDate(json['createdAt']),
       readAt: json['readAt'] != null
           ? ScoreLedgerEntry._parseDate(json['readAt'])
           : null,
+      fromName: json['fromName'] as String?,
+      groupName: json['groupName'] as String?,
+      classId: json['classId'] as String?,
     );
   }
+
+  Nudge markedRead([DateTime? at]) => Nudge(
+        id: id,
+        stickerKey: stickerKey,
+        message: message,
+        createdAt: createdAt,
+        readAt: readAt ?? at ?? DateTime.now(),
+        fromName: fromName,
+        groupName: groupName,
+        classId: classId,
+      );
 }
 
 /// Class Quiz Activation
@@ -473,7 +875,7 @@ class ClassQuizActivation {
       id: json['id'] as String,
       classId: json['classId'] as String,
       questId: json['questId'] as String,
-      quizType: json['quizType'] as String? ?? 'BOTH',
+      quizType: json['quizType'] as String? ?? 'OBJS',
       isActive: json['isActive'] as bool? ?? true,
       activatedByUserId: json['activatedByUserId'] as String,
       activatedAt: ScoreLedgerEntry._parseDate(json['activatedAt']),

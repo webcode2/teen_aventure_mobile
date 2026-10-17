@@ -2,19 +2,32 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { forgotPassword, login, resetPassword } from './api';
 import { safeStaffNext } from './path-helpers';
-import { Alert, APP_NAME, Brand, DASHBOARD_TITLE, Field } from './ui';
+import { Alert, APP_NAME, Brand, Button, DASHBOARD_TITLE, Field } from './ui';
+
+const DEMO_PASSWORD = 'password123';
+const DEMO_ADMINS = [
+  { label: 'App Manager', email: 'manager@askhub.local' },
+  { label: 'Super Admin', email: 'superadmin@askhub.local' },
+  { label: 'Super Editor', email: 'supereditor@askhub.local' },
+  { label: 'Editor', email: 'editor@askhub.local' },
+] as const;
 
 function AuthPanel() {
   return (
     <aside className="bg-navy text-cream p-8 md:p-12 flex flex-col justify-between min-h-[260px] lg:min-h-screen relative overflow-hidden">
-      <div className="flex flex-col gap-3 max-w-md relative z-10">
-        <p className="text-[11px] font-bold tracking-widest uppercase text-gold">{APP_NAME} &bull; Admin</p>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-cream leading-tight">
-          Steward the content families actually open.
-        </h1>
-        <p className="text-xs sm:text-sm text-cream/75 leading-relaxed max-w-sm mt-1">
-          Publish Teen Quest weeks, quizzes, and safeguarding workflows from one desk — the same system the Flutter app reads live.
-        </p>
+      <div className="flex flex-col gap-6 max-w-md relative z-10">
+        <a href="#/" className="inline-block focus:outline-none focus:ring-2 focus:ring-gold/50 rounded-lg w-fit" aria-label={APP_NAME}>
+          <Brand size="lg" />
+        </a>
+        <div className="flex flex-col gap-3">
+          <p className="text-[11px] font-bold tracking-widest uppercase text-gold">{APP_NAME} &bull; Admin</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-cream leading-tight">
+            Steward the content families actually open.
+          </h1>
+          <p className="text-xs sm:text-sm text-cream/75 leading-relaxed max-w-sm mt-1">
+            Publish Teen Quest weeks, quizzes, and safeguarding workflows from one desk — the same system the Flutter app reads live.
+          </p>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs text-cream/60 mt-8 pt-6 border-t border-white/10 relative z-10">
         <span>Token sign-in</span>
@@ -30,8 +43,8 @@ function AuthPanel() {
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState<string>(DEMO_ADMINS[0].email);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -54,9 +67,6 @@ export function LoginPage() {
       <AuthPanel />
       <div className="grid place-items-center p-6 md:p-12 bg-cream">
         <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
-          <div className="mb-1">
-            <Brand size="lg" />
-          </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-navy">Sign in</h2>
             <p className="sr-only">{DASHBOARD_TITLE}</p>
@@ -85,12 +95,24 @@ export function LoginPage() {
             />
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
-          <button
-            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
-            disabled={busy}
-          >
+          <div className="flex flex-wrap gap-1.5">
+            {DEMO_ADMINS.map((admin) => (
+              <button
+                key={admin.email}
+                type="button"
+                onClick={() => {
+                  setEmail(admin.email);
+                  setPassword(DEMO_PASSWORD);
+                }}
+                className="px-2 py-1 rounded-md text-[10px] bg-cream hover:bg-teal-tint hover:text-teal font-semibold text-navy border border-border transition-colors cursor-pointer"
+              >
+                {admin.label}
+              </button>
+            ))}
+          </div>
+          <Button type="submit" size="lg" className="w-full mt-1" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+          </Button>
           <div className="flex items-center justify-between gap-4 mt-2 text-xs">
             <button
               type="button"
@@ -102,13 +124,9 @@ export function LoginPage() {
             <span className="text-muted/80 text-[11px]">Editor, Super Editor, or Super Admin</span>
           </div>
           <div className="pt-3 mt-1 border-t border-border/60 flex flex-col gap-2 text-center text-xs">
-            <button
-              type="button"
-              onClick={() => navigate('/groups')}
-              className="w-full py-2 px-3 rounded-xl bg-teal-tint hover:bg-teal hover:text-white text-teal font-bold transition-all border border-teal/20 cursor-pointer text-xs"
-            >
+            <Button type="button" variant="soft" className="w-full" onClick={() => navigate('/ministry')}>
               Study Circle Leader Portal →
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => navigate('/')}
@@ -150,9 +168,6 @@ export function ForgotPage() {
       <AuthPanel />
       <div className="grid place-items-center p-6 md:p-12 bg-cream">
         <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
-          <div className="mb-1">
-            <Brand size="lg" />
-          </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-navy">Reset password</h2>
             <p className="text-xs text-muted mt-1">We’ll email a one-hour token link if this address is an App Manager.</p>
@@ -169,12 +184,9 @@ export function ForgotPage() {
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
           {message ? <Alert kind="ok">{message}</Alert> : null}
-          <button
-            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
-            disabled={busy}
-          >
+          <Button type="submit" size="lg" className="w-full mt-1" disabled={busy}>
             {busy ? 'Sending…' : 'Send reset link'}
-          </button>
+          </Button>
           <div className="flex items-center justify-between gap-4 mt-2 text-xs">
             <button
               type="button"
@@ -223,9 +235,6 @@ export function ResetPage({ token }: { token: string }) {
       <AuthPanel />
       <div className="grid place-items-center p-6 md:p-12 bg-cream">
         <form className="w-full max-w-[420px] bg-surface border border-border rounded-card p-7 sm:p-8 shadow-card flex flex-col gap-4" onSubmit={submit}>
-          <div className="mb-1">
-            <Brand size="lg" />
-          </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-navy">Choose a new password</h2>
             <p className="text-xs text-muted mt-1">This token can be used once and expires in one hour.</p>
@@ -255,12 +264,9 @@ export function ResetPage({ token }: { token: string }) {
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
           {message ? <Alert kind="ok">{message}</Alert> : null}
-          <button
-            className="w-full rounded-xl bg-navy hover:bg-teal text-white py-3 px-4 font-semibold text-sm shadow-xs hover:shadow-card transition-all duration-150 disabled:opacity-50 cursor-pointer mt-1"
-            disabled={busy || !token}
-          >
+          <Button type="submit" size="lg" className="w-full mt-1" disabled={busy || !token}>
             {busy ? 'Updating…' : 'Update password'}
-          </button>
+          </Button>
           <div className="flex items-center justify-between gap-4 mt-2 text-xs">
             <button
               type="button"

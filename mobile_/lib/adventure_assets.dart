@@ -10,7 +10,6 @@ class AdventureAssets {
   static const logo = 'assets/logo1.svg';
   static const abi = 'assets/abi.png';
   static const zack = 'assets/zack.png';
-  static const worldMap = 'assets/maps/world_map.png';
   static const questMap = 'assets/maps/quest_map.html';
 
   static bool isRaster(String asset) {

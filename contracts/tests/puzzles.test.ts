@@ -113,6 +113,28 @@ describe('fixtures/broken — expect fail', () => {
     expect(result.issues.some((i) => i.code === 'NO_CROSSING')).toBe(true);
   });
 
+  it('a placed grid with a missing ref is not reported as a chain error', () => {
+    const result = compile({
+      schemaVersion: 1,
+      id: 'layout-missing-ref',
+      type: 'LAYOUT',
+      title: 'Week 2',
+      scripture: 'Genesis 24',
+      rewards: { points: 40 },
+      data: {
+        entries: [
+          { id: 'a', direction: 'down', row: 0, col: 0, answer: 'ISAAC', clue: 'The son', ref: 'Genesis 22:2' },
+          { id: 'b', direction: 'across', row: 2, col: 0, answer: 'HANNAH', clue: 'A mother', ref: '' },
+        ],
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    const text = result.issues.map((issue) => issue.message).join(' ');
+    expect(text).not.toMatch(/CHAIN/);
+    expect(text.toLowerCase()).toMatch(/ref/);
+  });
+
   it('empty_ref.json fails with empty ref', () => {
     const raw = load('fixtures/broken/empty_ref.json');
     const parsed = puzzleEnvelopeSchema.safeParse(raw);

@@ -121,7 +121,6 @@ export function AboutPage() {
                   Energetic, inquisitive, and tech-savvy. Zack loves taking on weekly scripture challenges, word puzzles, and showing how faith applies to sports, friendship, and everyday teenage life.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start text-xs font-semibold text-teal">
-                  <span className="px-3 py-1 rounded-lg bg-teal-tint">#WordChains</span>
                   <span className="px-3 py-1 rounded-lg bg-teal-tint">#BoldFaith</span>
                   <span className="px-3 py-1 rounded-lg bg-teal-tint">#Puzzles</span>
                 </div>
@@ -155,7 +154,7 @@ export function AboutPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start text-xs font-semibold text-navy">
                   <span className="px-3 py-1 rounded-lg bg-surface-2">#ScriptureStudy</span>
                   <span className="px-3 py-1 rounded-lg bg-surface-2">#HeartPrayer</span>
-                  <span className="px-3 py-1 rounded-lg bg-surface-2">#Crosswords</span>
+                  <span className="px-3 py-1 rounded-lg bg-surface-2">#Puzzles</span>
                 </div>
               </div>
             </div>
@@ -217,7 +216,7 @@ export function AboutPage() {
               </div>
               <h3 className="font-extrabold text-lg text-navy">2. Creative Puzzles</h3>
               <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Word chains, thematic crosswords, and matching challenges that turn scripture memory into joyful mastery.
+                Scripture puzzles that turn Bible memory into joyful mastery.
               </p>
             </div>
 

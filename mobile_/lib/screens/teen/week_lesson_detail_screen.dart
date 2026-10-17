@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../data/episodes.dart';
 import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
-import '../../models/start_episode.dart';
 import '../../models/video_lesson.dart';
 import '../../models/week_video_progress.dart';
 import '../../services/content_service.dart';
 import '../../theme.dart';
+import 'matching_screen.dart';
 import 'objective_quiz_screen.dart';
 import 'puzzle_screen.dart';
 import 'video_learning_screen.dart';
+import 'week_quest_flow.dart';
 import '../shared/widgets/lesson_thumbnail.dart';
 import '../shared/widgets/adventure_list_card.dart';
 
@@ -118,17 +118,35 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
       );
       return;
     }
-    final controller = await startEpisode(SampleEpisodes.recipeEpisode1);
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: controller,
-          child: const PuzzleScreen(),
+    final matchingId = week.matchingId?.trim();
+    if (week.isMatchingGame && matchingId != null && matchingId.isNotEmpty) {
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MatchingScreen(matchingId: matchingId),
         ),
-      ),
+      );
+      return;
+    }
+    final game = context.read<GameController>();
+    final content = context.read<ContentService>();
+    final puzzleId = week.puzzleId?.trim();
+    if (puzzleId == null || puzzleId.isEmpty) {
+      game.markTechnicalIssue('This week has no puzzle attached yet.');
+    } else {
+      try {
+        await game.loadLiveFromDatabase(
+          contentService: content,
+          puzzleId: puzzleId,
+        );
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const PuzzleScreen()),
     );
+    if (mounted) await WeekQuestFlow.recordPuzzleIfSolved(context);
   }
 
   WeekVideoProgress _videoProgress() {
@@ -241,7 +259,11 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
                 OutlinedButton.icon(
                   onPressed: _openPuzzle,
                   icon: const Icon(Icons.grid_view_rounded),
-                  label: Text(_puzzleOpen ? 'Start puzzle' : 'Puzzle locked'),
+                  label: Text(
+                    _puzzleOpen
+                        ? 'Start ${week.gameStepTitle.toLowerCase()}'
+                        : '${week.gameStepTitle} locked',
+                  ),
                 ),
               ],
             ),

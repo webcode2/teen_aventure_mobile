@@ -1,4 +1,4 @@
-# ASK Hub MVP — PRD coverage spec
+# Teen Bible Adventures MVP — PRD coverage spec
 
 **Date:** 2026-08-29  
 **Source of truth:** repo PRDs (not the earlier Play-only IDOC)
@@ -61,7 +61,7 @@ Gaps: APP_MANAGER still needs bootstrap (seed env exists); CORS/production env; 
 2. Backend + PostgreSQL operational  
 3. Auth and role permissions tested  
 4. Family and child isolation tested  
-5. Core ASK Hub modules functional  
+5. Core Teen Bible Adventures modules functional  
 6. Bible Reading, Devotional, BIY functional  
 7. Scoring, streaks, Jars, Together Mode functional  
 8. Nudges and reporting functional  

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import App from './App';
-import { api, setToken, clearPastorSession } from './api';
+import { api, setToken, clearPastorSession, setPastorSession, publicWrite } from './api';
 
 vi.mock('./api', async () => {
   const actual = await vi.importActual<typeof import('./api')>('./api');
@@ -12,6 +12,7 @@ vi.mock('./api', async () => {
     api: vi.fn(),
     login: vi.fn(),
     pastorLogin: vi.fn(),
+    publicWrite: vi.fn(),
     forgotPassword: vi.fn(),
     resetPassword: vi.fn(),
   };
@@ -20,7 +21,21 @@ vi.mock('./api', async () => {
 const mockedApi = vi.mocked(api);
 const mockedLogin = vi.mocked((await import('./api')).login);
 const mockedPastorLogin = vi.mocked((await import('./api')).pastorLogin);
+const mockedPublicWrite = vi.mocked(publicWrite);
 const mockedForgot = vi.mocked((await import('./api')).forgotPassword);
+
+const PASTOR_SESSION_USER = {
+  id: 'pastor-1',
+  email: 'pastor@askhub.local',
+  name: 'Rev. Morgan Hale',
+  role: 'MAIN_ACCOUNT' as const,
+  churchRole: 'PASTOR' as const,
+  churchId: 'church-grace',
+};
+
+function seedPastorSession() {
+  setPastorSession('pastor-token-123', PASTOR_SESSION_USER);
+}
 
 function renderApp(path = '/') {
   return render(
@@ -50,7 +65,7 @@ beforeEach(() => {
         openReports: 1,
       };
     }
-    if (path === '/api/admin/people') {
+    if (path.startsWith('/api/admin/people')) {
       return { users: [], children: [], families: [] };
     }
     if (path === '/api/admin/groups') {
@@ -70,7 +85,8 @@ describe('Teen Bible Adventures Admin', () => {
   it('shows App Manager login when no token', () => {
     renderApp('/app/login');
     expect(screen.getByAltText('Teen Bible Adventures')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Email')).toBeTruthy();
+    expect((screen.getByPlaceholderText('Email') as HTMLInputElement).value).toBe('manager@askhub.local');
+    expect((screen.getByPlaceholderText('Password') as HTMLInputElement).value).toBe('password123');
     expect(screen.getByText('Editor, Super Editor, or Super Admin')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Forgot password' })).toBeTruthy();
   });
@@ -91,19 +107,33 @@ describe('Teen Bible Adventures Admin', () => {
     renderApp('/app/dashboard');
     expect(screen.getByText('Settings')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Quest points' }));
-    expect(await screen.findByText('TEEN QUEST OBJS')).toBeTruthy();
+    expect(await screen.findByRole('spinbutton', { name: 'Quiz points' })).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Puzzle points' })).toBeTruthy();
+    expect(screen.getByText('Week quiz finished')).toBeTruthy();
+    expect(screen.getByText('Week puzzle finished')).toBeTruthy();
+    expect(screen.queryByText('TEEN QUEST OBJS')).toBeNull();
+    expect(screen.queryByText('Quiz / puzzle')).toBeNull();
+    expect(screen.queryByText('Objective quiz or puzzle complete')).toBeNull();
     expect(screen.queryByText('TEEN QUEST SCRAMBLE')).toBeNull();
+    expect(screen.getByText('Video watch')).toBeTruthy();
+    expect(screen.getByText('Each video finished')).toBeTruthy();
+    expect(screen.queryByText('One week video finished')).toBeNull();
+    expect(screen.getByText('Prayer declaration')).toBeTruthy();
     expect(screen.getByText('VIDEO WATCH')).toBeTruthy();
     expect(screen.getByText('PRAYER DECLARATION')).toBeTruthy();
     expect(screen.queryByText('PRAYER STEP')).toBeNull();
     expect(screen.queryByText('DEVOTIONAL')).toBeNull();
     expect(screen.getByRole('button', { name: 'Save quest points' })).toBeTruthy();
+    expect(screen.getByText('Completion ledger')).toBeTruthy();
+    expect(screen.getByText('Award milestones')).toBeTruthy();
   });
 
   it('shows login error on failed manager login', async () => {
     mockedLogin.mockRejectedValueOnce(new Error('Dashboard access required'));
     renderApp('/app/login');
+    await userEvent.clear(screen.getByPlaceholderText('Email'));
     await userEvent.type(screen.getByPlaceholderText('Email'), 'someone@church.com');
+    await userEvent.clear(screen.getByPlaceholderText('Password'));
     await userEvent.type(screen.getByPlaceholderText('Password'), 'password123');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('Dashboard access required')).toBeTruthy();
@@ -138,21 +168,31 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.queryByText('Scripture Marinade step')).toBeNull();
   });
 
-  it('shows people directory for the App Manager', async () => {
+  it('shows users directory for the App Manager', async () => {
     setToken('test-token');
     renderApp('/app/dashboard');
-    await userEvent.click(screen.getByRole('button', { name: 'People' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Users' }));
     expect(await screen.findByText('Users (0)')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Staff \(0\)/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Staff \(0\)/ })).toBeNull();
     expect(screen.getByPlaceholderText('Search name, email, family…')).toBeTruthy();
   });
 
-  it('shows Groups from the Operate sidebar', async () => {
+  it('shows pastors under Operate and staff under Settings', async () => {
+    setToken('test-token');
+    renderApp('/app/dashboard');
+    expect(screen.getByRole('button', { name: 'Pastors' })).toBeTruthy();
+    expect(screen.getByText('Settings')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Staff' }));
+    expect(await screen.findByText('Dashboard administrator accounts')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search name, email, family…')).toBeTruthy();
+  });
+
+  it('shows Groups from the Operate sidebar without create', async () => {
     setToken('test-token');
     renderApp('/app/dashboard');
     await userEvent.click(screen.getByRole('button', { name: 'Groups' }));
-    expect(await screen.findByText('Church class groups and family groups across the platform.')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Search name, code, owner, church…')).toBeTruthy();
+    expect(await screen.findByPlaceholderText('Search name, code, owner, church…')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '+ Create Group' })).toBeNull();
   });
 
   it('shows Puzzle Studio from the sidebar', async () => {
@@ -162,75 +202,7 @@ describe('Teen Bible Adventures Admin', () => {
     expect(await screen.findByRole('button', { name: /\+ Add word/i })).toBeTruthy();
     expect(screen.getByText('Checklist')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Drafts & published/i })).toBeTruthy();
-    expect(screen.getByText(/Link each puzzle to a Teen Quest week/i)).toBeTruthy();
-    expect(screen.getByLabelText('Week number')).toBeTruthy();
-  });
-
-  it('shows published weeks list with pagination and search', async () => {
-    const mockWeeks = Array.from({ length: 12 }, (_, i) => ({
-      id: `week-${i + 1}`,
-      weekNumber: i + 1,
-      title: `Lesson for Week ${i + 1}`,
-      scripture: `Proverbs ${i + 1}:1-5`,
-      content: `Reflecting on week ${i + 1} teachings and core discipleship lessons.`,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    }));
-
-    mockedApi.mockImplementation(async (path: string) => {
-      if (path === '/api/teen-quest/weeks') {
-        return mockWeeks;
-      }
-      if (path === '/api/admin/stats') {
-        return {
-          families: 3,
-          groups: 5,
-          kidsOnParentAccount: 2,
-          standaloneTeens: 1,
-          pastors: 1,
-          churchStaff: 3,
-          churches: 2,
-          dashboardAdmins: 1,
-          openReports: 1,
-        };
-      }
-      if (path === '/api/admin/people') {
-        return { users: [], children: [], families: [] };
-      }
-      return [];
-    });
-
-    setToken('test-token');
-    renderApp('/app/dashboard');
-
-    // Click 'Published weeks' in the sidebar
-    await userEvent.click(screen.getByRole('button', { name: 'Published weeks' }));
-
-    // Page header & summary cards
-    expect(await screen.findByRole('heading', { level: 1, name: 'Published weeks' })).toBeTruthy();
-    expect(screen.getByText('Active curriculum lessons')).toBeTruthy();
-
-    // Showing 1 to 10 of 12 published weeks
-    expect(screen.getByText(/Showing/)).toBeTruthy();
-    expect(screen.getAllByText('12').length).toBeGreaterThan(0);
-    expect(screen.getByText('W1')).toBeTruthy();
-    expect(screen.getByText('W10')).toBeTruthy();
-    expect(screen.queryByText('W11')).toBeNull();
-
-    // Next page button navigation
-    const nextBtn = screen.getByRole('button', { name: 'Next →' });
-    expect(nextBtn).toBeTruthy();
-    await userEvent.click(nextBtn);
-
-    // Page 2 should display W11 and W12
-    expect(screen.getByText('W11')).toBeTruthy();
-    expect(screen.getAllByText('W12').length).toBeGreaterThan(0);
-    expect(screen.queryByText('W1')).toBeNull();
-
-    // Search filter
-    const searchInput = screen.getByPlaceholderText(/Search by week/i);
-    await userEvent.type(searchInput, 'Week 12');
-    expect(screen.getAllByText('W12').length).toBeGreaterThan(0);
-    expect(screen.queryByText('W11')).toBeNull();
+    expect(screen.getByLabelText('Puzzle title')).toBeTruthy();
   });
 
   it('renders public landing page at / with discipleship pillars, mission, and barcode onboarding pass', async () => {
@@ -248,35 +220,26 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.getByRole('button', { name: /1D Barcode/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /2D QR Code/i })).toBeTruthy();
 
-    // Contact Us action button
-    expect(screen.getAllByRole('button', { name: /Contact Us/i }).length).toBeGreaterThan(0);
+    // Primary landing CTAs
+    expect(screen.getByRole('link', { name: /Explore Weekly Quests/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Our Christian Mission' })).toBeTruthy();
   });
 
-  it('renders pastor portal at /groups, allows pastoral sign in, and loads church operations with one-pastor-one-church scope', async () => {
-    mockedPastorLogin.mockResolvedValueOnce({
-      token: 'pastor-token-123',
-      user: {
-        id: 'pastor-1',
-        email: 'pastor@askhub.local',
-        name: 'Rev. Morgan Hale',
-        role: 'MAIN_ACCOUNT',
-        churchRole: 'PASTOR',
-      },
+  it('shows ministry gateway at /ministry and redirects /groups there', async () => {
+    renderApp('/groups');
+    expect(await screen.findByRole('heading', { name: /Ministry Sign In/i })).toBeTruthy();
+    expect(screen.getByText(/Shepherd the Flock/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Create a ministry account/i })).toBeTruthy();
+  });
+
+  it('renders pastor portal at /ministry after approval, allows pastoral sign in, and loads church operations', async () => {
+    mockedPublicWrite.mockRejectedValueOnce(new Error('Not a ministry applicant'));
+    mockedPastorLogin.mockImplementationOnce(async () => {
+      setPastorSession('pastor-token-123', PASTOR_SESSION_USER);
+      return { token: 'pastor-token-123', user: PASTOR_SESSION_USER };
     });
 
     mockedApi.mockImplementation(async (path: string) => {
-      if (path === '/api/auth/login') {
-        return {
-          token: 'pastor-token-123',
-          user: {
-            id: 'pastor-1',
-            email: 'pastor@askhub.local',
-            name: 'Rev. Morgan Hale',
-            role: 'MAIN_ACCOUNT',
-            churchRole: 'PASTOR',
-          },
-        };
-      }
       if (path === '/api/auth/me') {
         return {
           type: 'user',
@@ -334,50 +297,325 @@ describe('Teen Bible Adventures Admin', () => {
           },
         ];
       }
+      if (path === '/api/churches/church-grace/nudge-templates') return [];
       return [];
     });
 
-    renderApp('/groups');
+    renderApp('/ministry');
 
-    // Unauthenticated Church Gateway view
-    expect(await screen.findByRole('heading', { name: /Church Sign In/i })).toBeTruthy();
-    expect(screen.getByText(/Shepherd the Flock/i)).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Ministry Sign In/i })).toBeTruthy();
+    await userEvent.type(screen.getByPlaceholderText('leader@ministry.org'), 'pastor@askhub.local');
+    await userEvent.type(screen.getByPlaceholderText('••••••••'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Enter ministry' }));
 
-    // Click quick-fill demo pastor button
-    await userEvent.click(screen.getByRole('button', { name: 'Grace Demo Church' }));
-
-    // Click Sign In
-    await userEvent.click(screen.getByRole('button', { name: 'Enter Church Operations Console' }));
-
-    // Authenticated Church Operations Console view
+    // Authenticated ministry operations console
     expect(await screen.findByText('Grace Demo Church')).toBeTruthy();
-    expect(screen.getByText('GRACE01')).toBeTruthy();
-    expect(screen.getByText('Rev. Morgan Hale')).toBeTruthy();
+    expect(screen.getAllByText('Rev. Morgan Hale').length).toBeGreaterThan(0);
 
     // Operational KPI overview cards
     expect(screen.getByText('Registered households')).toBeTruthy();
 
-    // Safeguarding confidential case (default active tab)
-    expect(screen.getByText(/Parent requested confidential pastoral check-in/i)).toBeTruthy();
-    expect(screen.getByText('UNDER_REVIEW')).toBeTruthy();
-
-    // Classes tab
-    await userEvent.click(screen.getByRole('button', { name: /Classes & Groups/i }));
-    expect(await screen.findByText('Senior Teens Quest')).toBeTruthy();
-
-    // Families tab
-    await userEvent.click(screen.getByRole('button', { name: /Families/i }));
+    // Families is the default tab
     expect(await screen.findByText('The Johnson Family')).toBeTruthy();
 
-    // Barcode & Pass tab
-    await userEvent.click(screen.getByRole('button', { name: /Barcode & Pass Generator/i }));
-    expect(await screen.findByText(/Family & Group Study Pass/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Regenerate Church Join Code/i })).toBeTruthy();
+    // Groups via sidebar
+    await userEvent.click(screen.getByRole('button', { name: /^Groups/i }));
+    expect(await screen.findByText('Senior Teens Quest')).toBeTruthy();
 
-    // Sign out button
+    // Care via sidebar
+    await userEvent.click(screen.getByRole('button', { name: /^Care/i }));
+    expect(await screen.findByText(/Parent requested confidential pastoral check-in/i)).toBeTruthy();
+    expect(screen.getByText('UNDER_REVIEW')).toBeTruthy();
+
+    expect(screen.queryByRole('button', { name: /Barcode & Pass Generator/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Regenerate$/i })).toBeNull();
+
+    // Sign out returns to the ministry gateway
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(await screen.findByRole('heading', { name: /Church Sign In/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Ministry Sign In/i })).toBeTruthy();
+  });
+
+  it('allows church leaders to create custom groups, review rosters, view streaks, and send broadcasts', async () => {
+    mockedPastorLogin.mockResolvedValueOnce({
+      token: 'pastor-token-123',
+      user: {
+        id: 'pastor-1',
+        email: 'pastor@askhub.local',
+        name: 'Rev. Morgan Hale',
+        role: 'MAIN_ACCOUNT',
+        churchRole: 'PASTOR',
+      },
+    });
+
+    let currentClasses = [
+      {
+        id: 'class-1',
+        name: 'Senior Teens Quest',
+        kind: 'CHURCH',
+        joinCode: 'STQ123',
+        assignments: [{ teacher: { id: 't-1', name: 'Teacher Bob' } }],
+      },
+    ];
+
+    let currentEnrollments = [
+      {
+        id: 'en-1',
+        classId: 'class-1',
+        childId: 'ch-1',
+        status: 'PENDING',
+        child: { id: 'ch-1', name: 'David J.', streak: { current: 5, lastDay: '2026-03-01' } },
+      },
+    ];
+
+    mockedApi.mockImplementation(async (path: string, options?: RequestInit) => {
+      if (path === '/api/auth/me') {
+        return {
+          type: 'user',
+          userId: 'pastor-1',
+          churchId: 'church-grace',
+          churchRole: 'PASTOR',
+          name: 'Rev. Morgan Hale',
+          email: 'pastor@askhub.local',
+        };
+      }
+      if (path === '/api/churches/church-grace') {
+        return {
+          id: 'church-grace',
+          name: 'Grace Demo Church',
+          joinCode: 'GRACE01',
+          jurisdiction: 'US',
+        };
+      }
+      if (path === '/api/churches/church-grace/classes') {
+        return currentClasses;
+      }
+      if (path === '/api/classes/church/church-grace' && options?.method === 'POST') {
+        const body = JSON.parse(options.body as string);
+        const newClass = {
+          id: 'class-2',
+          name: body.name,
+          kind: 'CHURCH',
+          joinCode: 'KNG789',
+          assignments: [],
+        };
+        currentClasses.push(newClass);
+        return newClass;
+      }
+      if (path === '/api/classes/class-1/enrollments') {
+        return currentEnrollments;
+      }
+      if (path === '/api/classes/enrollment/en-1' && options?.method === 'PATCH') {
+        currentEnrollments[0].status = 'APPROVED';
+        return currentEnrollments[0];
+      }
+      if (path === '/api/classes/class-1/activity') {
+        return {
+          enrollments: currentEnrollments,
+          recentScores: [
+            {
+              id: 'sc-1',
+              childId: 'ch-1',
+              activityType: 'QUIZ',
+              refKey: 'WEEK_1_QUIZ',
+              points: 50,
+              createdAt: '2026-03-01T11:00:00.000Z',
+              child: { id: 'ch-1', name: 'David J.' },
+            },
+          ],
+        };
+      }
+      if (path === '/api/churches/church-grace/people') return [];
+      if (path === '/api/churches/church-grace/families') return [];
+      if (path === '/api/safeguarding/church/church-grace/reports') return [];
+      if (path === '/api/churches/church-grace/nudge-templates') return [];
+      return [];
+    });
+
+    seedPastorSession();
+    renderApp('/ministry/church-grace/groups');
+
+    // Groups page
+    expect(await screen.findByText('Senior Teens Quest')).toBeTruthy();
+
+    // 1. Create a Custom Group
+    await userEvent.click(screen.getByRole('button', { name: /\+ Create Custom Group/i }));
+    const groupInput = screen.getByPlaceholderText(/e\.g\. Senior High Disciples/i);
+    await userEvent.type(groupInput, 'Kingdom Explorers');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Group' }));
+    expect(await screen.findByText('Kingdom Explorers')).toBeTruthy();
+
+    // 2. Open Roster & Approve Enrollment
+    const rosterButtons = screen.getAllByRole('button', { name: /👥 Roster/i });
+    await userEvent.click(rosterButtons[0]);
+    expect(await screen.findByText('David J.')).toBeTruthy();
+    expect(screen.getByText('PENDING')).toBeTruthy();
+
+    // Click Approve
+    await userEvent.click(screen.getByRole('button', { name: /Approve ✓/i }));
+    expect(await screen.findByText('APPROVED')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    // 3. Open Streaks & Activity
+    const streakButtons = screen.getAllByRole('button', { name: /🔥 Streaks/i });
+    await userEvent.click(streakButtons[0]);
+    expect(await screen.findByText(/🔥 5 Days/i)).toBeTruthy();
+    expect(screen.getByText(/WEEK_1_QUIZ/i)).toBeTruthy();
+    expect(screen.getByText('+50 pts')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Close Activity' }));
+
+    // Church-wide freeform broadcasts removed — only approved student nudges remain.
+    expect(screen.queryByRole('button', { name: /📢 Notify/i })).toBeNull();
+  });
+
+  it('allows church leadership to register teachers directly, update user roles, and restrict users', async () => {
+    mockedPastorLogin.mockResolvedValueOnce({
+      token: 'pastor-token-123',
+      user: {
+        id: 'pastor-1',
+        email: 'pastor@askhub.local',
+        name: 'Rev. Morgan Hale',
+        role: 'MAIN_ACCOUNT',
+        churchRole: 'PASTOR',
+      },
+    });
+
+    let currentPeople = [
+      {
+        id: 'user-pastor',
+        name: 'Rev. Morgan Hale',
+        email: 'pastor@askhub.local',
+        roles: ['PASTOR'],
+        isActive: true,
+      },
+      {
+        id: 'user-teacher-1',
+        name: 'Brother James',
+        email: 'james@askhub.local',
+        roles: ['TEACHER'],
+        isActive: true,
+      },
+    ];
+
+    mockedApi.mockImplementation(async (path: string, options?: RequestInit) => {
+      if (path === '/api/auth/me') {
+        return {
+          type: 'user',
+          userId: 'pastor-1',
+          churchId: 'church-grace',
+          churchRole: 'PASTOR',
+          name: 'Rev. Morgan Hale',
+          email: 'pastor@askhub.local',
+        };
+      }
+      if (path === '/api/churches/church-grace') {
+        return {
+          id: 'church-grace',
+          name: 'Grace Demo Church',
+          joinCode: 'GRACE01',
+          jurisdiction: 'US',
+          description: 'A vibrant church',
+        };
+      }
+      if (path === '/api/churches/church-grace/people') {
+        return currentPeople;
+      }
+      if (path === '/api/churches/church-grace/classes') {
+        return [];
+      }
+      if (path === '/api/churches/church-grace/families') {
+        return [];
+      }
+      if (path === '/api/safeguarding/church/church-grace/reports') {
+        return [];
+      }
+      if (path === '/api/churches/church-grace/nudge-templates') return [];
+      if (path === '/api/churches/church-grace/teachers' && options?.method === 'POST') {
+        const body = JSON.parse(options.body as string);
+        const newTeacher = {
+          id: 'user-new-teacher',
+          name: body.name,
+          email: body.email,
+          roles: [body.role || 'TEACHER'],
+          isActive: true,
+        };
+        currentPeople = [...currentPeople, newTeacher];
+        return { user: newTeacher, role: body.role };
+      }
+      if (path === '/api/churches/church-grace/people/user-teacher-1/roles' && options?.method === 'PUT') {
+        const body = JSON.parse(options.body as string);
+        currentPeople = currentPeople.map((p) =>
+          p.id === 'user-teacher-1' ? { ...p, roles: body.roles } : p,
+        );
+        return { success: true, userId: 'user-teacher-1', roles: body.roles };
+      }
+      if (path === '/api/churches/church-grace/people/user-teacher-1' && options?.method === 'PATCH') {
+        const body = JSON.parse(options.body as string);
+        currentPeople = currentPeople.map((p) =>
+          p.id === 'user-teacher-1' ? { ...p, isActive: body.isActive } : p,
+        );
+        return currentPeople.find((p) => p.id === 'user-teacher-1');
+      }
+      return {};
+    });
+
+    seedPastorSession();
+    renderApp('/ministry/church-grace/team');
+
+    // Team page
+      expect(await screen.findByText('Brother James')).toBeTruthy();
+      expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+
+      // 1. Direct Teacher Registration by the Church
+      await userEvent.click(screen.getByRole('button', { name: /\+ Register New Teacher/i }));
+      expect(await screen.findByText('Register New Teacher / Ministry Leader')).toBeTruthy();
+
+      await userEvent.type(screen.getByPlaceholderText(/e\.g\. Deborah Campbell/i), 'Sister Deborah');
+      await userEvent.type(screen.getByPlaceholderText(/deborah@ministry\.org/i), 'deborah@church.org');
+      await userEvent.type(screen.getByPlaceholderText(/Minimum 6 characters/i), 'secret123');
+      await userEvent.type(screen.getByPlaceholderText(/e\.g\. 1988/i), '1988');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Register Teacher Account' }));
+      expect(await screen.findByText('Sister Deborah')).toBeTruthy();
+      expect(screen.getByText('deborah@church.org')).toBeTruthy();
+
+      // 2. Update Roles for an existing teacher
+      const updateRoleButtons = screen.getAllByRole('button', { name: /✎ Update Roles/i });
+      await userEvent.click(updateRoleButtons[1]); // Brother James
+      expect(await screen.findByText(/Update Ministry Roles: Brother James/i)).toBeTruthy();
+
+      // Check Chaperone role as well
+      const chaperoneCheckbox = screen.getByLabelText(/CHAPERONE — Teenager event helper & chaperone/i);
+      await userEvent.click(chaperoneCheckbox);
+      await userEvent.click(screen.getByRole('button', { name: 'Save Roles' }));
+
+      // 3. Restrict and Reactivate user
+      const restrictButtons = screen.getAllByRole('button', { name: 'Restrict' });
+      await userEvent.click(restrictButtons[1]); // Restrict Brother James
+      const restrictDialog = await screen.findByRole('dialog', { name: 'Restrict access' });
+      await userEvent.click(within(restrictDialog).getByRole('button', { name: 'Restrict' }));
+      expect(await screen.findByText('Restricted')).toBeTruthy();
+
+      // Reactivate
+      const reactivateBtn = screen.getByRole('button', { name: 'Reactivate' });
+      await userEvent.click(reactivateBtn);
+      const reactivateDialog = await screen.findByRole('dialog', { name: 'Reactivate' });
+      await userEvent.click(within(reactivateDialog).getByRole('button', { name: 'Reactivate' }));
+      expect(await screen.findByText(/Reactivated Brother James/i)).toBeTruthy();
+      expect(screen.queryByText('Restricted')).toBeNull();
+  });
+
+  it('edits the explorer hero greeting, tagline, and Abi and Zack art', async () => {
+    setToken('test-token');
+    renderApp('/app/dashboard/content-mobile');
+    const greeting = await screen.findByDisplayValue('Hey, Explorer!');
+    expect(screen.getByDisplayValue("Ready for today's adventure in God's Word?")).toBeTruthy();
+    expect(screen.getAllByAltText('Abi').length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText('Zack').length).toBeGreaterThan(0);
+    await userEvent.clear(greeting);
+    await userEvent.type(greeting, 'Hello, team!');
+    expect(screen.getByText('Hello, team!')).toBeTruthy();
   });
 });
+
 
 

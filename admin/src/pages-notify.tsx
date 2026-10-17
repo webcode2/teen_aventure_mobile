@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { api } from './api';
-import { Alert, Badge, Empty, Field, PageHeader } from './ui';
+import { Alert, Button, Badge, Empty, Field, PageHeader, Spinner } from './ui';
 
 type Notice = {
   id: string;
@@ -11,197 +12,677 @@ type Notice = {
   status: string;
   error?: string | null;
   createdAt?: string;
+  queued?: number;
+  audience?: string | null;
 };
 
-type Pack = {
-  id: string;
-  jurisdiction: string;
-  title: string;
-  body: string;
-  minAge: number;
-};
+type Channel = 'PUSH' | 'EMAIL' | 'SMS';
+type PreviewPlatform = 'android' | 'ios' | 'web';
+/** '' = one specific id; otherwise an account-type group. */
+type Audience =
+  | ''
+  | 'all'
+  | 'parents'
+  | 'explorers'
+  | 'teachers'
+  | 'pastors'
+  | 'ministry_leads'
+  | 'chaperones'
+  | 'church_staff';
+
+const CHANNELS: { id: Channel; label: string; hint: string }[] = [
+  { id: 'PUSH', label: 'Push', hint: 'FCM device' },
+  { id: 'EMAIL', label: 'Email', hint: 'Inbox' },
+  { id: 'SMS', label: 'SMS', hint: 'Text' },
+];
+
+/** Mobile app login is only parents, explorers, and teachers — push audiences match that. */
+const AUDIENCES: {
+  id: Audience;
+  label: string;
+  hint: string;
+  /** Shown for device push (people who can use the mobile app). */
+  appPush: boolean;
+}[] = [
+  { id: '', label: 'Specific person', hint: 'One id, email, or phone', appPush: true },
+  { id: 'all', label: 'All', hint: 'Every parent, explorer, and teacher on the app', appPush: true },
+  { id: 'parents', label: 'Parents', hint: 'Adult family accounts on the app', appPush: true },
+  { id: 'explorers', label: 'Explorers', hint: 'Teens with app login', appPush: true },
+  { id: 'teachers', label: 'Teachers', hint: 'Teachers who use the app', appPush: true },
+  { id: 'pastors', label: 'Pastors', hint: 'Email or SMS only — not on the app', appPush: false },
+  { id: 'ministry_leads', label: "Children's ministry leads", hint: 'Email or SMS only — not on the app', appPush: false },
+  { id: 'chaperones', label: 'Chaperones', hint: 'Email or SMS only — not on the app', appPush: false },
+  { id: 'church_staff', label: 'All church staff', hint: 'Email or SMS only — includes non-app roles', appPush: false },
+];
+
+function audiencesForChannel(channel: Channel) {
+  return channel === 'PUSH' ? AUDIENCES.filter((a) => a.appPush) : AUDIENCES;
+}
+
+function audienceLabel(id: Audience) {
+  return AUDIENCES.find((a) => a.id === id)?.label ?? 'Group';
+}
+
+const PREVIEW_TABS: { id: PreviewPlatform; label: string }[] = [
+  { id: 'android', label: 'Android' },
+  { id: 'ios', label: 'iOS' },
+  { id: 'web', label: 'Web' },
+];
 
 const statusKind: Record<string, 'ok' | 'warn' | 'bad' | 'info'> = {
-  SENT: 'ok', PENDING: 'warn', FAILED: 'bad',
+  SENT: 'ok',
+  PENDING: 'warn',
+  FAILED: 'bad',
 };
 
-export function NotificationsPage() {
-  const [rows, setRows] = useState<Notice[]>([]);
-  const [filter, setFilter] = useState('ALL');
-  const [error, setError] = useState('');
+const inputClass =
+  'w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal/40';
 
-  async function load() {
-    try { setRows(await api<Notice[]>('/api/admin/notifications')); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Failed'); }
-  }
-  useEffect(() => { load(); }, []);
+function DataTableShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="overflow-x-auto bg-transparent">
+      <table className="w-full min-w-[720px] border-collapse text-left text-xs">{children}</table>
+    </div>
+  );
+}
 
-  const visible = rows.filter((n) => filter === 'ALL' || n.channel === filter || n.status === filter);
+function PreviewImage({ src, className }: { src: string; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    setBroken(false);
+  }, [src]);
+  if (!src || broken) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function ChannelSwitch({
+  value,
+  onChange,
+}: {
+  value: Channel;
+  onChange: (next: Channel) => void;
+}) {
+  return (
+    <div
+      className="inline-flex w-full sm:w-auto rounded-xl border border-border bg-cream p-1"
+      role="tablist"
+      aria-label="Delivery channel"
+    >
+      {CHANNELS.map((ch) => {
+        const active = value === ch.id;
+        return (
+          <button
+            key={ch.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(ch.id)}
+            className={`flex-1 sm:flex-none cursor-pointer rounded-lg px-4 py-2 text-left transition-colors ${
+              active ? 'bg-navy text-cream shadow-xs' : 'text-muted hover:text-navy hover:bg-surface'
+            }`}
+          >
+            <span className="block text-xs font-bold leading-none">{ch.label}</span>
+            <span className={`mt-1 block text-[10px] font-medium leading-none ${active ? 'text-cream/70' : 'text-muted/80'}`}>
+              {ch.hint}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PushNotificationPreview({
+  subject,
+  body,
+  imageUrl,
+  actionLabel,
+}: {
+  subject: string;
+  body: string;
+  imageUrl: string;
+  actionLabel: string;
+}) {
+  const [platform, setPlatform] = useState<PreviewPlatform>('android');
+  const title = subject.trim() || 'Title on the device';
+  const message = body.trim() || 'Message text';
+  const image = imageUrl.trim();
+  const showAction = Boolean(actionLabel.trim());
+  const actionText = actionLabel.trim() || 'Open';
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        kicker="Reach"
-        title="Notifications"
-        subtitle="System outbox only (teen login, deletion, password reset). There is no compose box and no custom message to children."
-      />
-      <div className="bg-surface border border-border rounded-card p-6 shadow-xs flex flex-col gap-4">
-        <div>
-          <h3 className="text-base font-bold text-navy">System outbox</h3>
-          <p className="text-xs text-muted mt-0.5">Queued by the app. Delivery runs when Resend, Twilio, or FCM keys are set. Managers cannot write a custom message here.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-cream border border-border/80 w-fit">
-          {['ALL', 'EMAIL', 'SMS', 'PUSH', 'PENDING', 'SENT', 'FAILED'].map((key) => (
+    <div className="flex flex-col gap-3">
+      <div
+        className="inline-flex self-start flex-wrap items-center gap-0.5 rounded-full border border-white/15 bg-white/10 p-0.5"
+        role="tablist"
+        aria-label="Notification preview platform"
+      >
+        {PREVIEW_TABS.map((tab) => {
+          const active = platform === tab.id;
+          return (
             <button
-              key={key}
+              key={tab.id}
               type="button"
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                filter === key
-                  ? 'bg-navy text-white shadow-xs'
-                  : 'text-muted hover:text-navy hover:bg-surface-2/60'
+              role="tab"
+              aria-selected={active}
+              className={`cursor-pointer rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                active ? 'bg-cream text-navy' : 'text-cream/70 hover:text-cream hover:bg-white/10'
               }`}
-              onClick={() => setFilter(key)}
+              onClick={() => setPlatform(tab.id)}
             >
-              {key}
+              {tab.label}
             </button>
-          ))}
-        </div>
-        {error ? <Alert kind="error">{error}</Alert> : null}
-        {visible.length === 0 ? <Empty title="No notifications queued" body="System emails from the app (teen login, deletion) appear here." /> : (
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Channel</th>
-                  <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">To</th>
-                  <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Subject</th>
-                  <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((n) => (
-                  <tr key={n.id} className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
-                    <td className="py-3 px-3 font-medium text-navy">{n.channel}</td>
-                    <td className="py-3 px-3 text-navy font-mono text-[11px]">{n.to}</td>
-                    <td className="py-3 px-3 text-muted">{n.subject}</td>
-                    <td className="py-3 px-3"><Badge kind={statusKind[n.status] ?? 'info'}>{n.status}</Badge></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          );
+        })}
+      </div>
+
+      <div
+        className="flex min-h-[280px] items-center justify-center"
+        role="tabpanel"
+        aria-label={`${platform} notification preview`}
+      >
+        {platform === 'android' ? (
+          <div className="w-full max-w-[300px] overflow-hidden rounded-2xl bg-[#2d2d2d] text-white shadow-lg ring-1 ring-white/10">
+            <div className="flex items-start gap-3 px-3.5 pt-3 pb-2">
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal text-[9px] font-bold text-white">
+                TBA
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-[11px] text-white/70">Teen Bible Adventures · now</p>
+                <p className="m-0 mt-1 truncate text-[13px] font-semibold leading-snug">{title}</p>
+                <p className="m-0 mt-0.5 line-clamp-3 text-[12px] leading-snug text-white/85">{message}</p>
+              </div>
+            </div>
+            {image ? <PreviewImage src={image} className="mt-1 h-36 w-full object-cover" /> : null}
+            {showAction ? (
+              <div className="flex justify-end gap-1 border-t border-white/10 px-2 py-1.5">
+                <span className="rounded px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#8ab4f8]">
+                  {actionText}
+                </span>
+              </div>
+            ) : null}
           </div>
-        )}
+        ) : null}
+
+        {platform === 'ios' ? (
+          <div className="w-full max-w-[300px] overflow-hidden rounded-[22px] bg-white/95 text-[#111] shadow-xl">
+            <div className="flex items-start gap-2.5 px-3.5 pt-3 pb-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-navy text-[9px] font-bold text-white">
+                TBA
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-wide text-[#6b6b6b]">
+                    Teen Bible Adventures
+                  </p>
+                  <p className="m-0 shrink-0 text-[10px] text-[#8e8e93]">now</p>
+                </div>
+                <p className="m-0 mt-0.5 truncate text-[13px] font-semibold leading-snug">{title}</p>
+                <p className="m-0 mt-0.5 line-clamp-3 text-[12px] leading-snug text-[#3a3a3c]">{message}</p>
+              </div>
+            </div>
+            {image ? <PreviewImage src={image} className="h-40 w-full object-cover" /> : null}
+            {showAction ? (
+              <div className="border-t border-black/10 px-3.5 py-2 text-center text-[12px] font-semibold text-[#007aff]">
+                {actionText}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {platform === 'web' ? (
+          <div className="w-full max-w-[320px] overflow-hidden rounded-xl border border-[#dadce0] bg-white text-[#202124] shadow-md">
+            <div className="flex items-start gap-3 px-3.5 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-navy text-[9px] font-bold text-white">
+                TBA
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="m-0 truncate text-[13px] font-medium leading-snug">{title}</p>
+                <p className="m-0 mt-0.5 text-[11px] text-[#5f6368]">teenbibleadventures.app</p>
+                <p className="m-0 mt-1 line-clamp-3 text-[12px] leading-snug text-[#3c4043]">{message}</p>
+              </div>
+              {image ? <PreviewImage src={image} className="h-14 w-14 shrink-0 rounded object-cover" /> : null}
+            </div>
+            {showAction ? (
+              <div className="flex justify-end border-t border-[#eee] px-2 py-1">
+                <span className="rounded px-3 py-1.5 text-[12px] font-medium text-[#1a73e8]">{actionText}</span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export function ConsentPage() {
-  const [form, setForm] = useState({ jurisdiction: 'US', title: '', body: '', minAge: 13 });
-  const [rows, setRows] = useState<Pack[]>([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+function MessagePreview({
+  channel,
+  to,
+  subject,
+  body,
+}: {
+  channel: Channel;
+  to: string;
+  subject: string;
+  body: string;
+}) {
+  const title = subject.trim() || 'Subject';
+  const message = body.trim() || 'Message body';
+  const recipient = to.trim() || (channel === 'EMAIL' ? 'name@example.com' : '+1…');
 
-  function load() {
-    api<Pack[]>('/api/admin/consent-packs').then(setRows).catch((e: Error) => setError(e.message));
-  }
-  useEffect(() => { load(); }, []);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage('');
-    setError('');
-    try {
-      await api('/api/admin/consent-packs', {
-        method: 'POST',
-        body: JSON.stringify({ ...form, minAge: Number(form.minAge), requiresParentalConsent: true }),
-      });
-      setMessage(`Consent pack saved for ${form.jurisdiction}`);
-      setForm({ ...form, title: '', body: '' });
-      load();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed');
-    }
+  if (channel === 'EMAIL') {
+    return (
+      <div className="w-full max-w-[320px] overflow-hidden rounded-xl border border-border bg-cream text-navy shadow-xs">
+        <div className="border-b border-border bg-surface px-3.5 py-2.5">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-muted">Inbox</p>
+          <p className="m-0 mt-1 truncate text-sm font-bold">{title}</p>
+          <p className="m-0 mt-0.5 truncate text-[11px] text-muted">To {recipient}</p>
+        </div>
+        <p className="m-0 px-3.5 py-3 text-xs leading-relaxed text-text-2 line-clamp-6 whitespace-pre-wrap">
+          {message}
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="w-full max-w-[280px]">
+      <p className="m-0 mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-cream/50">
+        {recipient}
+      </p>
+      <div className="rounded-[18px_18px_4px_18px] bg-teal px-3.5 py-2.5 text-cream shadow-md">
+        <p className="m-0 text-[11px] font-bold leading-snug">{title}</p>
+        <p className="m-0 mt-1 text-xs leading-snug text-cream/90 line-clamp-5 whitespace-pre-wrap">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+const thClass =
+  'whitespace-nowrap border-b border-border px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-0 last:pr-0';
+const tdClass = 'px-3 py-3 align-middle text-navy first:pl-0 last:pr-0';
+const rowClass = 'border-b border-border/50 transition-colors hover:bg-surface-2/30';
+
+const FILTERS = ['ALL', 'EMAIL', 'SMS', 'PUSH', 'PENDING', 'SENT', 'FAILED'] as const;
+
+export function NotificationsPage() {
+  const [sendError, setSendError] = useState('');
+  const [sendNote, setSendNote] = useState('');
+  const [sending, setSending] = useState(false);
+  const [channel, setChannel] = useState<Channel>('PUSH');
+  const [audience, setAudience] = useState<Audience>('');
+  const [to, setTo] = useState('');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [actionLabel, setActionLabel] = useState('');
+  const [actionUrl, setActionUrl] = useState('');
+
+  const audienceOptions = audiencesForChannel(channel);
+
+  function chooseChannel(next: Channel) {
+    setChannel(next);
+    // Drop pastor / staff groups when switching to push — they are not on the app.
+    if (next === 'PUSH' && audience && !AUDIENCES.find((a) => a.id === audience)?.appPush) {
+      setAudience('');
+    }
+  }
+
+  async function send(event: FormEvent) {
+    event.preventDefault();
+    setSendError('');
+    setSendNote('');
+    setSending(true);
+    try {
+      const row = await api<Notice>('/api/admin/notifications', {
+        method: 'POST',
+        body: JSON.stringify({
+          channel,
+          subject: subject.trim(),
+          body: body.trim(),
+          ...(audience ? { audience } : { to: to.trim() }),
+          ...(channel === 'PUSH'
+            ? {
+                data: { type: 'account' },
+                ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
+                ...(actionLabel.trim() ? { actionLabel: actionLabel.trim() } : {}),
+                ...(actionUrl.trim() ? { actionUrl: actionUrl.trim() } : {}),
+              }
+            : {}),
+        }),
+      });
+      const count = row.queued ?? 1;
+      const group = audience ? ` to ${audienceLabel(audience).toLowerCase()}` : '';
+      setSendNote(
+        row.status === 'SENT'
+          ? count > 1
+            ? `Delivered to ${count}${group}.`
+            : 'Delivered.'
+          : row.status === 'PENDING'
+            ? row.error
+              ? `Queued ${count}${group} (${row.error}).`
+              : `Queued ${count}${group}. Delivery runs when the channel keys are set.`
+            : `Status: ${row.status}${row.error ? ` — ${row.error}` : ''}`,
+      );
+      setSubject('');
+      setBody('');
+      setImageUrl('');
+      setActionLabel('');
+      setActionUrl('');
+    } catch (e: unknown) {
+      setSendError(e instanceof Error ? e.message : 'Send failed');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const toPlaceholder =
+    channel === 'PUSH' ? 'user-uuid or child-uuid' : channel === 'EMAIL' ? 'name@example.com' : '+15551234567';
+  const toHint =
+    channel === 'PUSH'
+      ? 'From People — the id on the device session'
+      : channel === 'EMAIL'
+        ? 'Recipient email'
+        : 'E.164 phone number';
+  const audienceHint = AUDIENCES.find((a) => a.id === audience)?.hint ?? '';
+  const canSend =
+    Boolean(subject.trim() && body.trim()) &&
+    !sending &&
+    (audience ? true : Boolean(to.trim()));
+  const previewTo = audience ? audienceLabel(audience) : to;
+
+  return (
+    <div className="flex flex-col gap-0">
       <PageHeader
-        kicker="Legal"
-        title="Consent"
-        subtitle="Jurisdiction packs shown during onboarding. Saving the same title updates the live pack."
+        kicker="Operations"
+        title="Notifications"
+        subtitle="Write once, see how it lands, then send."
+        actions={
+          <Link
+            to="/app/dashboard/notifications/history"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal no-underline hover:text-navy"
+          >
+            History
+            <span aria-hidden className="text-base leading-none">
+              →
+            </span>
+          </Link>
+        }
       />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <form className="bg-surface border border-border rounded-card p-6 shadow-xs flex flex-col gap-4" onSubmit={submit}>
-          <h3 className="text-base font-bold text-navy">Jurisdiction consent pack</h3>
-          <Field label="Jurisdiction">
-            <input
-              value={form.jurisdiction}
-              onChange={(e) => setForm({ ...form, jurisdiction: e.target.value.toUpperCase() })}
-              placeholder="US / GB / NG"
-              required
-              className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy uppercase focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-            />
-          </Field>
-          <Field label="Title">
-            <input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Title"
-              required
-              className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-            />
-          </Field>
-          <Field label="Legal pack body">
-            <textarea
-              rows={6}
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              placeholder="Legal pack body"
-              required
-              className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal font-sans leading-relaxed"
-            />
-          </Field>
-          <Field label="Minimum age">
-            <input
-              type="number"
-              min={0}
-              value={form.minAge}
-              onChange={(e) => setForm({ ...form, minAge: Number(e.target.value) })}
-              className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-            />
-          </Field>
-          {error ? <Alert kind="error">{error}</Alert> : null}
-          {message ? <Alert kind="ok">{message}</Alert> : null}
-          <button className="w-full rounded-xl bg-navy hover:bg-teal text-white py-2.5 px-4 font-semibold text-xs shadow-xs hover:shadow transition-all cursor-pointer">
-            Save consent pack
-          </button>
-        </form>
-        <div className="bg-surface border border-border rounded-card p-6 shadow-xs flex flex-col gap-4">
-          <h3 className="text-base font-bold text-navy">Published packs</h3>
-          {rows.length === 0 ? <Empty title="No packs yet" body="Save a pack to show it in the app." /> : (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Where</th>
-                    <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Title</th>
-                    <th className="py-2.5 px-3 font-semibold text-muted uppercase text-[10px] tracking-wide">Min age</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((p) => (
-                    <tr key={p.id} className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
-                      <td className="py-3 px-3 font-bold text-navy">{p.jurisdiction}</td>
-                      <td className="py-3 px-3 font-medium text-navy">{p.title}</td>
-                      <td className="py-3 px-3 text-muted">{p.minAge}</td>
-                    </tr>
+
+      <form onSubmit={(e) => void send(e)} className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
+        <section className="flex flex-col gap-5 rounded-card border border-border bg-surface p-5 shadow-xs">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <ChannelSwitch value={channel} onChange={chooseChannel} />
+            {channel === 'PUSH' ? (
+              <p className="m-0 text-[11px] text-muted sm:max-w-[16rem] sm:text-right">
+                Push only to app users: parents, explorers, teachers.
+              </p>
+            ) : (
+              <p className="m-0 text-[11px] text-muted sm:max-w-[16rem] sm:text-right">
+                Email and SMS can include pastors and other ministry roles.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <Field label="To" hint={audience ? audienceHint : toHint}>
+              <div className="flex flex-col gap-2">
+                <select
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value as Audience)}
+                  className={inputClass}
+                  aria-label="Recipient group"
+                >
+                  {audienceOptions.map((a) => (
+                    <option key={a.id || 'one'} value={a.id}>
+                      {a.label}
+                    </option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+                {!audience ? (
+                  <input
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    required
+                    placeholder={toPlaceholder}
+                    className={inputClass}
+                  />
+                ) : (
+                  <p className="m-0 rounded-xl border border-teal/25 bg-teal-tint/60 px-3.5 py-2.5 text-xs text-navy">
+                    Sends to every <strong>{audienceLabel(audience)}</strong> account that has a{' '}
+                    {channel === 'PUSH' ? 'device' : channel === 'EMAIL' ? 'email' : 'phone'} on file.
+                  </p>
+                )}
+              </div>
+            </Field>
+            <Field label={channel === 'SMS' ? 'Title' : 'Subject'}>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                required
+                placeholder={channel === 'PUSH' ? 'Title on the device' : 'Subject line'}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Message">
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                required
+                rows={5}
+                placeholder="What should they read?"
+                className={`${inputClass} min-h-[120px] resize-y`}
+              />
+            </Field>
+          </div>
+
+          {channel === 'PUSH' ? (
+            <div className="flex flex-col gap-3 border-t border-border pt-4">
+              <p className="m-0 text-[11px] font-bold uppercase tracking-wide text-muted">Optional extras</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Image URL" hint="Public https image">
+                  <input
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    type="url"
+                    placeholder="https://…/banner.png"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Action label" hint="Button on the notification">
+                  <input
+                    value={actionLabel}
+                    onChange={(e) => setActionLabel(e.target.value)}
+                    maxLength={40}
+                    placeholder="Open lesson"
+                    className={inputClass}
+                  />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Action URL" hint="Opened when the action is used">
+                    <input
+                      value={actionUrl}
+                      onChange={(e) => setActionUrl(e.target.value)}
+                      type="url"
+                      placeholder="https://…"
+                      className={inputClass}
+                    />
+                  </Field>
+                </div>
+              </div>
             </div>
-          )}
+          ) : null}
+
+          {sendError ? <Alert kind="error">{sendError}</Alert> : null}
+          {sendNote ? <Alert kind="ok">{sendNote}</Alert> : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="m-0 text-[11px] text-muted">
+              {channel === 'PUSH' ? 'Sends to the registered device for that id.' : 'Queued for delivery when keys are set.'}
+            </p>
+            <Button size="lg" className="disabled:opacity-45" type="submit"
+              disabled={!canSend}>
+              {sending ? 'Sending…' : channel === 'PUSH' ? 'Send push' : 'Queue send'}
+            </Button>
+          </div>
+        </section>
+
+        <aside className="xl:sticky xl:top-20">
+          <div className="overflow-hidden rounded-card border border-navy/20 bg-gradient-to-b from-navy via-navy-deep to-navy text-cream shadow-md">
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+              <div>
+                <p className="m-0 text-[10px] font-bold uppercase tracking-wider text-teal">Live preview</p>
+                <p className="m-0 mt-0.5 text-xs text-cream/70">
+                  {channel === 'PUSH' ? 'How it looks on device' : channel === 'EMAIL' ? 'Inbox sketch' : 'Text bubble'}
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-5">
+              {audience ? (
+                <p className="m-0 mb-3 text-center text-[11px] font-semibold text-cream/60">
+                  Audience · {audienceLabel(audience)}
+                </p>
+              ) : null}
+              {channel === 'PUSH' ? (
+                <PushNotificationPreview
+                  subject={subject}
+                  body={body}
+                  imageUrl={imageUrl}
+                  actionLabel={actionLabel}
+                />
+              ) : (
+                <div className="flex min-h-[280px] items-center justify-center">
+                  <MessagePreview channel={channel} to={previewTo} subject={subject} body={body} />
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </form>
+    </div>
+  );
+}
+
+export function NotificationHistoryPage() {
+  const [rows, setRows] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('ALL');
+  const [error, setError] = useState('');
+
+  async function load() {
+    setLoading(true);
+    try {
+      setRows(await api<Notice[]>('/api/admin/notifications'));
+      setError('');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  const visible = rows.filter((n) => filter === 'ALL' || n.channel === filter || n.status === filter);
+
+  return (
+    <div className="flex flex-col gap-0">
+      <PageHeader
+        kicker="Operations"
+        title="Notification history"
+        subtitle="Queued by the app and the send form. Retries run when Resend, Twilio, or FCM keys are set."
+        actions={
+          <Link
+            to="/app/dashboard/notifications"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal no-underline hover:text-navy"
+          >
+            ← Compose
+          </Link>
+        }
+      />
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="inline-flex flex-wrap items-center gap-0.5 rounded-full border border-border bg-cream p-1"
+            role="tablist"
+            aria-label="Outbox filters"
+          >
+            {FILTERS.map((key) => {
+              const active = filter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    active ? 'bg-navy text-white shadow-xs' : 'text-muted hover:bg-surface hover:text-navy'
+                  }`}
+                  onClick={() => setFilter(key)}
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="cursor-pointer rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy hover:bg-cream"
+          >
+            Refresh
+          </button>
         </div>
+
+        {error ? <Alert kind="error">{error}</Alert> : null}
+
+        {loading ? (
+          <Spinner label="Loading notifications…" />
+        ) : visible.length === 0 && !error ? (
+          <Empty
+            title="No notifications queued"
+            body="System emails, SMS, and device pushes appear here."
+          />
+        ) : visible.length === 0 ? null : (
+          <div className="rounded-card border border-border bg-surface p-4 shadow-xs">
+            <DataTableShell>
+              <thead>
+                <tr>
+                  <th className={thClass}>Channel</th>
+                  <th className={thClass}>To</th>
+                  <th className={thClass}>Subject</th>
+                  <th className={thClass}>Status</th>
+                  <th className={thClass}>Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((n) => (
+                  <tr key={n.id} className={rowClass}>
+                    <td className={`${tdClass} font-semibold`}>{n.channel}</td>
+                    <td className={`${tdClass} max-w-[16rem] truncate text-muted`}>{n.to}</td>
+                    <td className={`${tdClass} max-w-[22rem] truncate text-muted`}>{n.subject}</td>
+                    <td className={tdClass}>
+                      <Badge kind={statusKind[n.status] ?? 'info'}>{n.status}</Badge>
+                    </td>
+                    <td className={`${tdClass} max-w-[18rem] truncate text-muted`} title={n.error ?? ''}>
+                      {n.error || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTableShell>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { compile } from '@askhub/puzzles/compile.ts';
+import { compile } from '@askhub/puzzle-contracts';
 import type { StudioDoc } from './doc-store';
 
 type Props = {
@@ -13,7 +13,7 @@ function toChainForCompile(doc: StudioDoc) {
     id: doc.id,
     type: 'CHAIN' as const,
     title: doc.title || 'Untitled',
-    scripture: doc.scripture || '—',
+    scripture: doc.scripture,
     rewards: doc.rewards,
     data: {
       steps: doc.data.steps.map((s) => ({

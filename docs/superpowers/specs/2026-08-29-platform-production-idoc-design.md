@@ -1,4 +1,4 @@
-# ASK Hub Teen — Platform Production IDOC
+# Teen Bible Adventures Teen — Platform Production IDOC
 
 **Date:** 2026-08-29  
 **Product:** one system in this repo: `mobile/` (Flutter) + `backend/` (Fastify/Postgres) + `admin/` (React CMS).  

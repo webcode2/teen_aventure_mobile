@@ -1,16 +1,9 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { publicApi } from './api';
 import { ChurchJoinBarcodeCard } from './barcode';
 import { PublicLayout, GooglePlayButton, AppStoreButton } from './public-shell';
 import { WorldMapBackground } from './pages-contact';
-
-function CompassIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <circle cx="12" cy="12" r="10" />
-      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-    </svg>
-  );
-}
 
 function ShieldCheckIcon() {
   return (
@@ -42,224 +35,539 @@ function BookHeartIcon() {
   );
 }
 
-export function PublicLandingPage() {
+/** CMS-shaped copy used by the public landing and the admin live preview. */
+export type LandingCmsContent = {
+  hero?: {
+    badge?: string;
+    title?: string;
+    subtitle?: string;
+    primaryCta?: string;
+    secondaryCta?: string;
+  };
+  pillars?: {
+    eyebrow?: string;
+    title?: string;
+    subtitle?: string;
+    seek?: { title?: string; description?: string };
+    connect?: { title?: string; description?: string };
+    grow?: { title?: string; description?: string };
+  };
+  passSection?: {
+    badge?: string;
+    title?: string;
+    description?: string;
+  };
+  about?: {
+    mission?: string;
+    vision?: string;
+  };
+  footer?: {
+    tagline?: string;
+    supportEmail?: string;
+    copyright?: string;
+  };
+};
+
+export const DEFAULT_LANDING_CONTENT: Required<{
+  hero: Required<NonNullable<LandingCmsContent['hero']>>;
+  pillars: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    seek: Required<NonNullable<NonNullable<LandingCmsContent['pillars']>['seek']>>;
+    connect: Required<NonNullable<NonNullable<LandingCmsContent['pillars']>['connect']>>;
+    grow: Required<NonNullable<NonNullable<LandingCmsContent['pillars']>['grow']>>;
+  };
+  passSection: Required<NonNullable<LandingCmsContent['passSection']>>;
+  about: Required<NonNullable<LandingCmsContent['about']>>;
+  footer: Required<NonNullable<LandingCmsContent['footer']>>;
+}> = {
+  hero: {
+    badge: 'Biblical Discipleship for the Next Generation',
+    title: 'Nurturing Christian Teens Through Biblical Truth & Faith Adventures.',
+    subtitle:
+      'Teen Bible Adventures inspires Christian teenagers and families through structured weekly scripture quests, video reflections, interactive Bible quizzes, and engaging scripture puzzles.',
+    primaryCta: 'Explore Weekly Quests',
+    secondaryCta: 'Our Christian Mission',
+  },
+  pillars: {
+    eyebrow: 'Core Foundations',
+    title: 'Everything Christian Youth & Families Need to Grow in Faith',
+    subtitle:
+      'Built specifically for adolescent Christian spiritual growth — engaging for teenagers, reassuring for parents, and centered on Christ.',
+    seek: {
+      title: 'Weekly Scripture Quests',
+      description:
+        'Scheduled curriculum featuring scripture reading passages, curated video reflections, and 4-option objective quizzes that build biblical literacy.',
+    },
+    connect: {
+      title: 'Christian Fellowship',
+      description:
+        'Connect with Christian friends, youth mentors, and family study circles to walk together in daily faith, encouragement, and scripture reading.',
+    },
+    grow: {
+      title: 'Family Safeguarding',
+      description:
+        "Confidential, ad-free environment where parents retain full oversight of their teens' accounts, protecting their digital spiritual journey.",
+    },
+  },
+  passSection: {
+    badge: 'Getting Started',
+    title: 'How Christian Teens & Families Journey Together',
+    description: 'Simple, safe, and engaging. Begin your weekly scripture adventure in three easy steps.',
+  },
+  about: {
+    mission: 'To spark lifelong faith in adolescents through Christ-centered discipleship.',
+    vision: "Every teen anchored in God's Truth, walking in wisdom and Christian community.",
+  },
+  footer: {
+    tagline: 'Teen Bible Adventures — An AskAdonai Ministry Product',
+    supportEmail: 'support@askhub.app',
+    copyright: '© 2026 Teen Bible Adventures. All rights reserved.',
+  },
+};
+
+function pick(value: string | undefined, fallback: string) {
+  const trimmed = (value ?? '').trim();
+  return trimmed || fallback;
+}
+
+/** Badge can be cleared in the CMS — empty string hides it on the public site. */
+function pickBadge(value: string | undefined, fallback: string, fromCms: boolean) {
+  if (!fromCms) return fallback;
+  if (value === undefined) return fallback;
+  return value.trim();
+}
+
+export function mergeLandingContent(extra?: LandingCmsContent | null): typeof DEFAULT_LANDING_CONTENT {
+  const fromCms = extra != null;
+  return {
+    hero: {
+      badge: pickBadge(extra?.hero?.badge, DEFAULT_LANDING_CONTENT.hero.badge, fromCms),
+      title: pick(extra?.hero?.title, DEFAULT_LANDING_CONTENT.hero.title),
+      subtitle: pick(extra?.hero?.subtitle, DEFAULT_LANDING_CONTENT.hero.subtitle),
+      primaryCta: pick(extra?.hero?.primaryCta, DEFAULT_LANDING_CONTENT.hero.primaryCta),
+      secondaryCta: pick(extra?.hero?.secondaryCta, DEFAULT_LANDING_CONTENT.hero.secondaryCta),
+    },
+    pillars: {
+      eyebrow: pick(extra?.pillars?.eyebrow, DEFAULT_LANDING_CONTENT.pillars.eyebrow),
+      title: pick(extra?.pillars?.title, DEFAULT_LANDING_CONTENT.pillars.title),
+      subtitle: pick(extra?.pillars?.subtitle, DEFAULT_LANDING_CONTENT.pillars.subtitle),
+      seek: {
+        title: pick(extra?.pillars?.seek?.title, DEFAULT_LANDING_CONTENT.pillars.seek.title),
+        description: pick(
+          extra?.pillars?.seek?.description,
+          DEFAULT_LANDING_CONTENT.pillars.seek.description,
+        ),
+      },
+      connect: {
+        title: pick(extra?.pillars?.connect?.title, DEFAULT_LANDING_CONTENT.pillars.connect.title),
+        description: pick(
+          extra?.pillars?.connect?.description,
+          DEFAULT_LANDING_CONTENT.pillars.connect.description,
+        ),
+      },
+      grow: {
+        title: pick(extra?.pillars?.grow?.title, DEFAULT_LANDING_CONTENT.pillars.grow.title),
+        description: pick(
+          extra?.pillars?.grow?.description,
+          DEFAULT_LANDING_CONTENT.pillars.grow.description,
+        ),
+      },
+    },
+    passSection: {
+      badge: pick(extra?.passSection?.badge, DEFAULT_LANDING_CONTENT.passSection.badge),
+      title: pick(extra?.passSection?.title, DEFAULT_LANDING_CONTENT.passSection.title),
+      description: pick(
+        extra?.passSection?.description,
+        DEFAULT_LANDING_CONTENT.passSection.description,
+      ),
+    },
+    about: {
+      mission: pick(extra?.about?.mission, DEFAULT_LANDING_CONTENT.about.mission),
+      vision: pick(extra?.about?.vision, DEFAULT_LANDING_CONTENT.about.vision),
+    },
+    footer: {
+      tagline: pick(extra?.footer?.tagline, DEFAULT_LANDING_CONTENT.footer.tagline),
+      supportEmail: pick(extra?.footer?.supportEmail, DEFAULT_LANDING_CONTENT.footer.supportEmail),
+      copyright: pick(extra?.footer?.copyright, DEFAULT_LANDING_CONTENT.footer.copyright),
+    },
+  };
+}
+
+export type LandingPageSectionsProps = {
+  content?: LandingCmsContent | null;
+  /** When false, CTAs render as inert elements (CMS preview). */
+  interactive?: boolean;
+  /** Force narrow/mobile stacking for CMS preview (viewport breakpoints don't apply in a mini column). */
+  stacked?: boolean;
+};
+
+/** Shared landing body — used by the public site and the CMS mini preview. */
+export function LandingPageSections({
+  content,
+  interactive = true,
+  stacked = false,
+}: LandingPageSectionsProps) {
   const navigate = useNavigate();
+  const copy = mergeLandingContent(content);
+
+  const primaryCtaClass = stacked
+    ? 'w-full justify-center px-5 py-3 rounded-xl bg-navy text-white text-xs font-bold shadow-card inline-flex items-center gap-2'
+    : 'px-8 py-4 rounded-xl bg-navy hover:bg-teal text-white text-sm font-bold shadow-card transition-all inline-flex items-center gap-2';
+  const secondaryCtaClass = stacked
+    ? 'w-full justify-center px-5 py-3 rounded-xl border border-border bg-surface text-navy text-xs font-bold shadow-xs inline-flex'
+    : 'px-8 py-4 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy text-sm font-bold transition-all shadow-xs';
 
   return (
-    <PublicLayout activeTab="home">
-
+    <>
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16 pb-24 sm:pt-28 sm:pb-36 px-4 sm:px-8 border-b border-border/60">
-        {/* Gradient background + decorative blobs */}
-        <div className="absolute inset-0 bg-gradient-to-br from-teal/8 via-cream to-gold/5 -z-10" />
-        <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-teal/10 blur-3xl -z-10" />
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl -z-10" />
-
-        {/* 3-column layout: Zack | Content | Abi */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-8 items-end">
-
-          {/* Zack — left character */}
-          <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
-            <img
-              src="/zack.png"
-              alt="Zack — Teen Bible Adventures character"
-              className="w-52 h-auto object-contain drop-shadow-xl"
+      <section
+        className={`relative overflow-hidden border-b border-border/60 ${
+          stacked ? 'px-4 pt-10 pb-12' : 'pt-16 pb-24 sm:pt-28 sm:pb-36 px-4 sm:px-8'
+        }`}
+      >
+        <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 60% at 12% 18%, rgba(21,154,156,0.18), transparent 55%), radial-gradient(ellipse 70% 55% at 88% 12%, rgba(244,185,66,0.16), transparent 50%), radial-gradient(ellipse 55% 45% at 78% 88%, rgba(232,117,36,0.10), transparent 55%), radial-gradient(ellipse 50% 40% at 18% 92%, rgba(1,31,59,0.06), transparent 50%), linear-gradient(165deg, #eef7f7 0%, #fcfefc 42%, #fff8ee 100%)',
+            }}
+          />
+          <svg className="absolute inset-0 h-full w-full opacity-[0.45]" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <pattern id="tba-hero-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.15" fill="#011f3b" opacity="0.08" />
+              </pattern>
+              <linearGradient id="tba-hero-arc" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#159a9c" stopOpacity="0.35" />
+                <stop offset="55%" stopColor="#f4b942" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="#e87524" stopOpacity="0.12" />
+              </linearGradient>
+            </defs>
+            <rect width="1200" height="720" fill="url(#tba-hero-dots)" />
+            <path
+              d="M-40 520 C 180 380, 320 620, 520 470 S 860 280, 1240 420"
+              fill="none"
+              stroke="url(#tba-hero-arc)"
+              strokeWidth="64"
+              strokeLinecap="round"
+              opacity="0.35"
             />
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-sm font-extrabold text-navy">Zack</span>
-              <span className="text-[11px] font-medium text-muted bg-orange/15 border border-orange/30 px-2.5 py-0.5 rounded-full">
-                Quest Explorer
-              </span>
-            </div>
-          </div>
+            <path
+              d="M-20 180 C 220 80, 420 260, 640 140 S 980 40, 1260 160"
+              fill="none"
+              stroke="#159a9c"
+              strokeWidth="2.5"
+              opacity="0.18"
+            />
+            <path
+              d="M80 680 C 300 560, 480 700, 700 580 S 1020 480, 1220 560"
+              fill="none"
+              stroke="#011f3b"
+              strokeWidth="1.5"
+              opacity="0.12"
+            />
+            <circle cx="180" cy="140" r="120" fill="none" stroke="#159a9c" strokeWidth="1.25" opacity="0.16" />
+            <circle cx="180" cy="140" r="72" fill="none" stroke="#159a9c" strokeWidth="1" opacity="0.12" />
+            <circle cx="1040" cy="560" r="160" fill="none" stroke="#f4b942" strokeWidth="1.25" opacity="0.18" />
+            <circle cx="1040" cy="560" r="96" fill="none" stroke="#e87524" strokeWidth="1" opacity="0.12" />
+            <circle cx="980" cy="120" r="8" fill="#f4b942" opacity="0.35" />
+            <circle cx="240" cy="600" r="6" fill="#159a9c" opacity="0.3" />
+            <circle cx="720" cy="80" r="5" fill="#011f3b" opacity="0.15" />
+          </svg>
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#fcfefc] to-transparent" />
+        </div>
 
-          {/* Center: headline, tagline, CTAs, metrics */}
-          <div className="flex flex-col items-center text-center gap-12 py-6">
-            {/* Headline + tagline group */}
-            <div className="flex flex-col items-center gap-7">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-navy leading-[1.1] max-w-2xl">
-                Nurturing Christian Teens Through Biblical Truth &amp; Faith Adventures.
+        <div className="max-w-7xl mx-auto">
+          {/* Public site: headline spans full hero width (not squeezed between character columns). */}
+          {!stacked ? (
+            <div className="mx-auto flex max-w-5xl flex-col items-center gap-7 px-2 pb-10 text-center sm:px-4">
+              {copy.hero.badge ? (
+                <span className="inline-flex max-w-full items-center justify-center rounded-full border border-teal/25 bg-teal/10 px-3.5 py-1.5 text-center text-[10px] font-bold uppercase leading-snug tracking-[0.06em] text-teal text-balance whitespace-normal sm:max-w-xl sm:px-4 sm:text-[11px] sm:tracking-wider">
+                  {copy.hero.badge}
+                </span>
+              ) : null}
+              <h1 className="w-full max-w-4xl text-3xl font-extrabold leading-[1.1] tracking-tight text-navy sm:text-5xl lg:text-6xl">
+                {copy.hero.title}
               </h1>
-
-              <p className="text-sm sm:text-base lg:text-lg text-muted max-w-xl leading-loose mt-2">
-                Teen Bible Adventures inspires Christian teenagers and families through structured weekly scripture quests,
-                video reflections, interactive Bible quizzes, and engaging scripture puzzles.
+              <p className="mt-2 max-w-2xl text-sm leading-loose text-muted sm:text-base lg:text-lg">
+                {copy.hero.subtitle}
               </p>
             </div>
+          ) : null}
 
-            {/* Mobile characters row — only shows on small screens */}
-            <div className="flex lg:hidden items-end justify-center gap-8 py-2">
-              <div className="flex flex-col items-center gap-2">
-                <img src="/zack.png" alt="Zack" className="w-32 h-auto object-contain drop-shadow-lg" />
-                <span className="text-xs font-bold text-navy">Zack</span>
+          <div
+            className={`grid items-end gap-8 ${
+              stacked ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[280px_1fr_280px]'
+            }`}
+          >
+            {!stacked ? (
+              <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
+                <img
+                  src="/zack.png"
+                  alt="Zack — Teen Bible Adventures character"
+                  className="w-52 h-auto object-contain drop-shadow-xl"
+                />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-sm font-extrabold text-navy">Zack</span>
+                  <span className="text-[11px] font-medium text-muted bg-orange/15 border border-orange/30 px-2.5 py-0.5 rounded-full">
+                    Quest Explorer
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <img src="/abi.png" alt="Abi" className="w-32 h-auto object-contain drop-shadow-lg" />
-                <span className="text-xs font-bold text-navy">Abi</span>
-              </div>
-            </div>
+            ) : null}
 
-            {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-              <a
-                href="#quests"
-                className="px-8 py-4 rounded-xl bg-navy hover:bg-teal text-white text-sm font-bold shadow-card transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-lg inline-flex items-center gap-2"
+            <div className={`flex flex-col items-center text-center py-6 ${stacked ? 'gap-8' : 'gap-12'}`}>
+              {stacked ? (
+                <div className="flex flex-col items-center gap-4">
+                  {copy.hero.badge ? (
+                    <span className="inline-flex max-w-full items-center justify-center rounded-full border border-teal/25 bg-teal/10 px-3.5 py-1.5 text-center text-[10px] font-bold uppercase leading-snug tracking-[0.06em] text-teal text-balance whitespace-normal sm:max-w-xl sm:px-4 sm:text-[11px] sm:tracking-wider">
+                      {copy.hero.badge}
+                    </span>
+                  ) : null}
+                  <h1 className="max-w-2xl text-2xl font-extrabold leading-[1.1] tracking-tight text-navy">
+                    {copy.hero.title}
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-loose text-muted">{copy.hero.subtitle}</p>
+                </div>
+              ) : null}
+
+              <div
+                className={`grid grid-cols-2 gap-3 w-full max-w-sm ${
+                  stacked ? '' : 'lg:hidden sm:gap-5 sm:max-w-md'
+                }`}
               >
-                <span>Explore Weekly Quests</span>
-                <span>→</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => navigate('/about')}
-                className="px-8 py-4 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy text-sm font-bold transition-all shadow-xs hover:-translate-y-0.5 cursor-pointer"
+                <figure className="m-0 flex flex-col rounded-2xl border border-orange/25 bg-surface shadow-xs overflow-hidden">
+                  <div className="bg-gradient-to-b from-orange/5 to-orange/20 pt-4 px-3 flex items-end justify-center">
+                    <img src="/zack.png" alt="Zack" className="w-full max-w-[160px] h-auto object-contain block" />
+                  </div>
+                  <figcaption className="flex flex-col items-center gap-1 py-2.5 px-2">
+                    <span className="text-sm font-extrabold text-navy">Zack</span>
+                    <span className="text-[10px] font-semibold text-orange bg-orange/10 border border-orange/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Quest Explorer
+                    </span>
+                  </figcaption>
+                </figure>
+                <figure className="m-0 flex flex-col rounded-2xl border border-teal/25 bg-surface shadow-xs overflow-hidden">
+                  <div className="bg-gradient-to-b from-teal/5 to-teal/20 pt-4 px-3 flex items-end justify-center">
+                    <img src="/abi.png" alt="Abi" className="w-full max-w-[160px] h-auto object-contain block" />
+                  </div>
+                  <figcaption className="flex flex-col items-center gap-1 py-2.5 px-2">
+                    <span className="text-sm font-extrabold text-navy">Abi</span>
+                    <span className="text-[10px] font-semibold text-teal bg-teal/10 border border-teal/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Scripture Champion
+                    </span>
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div
+                className={`mt-2 flex items-center justify-center gap-3 ${
+                  stacked ? 'w-full flex-col' : 'flex-wrap gap-4'
+                }`}
               >
-                Our Christian Mission
-              </button>
+                {interactive ? (
+                  <a href="#quests" className={`${primaryCtaClass} cursor-pointer hover:-translate-y-0.5 hover:shadow-lg`}>
+                    <span>{copy.hero.primaryCta}</span>
+                    <span>→</span>
+                  </a>
+                ) : (
+                  <span className={primaryCtaClass}>
+                    <span>{copy.hero.primaryCta}</span>
+                    <span>→</span>
+                  </span>
+                )}
+                {interactive ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/about')}
+                    className={`${secondaryCtaClass} cursor-pointer hover:-translate-y-0.5`}
+                  >
+                    {copy.hero.secondaryCta}
+                  </button>
+                ) : (
+                  <span className={secondaryCtaClass}>{copy.hero.secondaryCta}</span>
+                )}
+              </div>
+
+              <div
+                className={`mt-4 grid w-full max-w-2xl gap-6 border-t border-border/60 pt-8 text-left ${
+                  stacked ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4 gap-8 pt-10'
+                }`}
+              >
+                <div className="flex flex-col gap-1.5">
+                  <span className={`font-black text-navy ${stacked ? 'text-xl' : 'text-2xl sm:text-3xl'}`}>52 Weeks</span>
+                  <span className="text-xs text-text-2 font-medium leading-relaxed">Annual quest journey</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className={`font-black text-teal ${stacked ? 'text-xl' : 'text-2xl sm:text-3xl'}`}>100% Biblical</span>
+                  <span className="text-xs text-text-2 font-medium leading-relaxed">Scripture-rooted truth</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className={`font-black text-navy ${stacked ? 'text-xl' : 'text-2xl sm:text-3xl'}`}>Protected</span>
+                  <span className="text-xs text-text-2 font-medium leading-relaxed">
+                    Safe &amp; ad-free for kids and families
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className={`font-black text-gold ${stacked ? 'text-xl' : 'text-2xl sm:text-3xl'}`}>Interactive</span>
+                  <span className="text-xs text-text-2 font-medium leading-relaxed">Quizzes &amp; Bible puzzles</span>
+                </div>
+              </div>
             </div>
 
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mt-4 pt-10 border-t border-border/60 w-full max-w-2xl text-left">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-2xl sm:text-3xl font-black text-navy">52 Weeks</span>
-                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Annual quest journey</span>
+            {!stacked ? (
+              <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
+                <img
+                  src="/abi.png"
+                  alt="Abi — Teen Bible Adventures character"
+                  className="w-52 h-auto object-contain drop-shadow-xl"
+                />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-sm font-extrabold text-navy">Abi</span>
+                  <span className="text-[11px] font-medium text-muted bg-teal/10 border border-teal/30 px-2.5 py-0.5 rounded-full">
+                    Scripture Champion
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-2xl sm:text-3xl font-black text-teal">100% Biblical</span>
-                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Scripture-rooted truth</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-2xl sm:text-3xl font-black text-navy">Protected</span>
-                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Safe &amp; ad-free for kids and families</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-2xl sm:text-3xl font-black text-gold">Interactive</span>
-                <span className="text-xs sm:text-sm text-text-2 font-medium leading-relaxed">Quizzes &amp; Bible puzzles</span>
-              </div>
-            </div>
-          </div>
-
-
-          {/* Abi — right character */}
-          <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
-            <img
-              src="/abi.png"
-              alt="Abi — Teen Bible Adventures character"
-              className="w-52 h-auto object-contain drop-shadow-xl"
-            />
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-sm font-extrabold text-navy">Abi</span>
-              <span className="text-[11px] font-medium text-muted bg-teal/10 border border-teal/30 px-2.5 py-0.5 rounded-full">
-                Scripture Champion
-              </span>
-            </div>
+            ) : null}
           </div>
         </div>
       </section>
 
-      {/* 4 Pillars of Christian Teen Discipleship */}
-      <section id="quests" className="py-16 sm:py-24 px-4 sm:px-8 bg-surface border-b border-border/60">
-        <div className="max-w-6xl mx-auto flex flex-col gap-12">
+      {/* 3 Pillars */}
+      <section
+        id="quests"
+        className={`bg-surface border-b border-border/60 ${stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'}`}
+      >
+        <div className={`max-w-6xl mx-auto flex flex-col ${stacked ? 'gap-8' : 'gap-12'}`}>
           <div className="text-center max-w-3xl mx-auto flex flex-col gap-3">
-            <span className="text-sm font-bold uppercase tracking-widest text-teal">Core Foundations</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-navy">
-              Everything Christian Youth &amp; Families Need to Grow in Faith
+            {copy.pillars.eyebrow ? (
+              <span className="text-sm font-bold uppercase tracking-widest text-teal">{copy.pillars.eyebrow}</span>
+            ) : null}
+            <h2
+              className={`font-extrabold tracking-tight text-navy ${
+                stacked ? 'text-2xl' : 'text-3xl sm:text-4xl lg:text-5xl'
+              }`}
+            >
+              {copy.pillars.title}
             </h2>
-            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
-              Built specifically for adolescent Christian spiritual growth — engaging for teenagers, reassuring for parents, and centered on Christ.
+            <p className={`text-text-2 leading-relaxed ${stacked ? 'text-sm' : 'text-base sm:text-lg'}`}>
+              {copy.pillars.subtitle}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
+          <div
+            className={`grid gap-4 ${
+              stacked ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 gap-6'
+            }`}
+          >
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
+              <div className="h-11 w-11 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                 <BookHeartIcon />
               </div>
-              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Weekly Scripture Quests</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Scheduled curriculum featuring scripture reading passages, curated video reflections, and 4-option objective quizzes that build biblical literacy.
-              </p>
+              <h3 className={`font-extrabold text-navy ${stacked ? 'text-base' : 'text-lg sm:text-xl'}`}>
+                {copy.pillars.seek.title}
+              </h3>
+              <p className="text-sm text-text-2 leading-relaxed">{copy.pillars.seek.description}</p>
             </div>
 
-            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-xl bg-sage text-forest flex items-center justify-center shrink-0">
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
+              <div className="h-11 w-11 rounded-xl bg-sage text-forest flex items-center justify-center shrink-0">
                 <UsersIcon />
               </div>
-              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Christian Fellowship</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Connect with Christian friends, youth mentors, and family study circles to walk together in daily faith, encouragement, and scripture reading.
-              </p>
+              <h3 className={`font-extrabold text-navy ${stacked ? 'text-base' : 'text-lg sm:text-xl'}`}>
+                {copy.pillars.connect.title}
+              </h3>
+              <p className="text-sm text-text-2 leading-relaxed">{copy.pillars.connect.description}</p>
             </div>
 
-            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-xl bg-gold/20 text-navy flex items-center justify-center shrink-0">
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3 shadow-xs">
+              <div className="h-11 w-11 rounded-xl bg-gold/20 text-navy flex items-center justify-center shrink-0">
                 <ShieldCheckIcon />
               </div>
-              <h3 className="font-extrabold text-navy text-lg sm:text-xl">Family Safeguarding</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Confidential, ad-free environment where parents retain full oversight of their teens' accounts, protecting their digital spiritual journey.
-              </p>
-            </div>
-
-            <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-4 shadow-xs hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-xl bg-navy-tint text-navy flex items-center justify-center shrink-0">
-                <CompassIcon />
-              </div>
-              <h3 className="font-extrabold text-navy text-lg sm:text-xl">TBA Puzzle Studio</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Challenging word chains, crossword grids, and Scripture matching exercises that reinforce the weekly lesson themes without gamification distraction.
-              </p>
+              <h3 className={`font-extrabold text-navy ${stacked ? 'text-base' : 'text-lg sm:text-xl'}`}>
+                {copy.pillars.grow.title}
+              </h3>
+              <p className="text-sm text-text-2 leading-relaxed">{copy.pillars.grow.description}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Christian Living & Discipleship Highlight */}
-      <section id="discipleship" className="relative overflow-hidden py-16 sm:py-24 px-4 sm:px-8 border-b border-border/60 bg-cream">
+      {/* Discipleship + barcode */}
+      <section
+        id="discipleship"
+        className={`relative overflow-hidden border-b border-border/60 bg-cream ${
+          stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'
+        }`}
+      >
         <WorldMapBackground />
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            <h2 className="text-3xl sm:text-5xl font-black text-navy tracking-tight leading-tight">
+        <div
+          className={`max-w-6xl mx-auto grid items-center gap-8 ${
+            stacked ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-12 gap-10'
+          }`}
+        >
+          <div className={`flex flex-col gap-5 ${stacked ? '' : 'lg:col-span-7 gap-6'}`}>
+            <h2
+              className={`font-black text-navy tracking-tight leading-tight ${
+                stacked ? 'text-2xl' : 'text-3xl sm:text-5xl'
+              }`}
+            >
               A Faith-Filled Digital Sanctuary for Today’s Christian Youth.
             </h2>
 
-            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
-              We help teenagers navigate modern life firmly grounded in the living Word of God. Teen Bible Adventures provides a safe, vibrant alternative to secular social noise:
+            <p className={`text-text-2 leading-relaxed ${stacked ? 'text-sm' : 'text-base sm:text-lg'}`}>
+              {copy.about.mission}
+            </p>
+            <p className={`text-muted leading-relaxed ${stacked ? 'text-sm' : 'text-sm sm:text-base'}`}>
+              {copy.about.vision}
             </p>
 
-            <ul className="flex flex-col gap-3 text-sm sm:text-base text-navy font-medium">
+            <ul className={`flex flex-col gap-3 text-navy font-medium ${stacked ? 'text-sm' : 'text-sm sm:text-base'}`}>
               <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
                 <span>Active scripture journeys: 52 weekly guided Bible quests with reflection questions.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
                 <span>Engaging video teachings that unpack biblical truth for everyday teen challenges.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
-                <span>Creative Bible puzzles (Crosswords, Word Chains, Scripture Matching) that make learning enjoyable.</span>
+                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
+                <span>Creative Bible puzzles that make learning enjoyable.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base sm:text-lg shrink-0 mt-0.5">✓</span>
+                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
                 <span>Family study passes with instant barcode cards for Christian households and study circles.</span>
               </li>
             </ul>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <GooglePlayButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs" />
-              <AppStoreButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs" />
-              <a
-                href="#quests"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface hover:bg-surface-2 text-navy font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-xs hover:shadow-md"
-              >
-                <span>Start Weekly Quests</span>
-                <span>→</span>
-              </a>
+            <div className={`pt-2 flex gap-3 ${stacked ? 'w-full flex-col' : 'flex-wrap items-center'}`}>
+              <div className={`items-stretch gap-3 ${stacked ? 'flex w-full flex-col' : 'hidden lg:flex items-center'}`}>
+                <GooglePlayButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs w-full justify-start" />
+                <AppStoreButton className="!bg-navy hover:!bg-teal !text-white !py-2.5 !px-3.5 text-xs w-full justify-start" />
+              </div>
+              {interactive ? (
+                <a
+                  href="#quests"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface hover:bg-surface-2 text-navy font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-xs hover:shadow-md"
+                >
+                  <span>Start Weekly Quests</span>
+                  <span>→</span>
+                </a>
+              ) : (
+                <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface text-navy font-bold text-xs shadow-xs">
+                  <span>Start Weekly Quests</span>
+                  <span>→</span>
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="lg:col-span-5 flex justify-center">
-            {/* Live Barcode Card Preview */}
+          <div className={`flex justify-center ${stacked ? '' : 'lg:col-span-5'}`}>
             <div className="w-full">
               <ChurchJoinBarcodeCard
                 joinCode="FAITH52"
@@ -271,40 +579,52 @@ export function PublicLandingPage() {
         </div>
       </section>
 
-      {/* Onboarding & Pass Section */}
-      <section id="onboarding" className="py-16 sm:py-24 px-4 sm:px-8 bg-surface border-b border-border/60">
-        <div className="max-w-5xl mx-auto flex flex-col items-center gap-10 text-center">
+      {/* Onboarding */}
+      <section
+        id="onboarding"
+        className={`bg-surface border-b border-border/60 ${stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'}`}
+      >
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-8 text-center">
           <div className="max-w-2xl flex flex-col gap-3">
-            <span className="text-sm font-bold uppercase tracking-widest text-teal">Getting Started</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-navy">
-              How Christian Teens &amp; Families Journey Together
+            <span className="text-sm font-bold uppercase tracking-widest text-teal">{copy.passSection.badge}</span>
+            <h2
+              className={`font-extrabold tracking-tight text-navy ${
+                stacked ? 'text-2xl' : 'text-3xl sm:text-4xl lg:text-5xl'
+              }`}
+            >
+              {copy.passSection.title}
             </h2>
-            <p className="text-base sm:text-lg text-text-2 leading-relaxed">
-              Simple, safe, and engaging. Begin your weekly scripture adventure in three easy steps.
+            <p className={`text-text-2 leading-relaxed ${stacked ? 'text-sm' : 'text-base sm:text-lg'}`}>
+              {copy.passSection.description}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left w-full max-w-4xl">
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 1</div>
-              <h4 className="font-extrabold text-base sm:text-lg text-navy">Get Your Study Pass</h4>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Families and youth study circles receive a unique 6-character pass code or barcode card to connect together.
+          <div
+            className={`grid text-left w-full max-w-4xl gap-4 ${
+              stacked ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 gap-6'
+            }`}
+          >
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 1</div>
+              <h4 className="font-extrabold text-base text-navy">Get Your Study Pass</h4>
+              <p className="text-sm text-text-2 leading-relaxed">
+                Families and youth study circles receive a unique 6-character pass code or barcode card to connect
+                together.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 2</div>
-              <h4 className="font-extrabold text-base sm:text-lg text-navy">Download Mobile App</h4>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 2</div>
+              <h4 className="font-extrabold text-base text-navy">Download Mobile App</h4>
+              <p className="text-sm text-text-2 leading-relaxed">
                 Parents and teens download the Teen Bible Adventures app for Android or iOS, and scan the pass code.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs sm:text-sm font-extrabold text-teal uppercase tracking-wider">Step 3</div>
-              <h4 className="font-extrabold text-base sm:text-lg text-navy">Grow in Faith Together</h4>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
+            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
+              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 3</div>
+              <h4 className="font-extrabold text-base text-navy">Grow in Faith Together</h4>
+              <p className="text-sm text-text-2 leading-relaxed">
                 Complete weekly quests, solve creative scripture puzzles, and build lifelong Christian habits.
               </p>
             </div>
@@ -312,28 +632,74 @@ export function PublicLandingPage() {
         </div>
       </section>
 
-      {/* Safeguarding Commitment */}
-      <section id="safeguarding" className="py-16 px-4 sm:px-8 bg-cream border-b border-border/60">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 rounded-2xl bg-surface border border-border shadow-xs">
+      {/* Safeguarding */}
+      <section
+        id="safeguarding"
+        className={`bg-cream border-b border-border/60 ${stacked ? 'py-10 px-4' : 'py-16 px-4 sm:px-8'}`}
+      >
+        <div
+          className={`max-w-4xl mx-auto flex items-center gap-5 p-5 rounded-2xl bg-surface border border-border shadow-xs ${
+            stacked ? 'flex-col text-center' : 'flex-col sm:flex-row p-6 sm:p-8 gap-6'
+          }`}
+        >
           <div className="h-14 w-14 rounded-2xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
             <ShieldCheckIcon />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg sm:text-xl font-extrabold text-navy">Uncompromising Commitment to Teen &amp; Family Safety</h3>
+            <h3 className="text-lg sm:text-xl font-extrabold text-navy">
+              Uncompromising Commitment to Teen &amp; Family Safety
+            </h3>
             <p className="text-sm sm:text-base text-text-2 mt-2 leading-relaxed">
-              We adhere strictly to COPPA (US), Age-Appropriate Design Code (UK), and national child safety regulations. Children under 13 cannot create unverified accounts; teen logins remain parent-managed; and all family safety reports remain strictly confidential.
+              We adhere strictly to COPPA (US), Age-Appropriate Design Code (UK), and national child safety regulations.
+              Children under 13 cannot create unverified accounts; teen logins remain parent-managed; and all family
+              safety reports remain strictly confidential.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/privacy')}
-            className="px-5 py-3 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-bold shrink-0 transition-colors cursor-pointer shadow-xs"
-          >
-            Safety &amp; Privacy Policy →
-          </button>
+          {interactive ? (
+            <button
+              type="button"
+              onClick={() => navigate('/privacy')}
+              className={`px-5 py-3 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-bold shrink-0 transition-colors cursor-pointer shadow-xs ${
+                stacked ? 'w-full' : ''
+              }`}
+            >
+              Safety &amp; Privacy Policy →
+            </button>
+          ) : (
+            <span
+              className={`px-5 py-3 rounded-xl bg-navy text-white text-xs font-bold shrink-0 shadow-xs ${
+                stacked ? 'w-full' : ''
+              }`}
+            >
+              Safety &amp; Privacy Policy →
+            </span>
+          )}
         </div>
       </section>
+    </>
+  );
+}
 
+export function PublicLandingPage() {
+  const [content, setContent] = useState<LandingCmsContent | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    publicApi<LandingCmsContent>('/api/content/web')
+      .then((res) => {
+        if (!cancelled && res) setContent(res);
+      })
+      .catch(() => {
+        /* keep defaults when API is offline */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <PublicLayout activeTab="home">
+      <LandingPageSections content={content} />
     </PublicLayout>
   );
 }

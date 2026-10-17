@@ -1,0 +1,12 @@
+# Deploy the admin SPA only. The Vite build still needs contracts/.
+mobile_
+backend
+docs
+.superpowers
+.agents
+.claude
+.vscode
+*.local
+.env
+.env.*
+!.env.example

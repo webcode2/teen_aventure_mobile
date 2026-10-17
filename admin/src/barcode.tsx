@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import QRCode from 'qrcode';
 
 // Code 39 standard character patterns (1 = wide bar/space, 0 = narrow bar/space)
 // 9 elements per character: 5 bars, 4 spaces
@@ -48,6 +49,22 @@ const CODE39_PATTERNS: Record<string, string> = {
   '%': '000101010',
   '*': '010010100', // start / stop delimiter
 };
+
+/** Payload the mobile app accepts for ministry bulletin passes. */
+export function churchJoinQrPayload(joinCode: string) {
+  const code = (joinCode || '').trim().toUpperCase();
+  return `tba-join:church:${code}`;
+}
+
+/** Payload the mobile app accepts for class / church-group bulletin passes. */
+export function classJoinQrPayload(joinCode: string) {
+  const code = (joinCode || '').trim().toUpperCase();
+  return `tba-join:class:${code}`;
+}
+
+export function joinPassQrPayload(kind: 'church' | 'class', joinCode: string) {
+  return kind === 'class' ? classJoinQrPayload(joinCode) : churchJoinQrPayload(joinCode);
+}
 
 export type BarcodeSvgProps = {
   value: string;
@@ -119,50 +136,42 @@ export function BarcodeSvg({
     <svg
       viewBox={`0 0 ${totalWidth} ${renderHeight}`}
       width={width}
-      height={showText ? (width / totalWidth) * renderHeight : (width / totalWidth) * height}
+      height={renderHeight}
       className={`select-none ${className}`}
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label={`Barcode for ${value}`}
     >
-      <rect x="0" y="0" width={totalWidth} height={renderHeight} fill={bgColor} rx="6" />
+      <rect x="0" y="0" width={totalWidth} height={renderHeight} fill={bgColor} rx="4" />
       {rects.map((r, i) => (
-        <rect
-          key={i}
-          x={r.x}
-          y="6"
-          width={r.width}
-          height={height - 8}
-          fill={barColor}
-        />
+        <rect key={i} x={r.x} y={8} width={r.width} height={height - 8} fill={barColor} />
       ))}
-      {showText && (
+      {showText ? (
         <text
           x={totalWidth / 2}
-          y={renderHeight - 6}
+          y={height + 14}
           textAnchor="middle"
+          fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+          fontSize="12"
+          fontWeight="700"
           fill={barColor}
-          fontSize="11"
-          fontWeight="bold"
-          letterSpacing="2.5"
-          fontFamily="ui-monospace, monospace"
+          letterSpacing="2"
         >
-          *{code}*
+          {code}
         </text>
-      )}
+      ) : null}
     </svg>
   );
 }
 
 /**
- * Procedural 2D QR Code SVG matrix for Church Join Links.
- * Generates a clean, scannable QR pattern representation.
+ * Real scannable QR (ISO/IEC 18004) rendered as SVG.
  */
 export function QrCodeSvg({
   value,
   size = 180,
   className = '',
-  fgColor = '#111e38',
+  fgColor = '#011f3b',
   bgColor = '#ffffff',
 }: {
   value: string;
@@ -171,111 +180,103 @@ export function QrCodeSvg({
   fgColor?: string;
   bgColor?: string;
 }) {
-  // Deterministic 21x21 QR Version 1 grid generator based on value hash
-  const matrix = useMemo(() => {
-    const dim = 21;
-    const grid: boolean[][] = Array.from({ length: dim }, () => Array(dim).fill(false));
+  const [svg, setSvg] = useState('');
+  const [error, setError] = useState('');
 
-    // Finder patterns (top-left, top-right, bottom-left 7x7)
-    function addFinder(startX: number, startY: number) {
-      for (let y = 0; y < 7; y++) {
-        for (let x = 0; x < 7; x++) {
-          const isBorder = x === 0 || x === 6 || y === 0 || y === 6;
-          const isCenter = x >= 2 && x <= 4 && y >= 2 && y <= 4;
-          grid[startY + y][startX + x] = isBorder || isCenter;
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    QRCode.toString(value, {
+      type: 'svg',
+      margin: 2,
+      width: size,
+      errorCorrectionLevel: 'M',
+      color: { dark: fgColor, light: bgColor },
+    })
+      .then((markup) => {
+        if (!cancelled) setSvg(markup);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setSvg('');
+          setError(err instanceof Error ? err.message : 'Could not build QR');
         }
-      }
-    }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [value, size, fgColor, bgColor]);
 
-    addFinder(0, 0);
-    addFinder(dim - 7, 0);
-    addFinder(0, dim - 7);
+  if (error) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-lg border border-border bg-cream text-center text-[11px] text-muted ${className}`}
+        style={{ width: size, height: size }}
+        role="alert"
+      >
+        QR unavailable
+      </div>
+    );
+  }
 
-    // Timing patterns
-    for (let i = 8; i < dim - 8; i++) {
-      grid[6][i] = i % 2 === 0;
-      grid[i][6] = i % 2 === 0;
-    }
-
-    // Alignment dark module
-    grid[dim - 8][8] = true;
-
-    // Pseudo-random data modules derived from string hash
-    let hash = 0x811c9dc5;
-    for (let i = 0; i < value.length; i++) {
-      hash ^= value.charCodeAt(i);
-      hash = (hash * 0x01000193) >>> 0;
-    }
-
-    for (let y = 0; y < dim; y++) {
-      for (let x = 0; x < dim; x++) {
-        const inFinderTL = x < 8 && y < 8;
-        const inFinderTR = x >= dim - 8 && y < 8;
-        const inFinderBL = x < 8 && y >= dim - 8;
-        const inTiming = x === 6 || y === 6;
-        if (inFinderTL || inFinderTR || inFinderBL || inTiming) continue;
-
-        // XOR bit hash for data positions
-        hash = (hash * 1103515245 + 12345) & 0x7fffffff;
-        grid[y][x] = (hash % 100) > 46;
-      }
-    }
-
-    return grid;
-  }, [value]);
-
-  const dim = matrix.length;
-  const cellSize = 8;
-  const quietZone = 2;
-  const viewBoxSize = (dim + quietZone * 2) * cellSize;
+  if (!svg) {
+    return (
+      <div
+        className={`rounded-lg bg-surface-2 animate-pulse ${className}`}
+        style={{ width: size, height: size }}
+        aria-hidden
+      />
+    );
+  }
 
   return (
-    <svg
-      viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
-      width={size}
-      height={size}
-      className={`select-none ${className}`}
-      xmlns="http://www.w3.org/2000/svg"
+    <div
+      className={`select-none overflow-hidden rounded-lg ${className}`}
+      style={{ width: size, height: size }}
       role="img"
       aria-label={`QR Code for ${value}`}
-    >
-      <rect x="0" y="0" width={viewBoxSize} height={viewBoxSize} fill={bgColor} rx="8" />
-      {matrix.map((row, y) =>
-        row.map((cell, x) =>
-          cell ? (
-            <rect
-              key={`${x}-${y}`}
-              x={(x + quietZone) * cellSize}
-              y={(y + quietZone) * cellSize}
-              width={cellSize}
-              height={cellSize}
-              fill={fgColor}
-              rx="1.2"
-            />
-          ) : null
-        )
-      )}
-    </svg>
+      // qrcode emits a trusted local SVG string for the given value
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
 
 /**
- * Interactive Church Join Barcode Card with format toggle,
- * copy-to-clipboard, and print ready presentation.
+ * Interactive join pass card (ministry or class group) with format toggle,
+ * copy-to-clipboard, share, and print-ready presentation.
  */
-export function ChurchJoinBarcodeCard({
+export function JoinPassCard({
   joinCode,
-  churchName,
-  jurisdiction,
+  name,
+  description,
+  badge,
+  passKind = 'church',
+  kicker,
+  instructions,
+  compact = false,
 }: {
   joinCode: string;
-  churchName: string;
-  jurisdiction?: string;
+  name: string;
+  description?: string;
+  badge?: string;
+  passKind?: 'church' | 'class';
+  kicker?: string;
+  instructions?: string;
+  /** Smaller graphic under page labels — no title chrome or print/share row. */
+  compact?: boolean;
 }) {
-  const [format, setFormat] = useState<'barcode' | 'qr'>('barcode');
+  const [format, setFormat] = useState<'barcode' | 'qr'>('qr');
   const [copied, setCopied] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
 
   const cleanCode = (joinCode || 'FAITH52').toUpperCase();
+  const qrPayload = joinPassQrPayload(passKind, cleanCode);
+  const passLabel = passKind === 'class' ? 'Group study pass' : 'Family & group study pass';
+  const helpText =
+    instructions ??
+    (passKind === 'class'
+      ? 'Explorers scan this pass in the Teen Bible Adventures app or enter the group code to join.'
+      : 'Visiting families scan this pass in the Teen Bible Adventures app or enter the code during family profile setup.');
 
   function copyCode() {
     navigator.clipboard.writeText(cleanCode).then(() => {
@@ -284,8 +285,73 @@ export function ChurchJoinBarcodeCard({
     });
   }
 
+  async function sharePass() {
+    setShareBusy(true);
+    try {
+      const shareData = {
+        title: `${name} join pass`,
+        text: `Join ${name} on Teen Bible Adventures with code ${cleanCode}`,
+        url: qrPayload,
+      };
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text}\n${qrPayload}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // User cancelled share sheet — ignore
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
   function handlePrint() {
     window.print();
+  }
+
+  if (compact) {
+    return (
+      <div className="flex w-full max-w-[14rem] flex-col items-stretch gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-cream p-0.5 text-[10px]">
+            <button
+              type="button"
+              className={`cursor-pointer rounded-md px-2 py-1 font-bold transition-all ${
+                format === 'barcode' ? 'bg-navy text-white' : 'text-muted hover:text-navy'
+              }`}
+              onClick={() => setFormat('barcode')}
+            >
+              1D
+            </button>
+            <button
+              type="button"
+              className={`cursor-pointer rounded-md px-2 py-1 font-bold transition-all ${
+                format === 'qr' ? 'bg-navy text-white' : 'text-muted hover:text-navy'
+              }`}
+              onClick={() => setFormat('qr')}
+            >
+              2D
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={copyCode}
+            className="cursor-pointer text-[10px] font-bold text-teal hover:text-teal/80"
+          >
+            {copied ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+        <div className="flex items-center justify-center rounded-xl border border-border/80 bg-white p-2.5">
+          {format === 'barcode' ? (
+            <BarcodeSvg value={cleanCode} width={180} height={44} showText={true} />
+          ) : (
+            <QrCodeSvg value={qrPayload} size={96} />
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -293,14 +359,21 @@ export function ChurchJoinBarcodeCard({
       {/* Header */}
       <div className="flex items-center justify-between w-full pb-3 border-b border-border/60">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-teal">Family &amp; Group Study Pass</span>
-          <h4 className="text-base sm:text-lg font-extrabold text-navy truncate" title={churchName}>
-            {churchName}
+          <span className="text-xs font-bold uppercase tracking-wider text-teal">
+            {kicker ?? passLabel}
+          </span>
+          <h4 className="text-base sm:text-lg font-extrabold text-navy truncate" title={name}>
+            {name}
           </h4>
+          {description ? (
+            <p className="mt-0.5 max-w-xs text-xs leading-snug text-muted line-clamp-2" title={description}>
+              {description}
+            </p>
+          ) : null}
         </div>
-        {jurisdiction ? (
+        {badge ? (
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-navy/5 text-navy border border-border">
-            {jurisdiction}
+            {badge}
           </span>
         ) : null}
       </div>
@@ -340,10 +413,15 @@ export function ChurchJoinBarcodeCard({
       {/* Scannable Graphic Card */}
       <div className="my-5 p-4 rounded-xl bg-white border border-border/80 shadow-inner flex flex-col items-center justify-center min-h-[140px] w-full">
         {format === 'barcode' ? (
-          <BarcodeSvg value={cleanCode} width={290} height={70} showText={true} />
+          <div className="flex flex-col items-center gap-2">
+            <BarcodeSvg value={cleanCode} width={290} height={70} showText={true} />
+            <span className="text-[10px] text-muted text-center">
+              Scanners read the join code. Phones: prefer the 2D QR tab.
+            </span>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <QrCodeSvg value={`askhub://study/join?code=${cleanCode}`} size={160} />
+            <QrCodeSvg value={qrPayload} size={160} />
             <span className="text-xs font-mono font-bold text-navy tracking-widest mt-1">
               JOIN CODE: {cleanCode}
             </span>
@@ -353,24 +431,239 @@ export function ChurchJoinBarcodeCard({
 
       {/* Instructions & Actions */}
       <p className="text-xs sm:text-sm text-text-2 text-center leading-relaxed">
-        Visiting families scan this pass in the Teen Bible Adventures app or enter code{' '}
-        <strong className="text-navy font-bold font-mono tracking-wide">{cleanCode}</strong> during family profile setup.
+        {helpText} Code:{' '}
+        <strong className="text-navy font-bold font-mono tracking-wide">{cleanCode}</strong>
       </p>
 
-      <div className="flex items-center justify-center gap-2.5 w-full mt-4 pt-3 border-t border-border/60">
+      <div className="flex flex-wrap items-center justify-center gap-2.5 w-full mt-4 pt-3 border-t border-border/60">
         <button
           type="button"
           onClick={handlePrint}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs sm:text-sm font-semibold text-navy transition-colors cursor-pointer"
+          className="flex-1 min-w-[7rem] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs sm:text-sm font-semibold text-navy transition-colors cursor-pointer"
         >
-          <span>🖨️ Print Onboarding Pass</span>
+          <span>Print pass</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => void sharePass()}
+          disabled={shareBusy}
+          className="flex-1 min-w-[7rem] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-teal/30 bg-teal-tint hover:bg-teal/15 text-xs sm:text-sm font-semibold text-teal transition-colors cursor-pointer disabled:opacity-60"
+        >
+          <span>{shareBusy ? 'Sharing…' : 'Share QR'}</span>
         </button>
         <button
           type="button"
           onClick={copyCode}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+          className="flex-1 min-w-[7rem] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-navy hover:bg-teal text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
         >
-          <span>{copied ? '✓ Code Copied' : 'Copy Join Code'}</span>
+          <span>{copied ? '✓ Copied' : 'Copy code'}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** @deprecated Prefer JoinPassCard — kept for existing ministry call sites. */
+export function ChurchJoinBarcodeCard({
+  joinCode,
+  churchName,
+  description,
+  jurisdiction,
+}: {
+  joinCode: string;
+  churchName: string;
+  description?: string;
+  jurisdiction?: string;
+}) {
+  return (
+    <JoinPassCard
+      joinCode={joinCode}
+      name={churchName}
+      description={description}
+      badge={jurisdiction}
+      passKind="church"
+    />
+  );
+}
+
+export function GroupJoinBarcodeCard({
+  joinCode,
+  groupName,
+  description,
+  kind,
+  compact = false,
+}: {
+  joinCode: string;
+  groupName: string;
+  description?: string;
+  kind?: string;
+  compact?: boolean;
+}) {
+  return (
+    <JoinPassCard
+      joinCode={joinCode}
+      name={groupName}
+      description={description}
+      badge={kind}
+      passKind="class"
+      kicker="Group join pass"
+      compact={compact}
+    />
+  );
+}
+
+/** Compact QR under group labels, with share / print / copy-link actions. */
+export function GroupJoinPassImages({
+  joinCode,
+  groupName,
+  className = '',
+}: {
+  joinCode: string;
+  groupName?: string;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [printBusy, setPrintBusy] = useState(false);
+
+  const cleanCode = (joinCode || '').trim().toUpperCase();
+  const qrPayload = cleanCode ? classJoinQrPayload(cleanCode) : '';
+  const label = (groupName || 'Group').trim() || 'Group';
+
+  function flashCopied() {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyLink() {
+    if (!qrPayload) return;
+    try {
+      await navigator.clipboard.writeText(qrPayload);
+      flashCopied();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function shareQr() {
+    if (!qrPayload) return;
+    setShareBusy(true);
+    try {
+      const shareData = {
+        title: `${label} join pass`,
+        text: `Join ${label} on Teen Bible Adventures`,
+        url: qrPayload,
+      };
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(qrPayload);
+        flashCopied();
+      }
+    } catch {
+      // User cancelled share sheet
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
+  /** Print window contains only the QR image — nothing else. */
+  async function printQrOnly() {
+    if (!qrPayload) return;
+    setPrintBusy(true);
+    try {
+      const dataUrl = await QRCode.toDataURL(qrPayload, {
+        margin: 2,
+        width: 512,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#011f3b', light: '#ffffff' },
+      });
+      const win = window.open('', '_blank', 'noopener,noreferrer,width=640,height=720');
+      if (!win) return;
+      win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title></title>
+  <style>
+    @page { margin: 0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    img {
+      width: 70vmin;
+      max-width: 512px;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <img src="${dataUrl}" alt="" />
+  <script>
+    const img = document.querySelector('img');
+    function go() {
+      setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 50);
+    }
+    if (img.complete) go();
+    else img.onload = go;
+    window.onafterprint = function () { window.close(); };
+  <\/script>
+</body>
+</html>`);
+      win.document.close();
+    } catch {
+      /* ignore */
+    } finally {
+      setPrintBusy(false);
+    }
+  }
+
+  if (!cleanCode) return null;
+
+  return (
+    <div className={`flex flex-col items-start gap-2 ${className}`}>
+      <div
+        className="rounded-lg border border-border/70 bg-white p-1.5 shadow-2xs"
+        aria-label={`Join QR for ${cleanCode}`}
+      >
+        <QrCodeSvg value={qrPayload} size={72} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <button
+          type="button"
+          onClick={() => void shareQr()}
+          disabled={shareBusy}
+          className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-teal hover:underline disabled:opacity-60"
+        >
+          {shareBusy ? 'Sharing…' : 'Share'}
+        </button>
+        <button
+          type="button"
+          onClick={() => void printQrOnly()}
+          disabled={printBusy}
+          className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-teal hover:underline disabled:opacity-60"
+        >
+          {printBusy ? 'Preparing…' : 'Print'}
+        </button>
+        <button
+          type="button"
+          onClick={() => void copyLink()}
+          className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-teal hover:underline"
+        >
+          {copied ? '✓ Copied' : 'Copy link'}
         </button>
       </div>
     </div>

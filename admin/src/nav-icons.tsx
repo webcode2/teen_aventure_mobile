@@ -54,6 +54,15 @@ export function PuzzleIcon() {
   );
 }
 
+export function MatchIcon() {
+  return (
+    <NavSvg>
+      <path d="M4 7h6M14 7h6M4 12h6M14 12h6M4 17h6M14 17h6" strokeLinecap="round" />
+      <path d="M10 7h4M10 17h4" strokeLinecap="round" />
+    </NavSvg>
+  );
+}
+
 export function SettingsIcon() {
   return (
     <NavSvg>
@@ -63,18 +72,6 @@ export function SettingsIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </NavSvg>
-  );
-}
-
-export function WeeksIcon() {
-  return (
-    <NavSvg>
-      <rect x="3" y="4" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="16" y1="2" x2="16" y2="6" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="8" y1="2" x2="8" y2="6" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="3" y1="10" x2="21" y2="10" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="m9 16 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </NavSvg>
   );
 }
@@ -90,19 +87,52 @@ export function GroupsIcon() {
   );
 }
 
+export function MobileIcon() {
+  return (
+    <NavSvg>
+      <rect x="5" y="2" width="14" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="12" y1="18" x2="12.01" y2="18" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+    </NavSvg>
+  );
+}
+
+export function WebIcon() {
+  return (
+    <NavSvg>
+      <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="2" y1="12" x2="22" y2="12" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round" strokeLinejoin="round" />
+    </NavSvg>
+  );
+}
+
+export function CheerIcon() {
+  return (
+    <NavSvg>
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round" />
+    </NavSvg>
+  );
+}
+
 const NAV_ICONS: Record<Tab, () => ReactNode> = {
   dashboard: DashboardIcon,
   people: UsersIcon,
+  pastors: ChurchIcon,
+  staff: SettingsIcon,
   churches: ChurchIcon,
   groups: GroupsIcon,
   notifications: MailIcon,
-  weeks: WeeksIcon,
   quests: QuestIcon,
   puzzles: PuzzleIcon,
+  matching: MatchIcon,
+  'content-mobile': MobileIcon,
+  'content-web': WebIcon,
+  legal: ConsentIcon,
+  cheers: CheerIcon,
   scoring: SettingsIcon,
   reports: ShieldIcon,
-  consent: ConsentIcon,
   deletions: TrashIcon,
+  archive: TrashIcon,
 };
 
 export function NavIcon({ tab }: { tab: Tab }) {

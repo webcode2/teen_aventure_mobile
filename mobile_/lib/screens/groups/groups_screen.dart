@@ -14,12 +14,19 @@ import '../shared/report_issue_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
 import '../shared/widgets/circle_stats_card.dart';
 import 'group_standing_board.dart';
+import 'teacher_class_members.dart';
 
 bool _isGroupAdmin(Map<String, dynamic>? item) {
   if (item == null) return false;
   if (item['canAdmin'] == true) return true;
   final role = (item['role'] as String? ?? '').toLowerCase();
-  return role == 'owner' || role == 'admin';
+  return role == 'owner' || role == 'admin' || role == 'teacher';
+}
+
+bool _isTeachingGroup(Map<String, dynamic>? item) {
+  if (item == null) return false;
+  final role = (item['role'] as String? ?? '').toLowerCase();
+  return item['canAdmin'] == true && (role == 'teacher' || role == 'owner');
 }
 
 class GroupsScreen extends StatefulWidget {
@@ -162,6 +169,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
           familyId: kind == 'FAMILY' ? id : null,
           churchId: kind == 'CHURCH' ? id : null,
           classId: kind == 'CLASS' ? id : null,
+          joinCode: item['joinCode'] as String?,
+          groupName: item['name'] as String?,
         ),
       ),
     );
@@ -244,12 +253,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
   Future<bool> _leave(Map<String, dynamic> item) async {
     final name = item['name'] as String? ?? 'this group';
+    final isChurch = (item['kind'] as String? ?? '').toUpperCase() == 'CHURCH';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave group?'),
+        title: Text(isChurch ? 'Leave church?' : 'Leave group?'),
         content: Text(
-          'You are about to leave $name. Your standing and points in this group will no longer be available here. You can join again later with a new invite.',
+          isChurch
+              ? 'You are about to leave $name. You will also be removed from all of its church groups. You can join again later with a new invite.'
+              : 'You are about to leave $name. Your standing and points in this group will no longer be available here. You can join again later with a new invite.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
@@ -293,6 +305,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
           canLeave: !isFamily && item?['canLeave'] == true,
           canInvite: !isFamily && _isGroupAdmin(item),
           canDelete: _isGroupAdmin(item),
+          canNudge: !isFamily && _isGroupAdmin(item),
           ranksOverride: widget.ranksOverride,
           onLeave: isFamily || item == null ? null : () => _leave(item),
           onInvite: isFamily || item == null || !_isGroupAdmin(item) ? null : () => _openInvite(item),
@@ -308,24 +321,71 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  void _openMembershipStanding(Map<String, dynamic> item) {
+    _openGroupStanding(
+      AssignedClass(
+        id: item['id'] as String,
+        name: item['name'] as String? ?? 'Group',
+        kind: item['kind'] as String? ?? 'CLASS',
+      ),
+    );
+  }
+
   List<Widget> _groupListingTiles() {
-    // Prefer membership items; fall back to assigned classes when needed.
+    // Prefer membership items; nest church subgroups under their ministry.
     if (_items.isNotEmpty) {
-      return [
-        for (final item in _items) ...[
-          _MembershipTile(
-            item: item,
-            onTap: () => _openGroupStanding(
-              AssignedClass(
-                id: item['id'] as String,
-                name: item['name'] as String? ?? 'Group',
-                kind: item['kind'] as String? ?? 'CLASS',
+      final families = _items.where((i) => (i['kind'] as String?) == 'FAMILY').toList();
+      final churches = _items.where((i) => (i['kind'] as String?) == 'CHURCH').toList();
+      final classes = _items.where((i) => (i['kind'] as String?) == 'CLASS').toList();
+      final nestedIds = <String>{};
+      final tiles = <Widget>[];
+
+      void addTile(Map<String, dynamic> item, {bool nested = false}) {
+        final tile = _MembershipTile(
+          item: item,
+          nested: nested,
+          onTap: () => _openMembershipStanding(item),
+        );
+        tiles.add(nested ? Padding(padding: const EdgeInsets.only(left: 18), child: tile) : tile);
+        tiles.add(const SizedBox(height: 10));
+      }
+
+      for (final item in families) {
+        addTile(item);
+      }
+      for (final church in churches) {
+        addTile(church);
+        final churchId = church['id'] as String?;
+        final subgroups = classes.where((c) {
+          final linked = c['churchId'] as String?;
+          return churchId != null && linked == churchId;
+        }).toList();
+        if (subgroups.isNotEmpty) {
+          tiles.add(
+            const Padding(
+              padding: EdgeInsets.only(left: 18, bottom: 6),
+              child: Text(
+                'Groups',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-        ],
-      ];
+          );
+          for (final sub in subgroups) {
+            nestedIds.add(sub['id'] as String);
+            addTile(sub, nested: true);
+          }
+        }
+      }
+      for (final item in classes) {
+        final id = item['id'] as String?;
+        if (id != null && nestedIds.contains(id)) continue;
+        addTile(item);
+      }
+      return tiles;
     }
 
     final boards = _standingClasses(context.read<AuthSession>());
@@ -344,30 +404,28 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }
 
   Future<void> _createGroup() async {
-    final nameCtrl = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New group'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Group name'),
-          textCapitalization: TextCapitalization.words,
+    final session = context.read<AuthSession>();
+    if (!session.canCreateGroups) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only adults can create groups. You can join a group with an invite.'),
+          backgroundColor: AppColors.navy,
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, nameCtrl.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      );
+      return;
+    }
+    final result = await showDialog<_NewGroupFormResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _NewGroupDialog(),
     );
-    nameCtrl.dispose();
-    if (name == null || name.isEmpty || !mounted) return;
+    if (result == null || result.name.isEmpty || !mounted) return;
     try {
-      final created = await context.read<FamilyService>().createGroup(name);
+      final created = await context.read<FamilyService>().createGroup(
+            result.name,
+            description: result.description,
+          );
       await _load();
       if (!mounted) return;
       final id = created['id'] as String?;
@@ -375,7 +433,12 @@ class _GroupsScreenState extends State<GroupsScreen> {
       await Navigator.push<void>(
         context,
         MaterialPageRoute(
-          builder: (_) => InviteShareScreen(kind: 'CLASS', classId: id),
+          builder: (_) => InviteShareScreen(
+            kind: 'CLASS',
+            classId: id,
+            joinCode: created['joinCode'] as String?,
+            groupName: created['name'] as String? ?? result.name,
+          ),
         ),
       );
     } catch (e) {
@@ -467,7 +530,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _yourGroupsHeader(session.isAdult),
+                _yourGroupsHeader(session.canCreateGroups),
                 const SizedBox(height: 12),
                 if (listings.isEmpty)
                   Container(
@@ -509,7 +572,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
               key: const Key('teen-join-group'),
               onPressed: _join,
               style: TextButton.styleFrom(foregroundColor: AppColors.cream),
-              child: const Text('+group', style: TextStyle(fontWeight: FontWeight.w900)),
+              child: const Text('Join Group', style: TextStyle(fontWeight: FontWeight.w900)),
             ),
         ],
       ),
@@ -559,7 +622,7 @@ class _GroupListingTile extends StatelessWidget {
   }
 }
 
-class _GroupStandingScreen extends StatelessWidget {
+class _GroupStandingScreen extends StatefulWidget {
   const _GroupStandingScreen({
     required this.cls,
     required this.canLeave,
@@ -568,6 +631,7 @@ class _GroupStandingScreen extends StatelessWidget {
     this.onLeave,
     this.canInvite = false,
     this.canDelete = false,
+    this.canNudge = false,
     this.onInvite,
     this.onDelete,
     this.onCancelDeletion,
@@ -580,51 +644,107 @@ class _GroupStandingScreen extends StatelessWidget {
   final Future<bool> Function()? onLeave;
   final bool canInvite;
   final bool canDelete;
+  final bool canNudge;
   final VoidCallback? onInvite;
   final VoidCallback? onDelete;
   final VoidCallback? onCancelDeletion;
 
+  @override
+  State<_GroupStandingScreen> createState() => _GroupStandingScreenState();
+}
+
+class _GroupStandingScreenState extends State<_GroupStandingScreen> {
+  GroupDetail? _detail;
+  bool _loading = true;
+  String? _error;
+
+  String get _kind => membershipApiKind(
+        widget.membership?['kind'] as String? ?? widget.cls.kind,
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.membership?['underReview'] == true || widget.ranksOverride != null) {
+      _loading = false;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
+  }
+
+  Future<void> _load() async {
+    if (widget.ranksOverride != null) return;
+    setState(() {
+      _loading = _detail == null;
+      _error = null;
+    });
+    try {
+      final detail = await context.read<FamilyService>().getGroupDetail(kind: _kind, id: widget.cls.id);
+      if (mounted) setState(() => _detail = detail);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not load this group.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _confirmLeave(BuildContext context) async {
-    if (onLeave == null) return;
-    final left = await onLeave!();
+    if (widget.onLeave == null) return;
+    final left = await widget.onLeave!();
     if (left && context.mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final membership = _detail?.mergeInto(widget.membership) ?? widget.membership;
+    final underReview = membership?['underReview'] == true;
+    final canInvite = widget.canInvite && !underReview;
+    final onInvite = widget.onInvite;
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: Column(
         children: [
           Expanded(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _GroupHeroHeader(
-                    cls: cls,
-                    membership: membership,
-                    canLeave: canLeave,
-                    canDelete: canDelete,
-                    onLeave: onLeave == null ? null : () => _confirmLeave(context),
-                    onInvite: canInvite ? onInvite : null,
-                    onDelete: onDelete,
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _GroupHeroHeader(
+                      cls: widget.cls,
+                      membership: membership,
+                      canLeave: widget.canLeave,
+                      canDelete: widget.canDelete,
+                      onLeave: widget.onLeave == null ? null : () => _confirmLeave(context),
+                      onInvite: canInvite ? onInvite : null,
+                      onDelete: widget.onDelete,
+                    ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _GroupDetailBody(
-                        cls: cls,
-                        membership: membership,
-                        ranksOverride: ranksOverride,
-                        onCancelDeletion: onCancelDeletion,
-                        hideTitleBlock: true,
-                      ),
-                    ]),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _GroupDetailBody(
+                          cls: widget.cls,
+                          membership: membership,
+                          ranksOverride: widget.ranksOverride ?? _detail?.standings,
+                          standingsLoading: _loading,
+                          standingsError: _detail == null ? _error : null,
+                          onRetry: _load,
+                          onCancelDeletion: widget.onCancelDeletion,
+                          hideTitleBlock: true,
+                          canNudge: widget.canNudge,
+                        ),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (canInvite && onInvite != null)
@@ -738,13 +858,20 @@ class _GroupHeroHeader extends StatelessWidget {
                   if (value == 'delete') {
                     onDelete?.call();
                   } else if (value == 'report') {
+                    final kind = (membership?['kind'] as String? ?? cls.kind).toUpperCase();
+                    final groupKind = (membership?['groupKind'] as String? ?? '').toUpperCase();
+                    final linkedChurch = membership?['churchId'] as String?;
+                    final canReportToChurch = kind == 'CHURCH' ||
+                        groupKind == 'CHURCH' ||
+                        (linkedChurch != null && linkedChurch.isNotEmpty);
                     Navigator.push<void>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ReportIssueScreen(
-                          targetType: 'group',
+                          targetType: kind == 'CHURCH' ? 'church' : 'group',
                           targetId: cls.id,
                           targetName: cls.name,
+                          canReportToChurch: canReportToChurch,
                         ),
                       ),
                     );
@@ -862,20 +989,34 @@ class _GroupDetailBody extends StatelessWidget {
     required this.cls,
     this.membership,
     this.ranksOverride,
+    this.standingsLoading = false,
+    this.standingsError,
+    this.onRetry,
     this.onCancelDeletion,
     this.hideTitleBlock = false,
+    this.canNudge = false,
   });
 
   final AssignedClass cls;
   final Map<String, dynamic>? membership;
   final List<LeaderboardEntry>? ranksOverride;
+  final bool standingsLoading;
+  final String? standingsError;
+  final VoidCallback? onRetry;
   final VoidCallback? onCancelDeletion;
   final bool hideTitleBlock;
+  final bool canNudge;
+
+  String get _displayKind {
+    final groupKind = membership?['groupKind'] as String?;
+    if (groupKind != null && groupKind.trim().isNotEmpty) return groupKind.trim();
+    return cls.kind;
+  }
 
   String get _description {
     final fromItem = membership?['description'] as String?;
     if (fromItem != null && fromItem.trim().isNotEmpty) return fromItem.trim();
-    return 'A ${joinKindLabel(cls.kind).toLowerCase()} circle for explorers in Teen Bible Adventures.';
+    return 'A ${joinKindLabel(_displayKind).toLowerCase()} circle for explorers in Teen Bible Adventures.';
   }
 
   String get _creatorName {
@@ -894,6 +1035,25 @@ class _GroupDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (membership?['underReview'] == true) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Under review',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppColors.navy),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'This ministry is under review. Group activities are paused.',
+              style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
     final role = membership?['role'] as String? ?? 'Member';
     final members = (membership?['memberCount'] as num?)?.toInt();
     final points = (membership?['points'] as num?)?.toInt();
@@ -931,7 +1091,7 @@ class _GroupDetailBody extends StatelessWidget {
         ],
         if (!hideTitleBlock) ...[
           Text(
-            joinKindLabel(cls.kind),
+            joinKindLabel(_displayKind),
             style: const TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 12,
@@ -965,7 +1125,7 @@ class _GroupDetailBody extends StatelessWidget {
         _GroupMetaIconsRow(
           members: members,
           role: role,
-          kindLabel: joinKindLabel(cls.kind),
+          kindLabel: joinKindLabel(_displayKind),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -980,6 +1140,24 @@ class _GroupDetailBody extends StatelessWidget {
         _ExpandableDescription(text: _description),
         const SizedBox(height: 18),
         _GroupLeadCard(name: _creatorName, email: _creatorEmail),
+        if (canNudge && _isTeachingGroup(membership) && cls.kind.toUpperCase() != 'FAMILY') ...[
+          const SizedBox(height: 24),
+          const Text(
+            'Members',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: AppColors.navy,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'See everyone in this group. Cheer all members or only the ones you select.',
+            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 12),
+          TeacherClassMembers(classId: cls.id, className: cls.name),
+        ],
         const SizedBox(height: 24),
         const Text(
           'Your standing',
@@ -995,10 +1173,24 @@ class _GroupDetailBody extends StatelessWidget {
           style: TextStyle(fontSize: 13, color: AppColors.textMuted),
         ),
         const SizedBox(height: 12),
-        GroupStandingBoard(
-          classId: cls.id,
-          entriesOverride: ranksOverride,
-        ),
+        if (standingsLoading && ranksOverride == null)
+          const SizedBox(height: 48, child: Center(child: CircularProgressIndicator()))
+        else if (standingsError != null && ranksOverride == null)
+          Row(
+            children: [
+              Expanded(
+                child: Text(standingsError!, style: const TextStyle(color: Color(0xFFBA1A1A))),
+              ),
+              if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Retry')),
+            ],
+          )
+        else
+          GroupStandingBoard(
+            key: ValueKey(ranksOverride),
+            classId: cls.id,
+            entriesOverride: ranksOverride ?? const [],
+            canNudge: canNudge,
+          ),
       ],
     );
   }
@@ -1255,15 +1447,21 @@ class _GroupDetailActions extends StatelessWidget {
 }
 
 class _MembershipTile extends StatelessWidget {
-  const _MembershipTile({required this.item, required this.onTap});
+  const _MembershipTile({
+    required this.item,
+    required this.onTap,
+    this.nested = false,
+  });
 
   final Map<String, dynamic> item;
   final VoidCallback onTap;
+  final bool nested;
 
   @override
   Widget build(BuildContext context) {
     final kind = item['kind'] as String? ?? 'CLASS';
     final pending = item['deletionPending'] == true;
+    final label = nested ? 'Group' : joinKindLabel(kind);
 
     IconData kindIcon;
     switch (kind.toUpperCase()) {
@@ -1277,14 +1475,131 @@ class _MembershipTile extends StatelessWidget {
 
     return AdventureListCard(
       title: item['name'] as String? ?? 'Group',
-      subtitle: pending
-          ? '${joinKindLabel(kind)} · Scheduled for deletion'
-          : '${joinKindLabel(kind)} · Standing',
+      subtitle: item['underReview'] == true
+          ? '$label · Under review'
+          : pending
+              ? '$label · Scheduled for deletion'
+              : '$label · Standing',
       icon: kindIcon,
       onTap: onTap,
-      accent: pending
-          ? AdventureListAccent.danger
-          : AdventureListCard.accentForKind(kind),
+      accent: item['underReview'] == true
+          ? AdventureListAccent.gold
+          : pending
+              ? AdventureListAccent.danger
+              : nested
+                  ? AdventureListAccent.teal
+                  : AdventureListCard.accentForKind(kind),
+    );
+  }
+}
+
+class _NewGroupFormResult {
+  const _NewGroupFormResult({required this.name, required this.description});
+
+  final String name;
+  final String description;
+}
+
+class _NewGroupDialog extends StatefulWidget {
+  const _NewGroupDialog();
+
+  @override
+  State<_NewGroupDialog> createState() => _NewGroupDialogState();
+}
+
+class _NewGroupDialogState extends State<_NewGroupDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _descriptionCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descriptionCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.pop(
+      context,
+      _NewGroupFormResult(
+        name: _nameCtrl.text.trim(),
+        description: _descriptionCtrl.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sideInset = screenWidth * 0.10;
+    final dialogWidth = screenWidth - (sideInset * 2);
+
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        insetPadding: EdgeInsets.symmetric(horizontal: sideInset, vertical: 24),
+        child: SizedBox(
+          width: dialogWidth,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('New group', style: theme.textTheme.titleLarge),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _nameCtrl,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(labelText: 'Group name'),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Enter a group name';
+                        }
+                        return null;
+                      },
+                      onFieldSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _descriptionCtrl,
+                      maxLines: 3,
+                      maxLength: 1000,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: _submit,
+                          child: const Text('Create'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

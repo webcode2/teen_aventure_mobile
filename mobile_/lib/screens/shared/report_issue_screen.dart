@@ -11,11 +11,16 @@ class ReportIssueScreen extends StatefulWidget {
     this.targetType,
     this.targetId,
     this.targetName,
+    this.canReportToChurch = false,
   });
 
   final String? targetType;
   final String? targetId;
   final String? targetName;
+
+  /// When true, user can send the report to the ministry (church must respond)
+  /// or keep it confidential with Teen Bible Adventures only.
+  final bool canReportToChurch;
 
   @override
   State<ReportIssueScreen> createState() => _ReportIssueScreenState();
@@ -28,7 +33,16 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   bool _wantFollowUp = false;
   bool _sending = false;
   bool _seededEmail = false;
+  /// app = confidential to operators; church = ministry + operators.
+  late String _destination;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefer ministry response when the target is church-linked.
+    _destination = widget.canReportToChurch ? 'church' : 'app';
+  }
 
   @override
   void didChangeDependencies() {
@@ -70,6 +84,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       await context.read<FamilyService>().submitAppReport(
             message: body,
             anonymous: _anonymous,
+            destination: widget.canReportToChurch ? _destination : 'app',
             followUpEmail: followUp,
             targetType: widget.targetType,
             targetId: widget.targetId,
@@ -81,11 +96,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             reporterFamilyId: session.familyId,
           );
       if (!mounted) return;
+      final thanks = _destination == 'church' && widget.canReportToChurch
+          ? 'Report sent. Your ministry will respond, and Teen Bible Adventures can also review it.'
+          : 'Report sent to Teen Bible Adventures. Thank you for speaking up.';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Report sent to Teen Bible Adventures. Thank you for speaking up.'),
-          backgroundColor: AppColors.navy,
-        ),
+        SnackBar(content: Text(thanks), backgroundColor: AppColors.navy),
       );
       Navigator.pop(context, true);
     } catch (e) {
@@ -102,6 +117,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     final about = widget.targetName?.trim().isNotEmpty == true
         ? 'About ${widget.targetName}'
         : 'Tell us what happened';
+    final showDestination = widget.canReportToChurch;
 
     return Scaffold(
       backgroundColor: AppColors.cream,
@@ -122,10 +138,45 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Reports go to the Teen Bible Adventures app team. Group admins do not see who filed a report.',
-            style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+          Text(
+            showDestination
+                ? 'Choose who should receive this report.'
+                : 'Reports go to the Teen Bible Adventures app team. Group admins do not see who filed a report.',
+            style: const TextStyle(color: AppColors.textSecondary, height: 1.35),
           ),
+          if (showDestination) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Send to',
+              style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'church',
+                  label: Text('Church'),
+                  icon: Icon(Icons.account_balance_rounded, size: 18),
+                ),
+                ButtonSegment(
+                  value: 'app',
+                  label: Text('App team'),
+                  icon: Icon(Icons.shield_rounded, size: 18),
+                ),
+              ],
+              selected: {_destination},
+              onSelectionChanged: _sending
+                  ? null
+                  : (next) => setState(() => _destination = next.first),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _destination == 'church'
+                  ? 'Your ministry must respond. Teen Bible Adventures admins can also see this report.'
+                  : 'Confidential. Only Teen Bible Adventures can see this — your church cannot.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
+            ),
+          ],
           const SizedBox(height: 16),
           TextField(
             key: const Key('report-message'),
@@ -144,9 +195,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               'Report anonymously',
               style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
             ),
-            subtitle: const Text(
-              'Your name stays hidden in the public report. App administrators still keep your account link for safety.',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
+            subtitle: Text(
+              _destination == 'church' && showDestination
+                  ? 'Your name stays hidden from the ministry. App administrators keep a safety link when possible.'
+                  : 'Your name stays hidden in the public report. App administrators still keep your account link for safety.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
             ),
             value: _anonymous,
             onChanged: _sending ? null : (value) => setState(() => _anonymous = value),

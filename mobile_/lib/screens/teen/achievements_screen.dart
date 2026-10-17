@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
-import '../../models/game_controller.dart';
+import '../../services/api_client.dart';
 import '../../quest_milestones.dart';
 import '../../services/engagement_service.dart';
 import '../../theme.dart';
 import '../adult/child_achievement_record_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
-
-class GroupPosition {
-  const GroupPosition({required this.className, required this.entry});
-
-  final String className;
-  final LeaderboardEntry entry;
-}
 
 bool isFamilyAchievementsHub(AuthSession session) =>
     session.isAdult && session.familyId != null;
@@ -39,9 +31,9 @@ String activityCaption(String type) {
     case 'VIDEO_WATCH':
       return 'Watched a lesson video';
     case 'TEEN_QUEST_OBJS':
-      return 'Quest quiz';
-    case 'TEEN_QUEST_SCRAMBLE':
-      return 'Quest activity';
+      return 'Quiz';
+    case 'PUZZLE_SOLVE':
+      return 'Puzzle';
     case 'PRAYER_DECLARATION':
       return 'Prayer declaration';
     default:
@@ -55,93 +47,63 @@ String compactWhen(DateTime at) {
   return '${months[local.month - 1]} ${local.day}';
 }
 
-List<GroupPosition> positionsForChild(List<GroupPosition> positions, FamilyChildScore child) {
-  final first = child.name.trim().split(' ').first;
-  return positions.where((position) {
-    final row = position.entry;
-    if (row.childId != null && row.childId == child.childId) return true;
-    return row.childName == first;
-  }).toList();
-}
-
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({
     super.key,
     this.embedded = false,
-    this.weeksCompletedOverride,
-    this.familySummaryOverride,
-    this.groupPositionsOverride,
+    this.achievementsOverride,
   });
 
   final bool embedded;
-  final int? weeksCompletedOverride;
-  final FamilySummary? familySummaryOverride;
-  final List<GroupPosition>? groupPositionsOverride;
+  final Achievements? achievementsOverride;
 
   @override
   State<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
 class _AchievementsScreenState extends State<AchievementsScreen> {
-  FamilySummary? _summary;
-  List<GroupPosition> _positions = const [];
+  Achievements? _data;
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _summary = widget.familySummaryOverride;
-    _positions = widget.groupPositionsOverride ?? const [];
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (widget.familySummaryOverride == null) _loadFamily();
-      if (widget.groupPositionsOverride == null) _loadPositions();
-    });
-  }
-
-  Future<void> _loadFamily() async {
-    final session = context.read<AuthSession>();
-    if (!isFamilyAchievementsHub(session)) return;
-    try {
-      final summary = await context.read<EngagementService>().getFamilySummary();
-      if (mounted) setState(() => _summary = summary);
-    } catch (_) {}
-  }
-
-  Future<void> _loadPositions() async {
-    final session = context.read<AuthSession>();
-    if (!isFamilyAchievementsHub(session)) return;
-    EngagementService engagement;
-    try {
-      engagement = context.read<EngagementService>();
-    } catch (_) {
-      return;
+    final override = widget.achievementsOverride;
+    if (override != null) {
+      _data = override;
+      _loading = false;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
     }
-    final children = _summary?.children ?? const <FamilyChildScore>[];
-    try {
-      final places = await engagement.familyGroupPlaces(
-        children: children,
-        classes: [
-          for (final cls in session.allAssignedClasses) (id: cls.id, name: cls.name),
-        ],
-      );
-      if (mounted) {
-        setState(() {
-          _positions = [
-            for (final place in places) GroupPosition(className: place.className, entry: place.entry),
-          ];
-        });
-      }
-    } catch (_) {}
   }
 
-  void _openChild(FamilyChildScore child) {
+  Future<void> _load() async {
+    if (widget.achievementsOverride != null) return;
+    setState(() {
+      _loading = _data == null;
+      _error = null;
+    });
+    try {
+      final data = await context.read<EngagementService>().getAchievements();
+      if (mounted) setState(() => _data = data);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not load achievements.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openChild(AchievementRecord child) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ChildAchievementRecordScreen(
           child: child,
-          familyJar: _summary?.familyJar ?? _summary?.familyAskScore ?? 0,
-          activities: _summary?.recent ?? const [],
-          positions: positionsForChild(_positions, child),
+          familyPoints: _data?.familyPoints ?? 0,
         ),
       ),
     );
@@ -150,44 +112,62 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthSession>();
-    final game = context.watch<GameController>();
-    final familyHub = isFamilyAchievementsHub(session);
-    final children = _summary?.children ?? const <FamilyChildScore>[];
-    final weeksCompleted = widget.weeksCompletedOverride ??
-        SampleWeekProgress.weeksFromParts(game.completedVideoParts);
-    final childPoints = children.fold<int>(0, (sum, child) => sum + child.askScore);
-    final familyPoints = _summary?.familyAskScore ?? childPoints;
-    final points = familyHub ? familyPoints + game.score : game.score;
-    final streak = familyHub
-        ? children.fold<int>(0, (max, c) => c.streak > max ? c.streak : max).clamp(0, 999)
-        : game.streakDays;
-    final current = latestMilestone(weeksCompleted);
-    final next = nextMilestone(weeksCompleted);
+    final data = _data;
+    final explorers = data?.explorers ?? const <AchievementRecord>[];
+    final self = data?.self ?? const AchievementRecord();
+    final tracked = data?.tracked ?? false;
+    // Adult explorers with their own ledger stay on the personal view; family hub
+    // is for parents looking after other explorers.
+    final familyHub =
+        explorers.isNotEmpty || (isFamilyAchievementsHub(session) && !tracked);
 
-    final body = ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-      children: [
-        Text(
-          familyHub ? 'Family achievements' : ' Achievements',
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 24,
-            letterSpacing: -0.5,
-            color: AppColors.navy,
-          ),
+    final ownWeeks = tracked ? self.weeksCompleted : 0;
+    final weeksCompleted = familyHub
+        ? explorers.fold<int>(ownWeeks, (max, e) => e.weeksCompleted > max ? e.weeksCompleted : max)
+        : self.weeksCompleted;
+    final points = familyHub
+        ? (data?.familyPoints ?? 0) + (tracked ? self.points : 0)
+        : self.points;
+    final streak = familyHub
+        ? explorers.fold<int>(tracked ? self.streak : 0, (max, e) => e.streak > max ? e.streak : max)
+        : self.streak;
+    final awards = data?.awards ?? knownQuestMilestones;
+
+    final Widget body;
+    if (_loading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (data == null) {
+      body = _LoadError(message: _error ?? 'Could not load achievements.', onRetry: _load);
+    } else {
+      body = RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          children: [
+            Text(
+              familyHub ? 'Family achievements' : 'Achievements',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 24,
+                letterSpacing: -0.5,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 18),
+            ..._achievementContent(
+              streak: streak,
+              points: points,
+              weeksCompleted: weeksCompleted,
+              awards: awards,
+              groups: familyHub && !tracked ? const [] : self.groups,
+              children: familyHub ? explorers : const [],
+              onOpenChild: familyHub ? _openChild : null,
+            ),
+          ],
         ),
-        const SizedBox(height: 18),
-        ..._achievementContent(
-          streak: streak,
-          points: points,
-          weeksCompleted: weeksCompleted,
-          current: current,
-          next: next,
-          children: familyHub ? children : const [],
-          onOpenChild: familyHub ? _openChild : null,
-        ),
-      ],
-    );
+      );
+    }
 
     if (widget.embedded) return Material(color: AppColors.cream, child: body);
     return Scaffold(
@@ -208,10 +188,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     required int streak,
     required int points,
     required int weeksCompleted,
-    required QuestMilestone current,
-    required QuestMilestone? next,
-    List<FamilyChildScore> children = const [],
-    ValueChanged<FamilyChildScore>? onOpenChild,
+    required List<QuestMilestone> awards,
+    List<GroupPlace> groups = const [],
+    List<AchievementRecord> children = const [],
+    ValueChanged<AchievementRecord>? onOpenChild,
   }) {
     return [
       _RecordCard(
@@ -237,7 +217,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
       ),
       const SizedBox(height: 12),
-      _AwardsRow(weeksCompleted: weeksCompleted, currentTitle: current.title, next: next),
+      _AwardsRow(weeksCompleted: weeksCompleted, awards: awards),
+      if (groups.isNotEmpty) ...[
+        const SizedBox(height: 22),
+        const Text(
+          'Group positions',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
+        ),
+        const SizedBox(height: 12),
+        for (final place in groups) GroupPlaceTile(place: place),
+      ],
       if (onOpenChild != null && children.isNotEmpty) ...[
         const SizedBox(height: 22),
         const Text(
@@ -250,10 +239,10 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             key: Key('explorer-tile-${child.childId}'),
             padding: const EdgeInsets.only(bottom: 10),
             child: AdventureListCard(
-              title: child.name.split(' ').first,
+              title: child.firstName,
               subtitle: profileMilestoneLine(
-                name: child.name.split(' ').first,
-                weeksCompleted: weeksCompleted,
+                name: child.firstName,
+                weeksCompleted: child.weeksCompleted,
               ),
               icon: Icons.person_rounded,
               accent: AdventureListAccent.teal,
@@ -262,7 +251,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '${child.askScore} pts',
+                    '${child.points} pts',
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppColors.textSecondary,
@@ -378,32 +367,23 @@ class _RecordCard extends StatelessWidget {
 class _AwardsRow extends StatelessWidget {
   const _AwardsRow({
     required this.weeksCompleted,
-    required this.currentTitle,
-    required this.next,
+    required this.awards,
   });
 
   final int weeksCompleted;
-  final String currentTitle;
-  final QuestMilestone? next;
+  final List<QuestMilestone> awards;
 
   @override
   Widget build(BuildContext context) {
-    final awards = <({QuestMilestone milestone, bool earned, bool isNew})>[
-      for (final m in knownQuestMilestones)
+    final current = latestMilestone(weeksCompleted, awards);
+    final unique = <({QuestMilestone milestone, bool earned, bool isNew})>[
+      for (final m in awards)
         (
           milestone: m,
           earned: weeksCompleted >= m.weekComplete,
-          isNew: latestMilestone(weeksCompleted).title == m.title && weeksCompleted >= m.weekComplete,
+          isNew: current != null && current.title == m.title && weeksCompleted >= m.weekComplete,
         ),
-      if (next != null)
-        (milestone: next!, earned: false, isNew: false),
     ];
-    // Dedupe if next is already in known list
-    final seen = <String>{};
-    final unique = <({QuestMilestone milestone, bool earned, bool isNew})>[];
-    for (final a in awards) {
-      if (seen.add(a.milestone.title)) unique.add(a);
-    }
 
     return SizedBox(
       height: 112,
@@ -536,6 +516,65 @@ class _AwardBadge extends StatelessWidget {
   }
 }
 
-class SampleWeekProgress {
-  static int weeksFromParts(int parts) => parts > 0 ? 1 : 0;
+String groupKindLabel(String kind) {
+  switch (kind.toUpperCase()) {
+    case 'FAMILY':
+      return 'Family';
+    case 'CHURCH':
+      return 'Church';
+    default:
+      return 'Class';
+  }
+}
+
+class GroupPlaceTile extends StatelessWidget {
+  const GroupPlaceTile({super.key, required this.place});
+
+  final GroupPlace place;
+
+  @override
+  Widget build(BuildContext context) {
+    final of = place.memberCount > 0 ? ' of ${place.memberCount}' : '';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AdventureListCard(
+        title: place.name,
+        subtitle: '${groupKindLabel(place.kind)} · ${ordinalRank(place.rank)}$of · ${place.points} pts',
+        icon: Icons.emoji_events_rounded,
+        accent: AdventureListAccent.gold,
+        trailing: Text(
+          ordinalRank(place.rank),
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            color: AppColors.gold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  const _LoadError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: const Text('Try again')),
+          ],
+        ),
+      ),
+    );
+  }
 }

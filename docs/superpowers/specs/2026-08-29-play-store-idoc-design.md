@@ -1,4 +1,4 @@
-# ASK Hub Teen — Play Store Readiness IDOC
+# Teen Bible Adventures Teen — Play Store Readiness IDOC
 
 **Date:** 2026-08-29  
 **Companion:** [fast-build IDOC](./2026-08-29-fast-build-idoc-design.md)  

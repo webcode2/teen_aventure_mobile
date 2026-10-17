@@ -2,12 +2,22 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { Brand } from './ui';
 
+type PublicTab = 'home' | 'about' | 'privacy' | 'contact' | 'ministry' | 'portal';
+
 export interface PublicLayoutProps {
   children: ReactNode;
-  activeTab?: 'home' | 'about' | 'privacy' | 'contact';
+  activeTab?: PublicTab;
+  /** CMS mini preview: compact chrome that fits a narrow column. */
+  stacked?: boolean;
 }
 
-export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'privacy' | 'contact' }) {
+export function PublicHeader({
+  activeTab,
+  stacked = false,
+}: {
+  activeTab?: PublicTab;
+  stacked?: boolean;
+}) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -16,6 +26,19 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
     navigate(path);
   };
 
+  if (stacked) {
+    return (
+      <header className="border-b border-border/80 bg-surface px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <Brand size="header" />
+          <span className="rounded-lg border border-navy px-2.5 py-1 text-[10px] font-bold text-navy">
+            Sign up / Login
+          </span>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <>
       {/* Top Banner Alert for Public / Christian Faith */}
@@ -23,7 +46,7 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
         <div className="flex items-center gap-2 mx-auto text-center flex-wrap justify-center">
           <span className="inline-block w-2 h-2 rounded-full bg-gold shrink-0" />
           <span className="font-medium text-cream/90">
-            Faith-Rooted Christian Discipleship for Youth &amp; Families &bull; 100% Ad-Free
+            Faith-Rooted Christian Discipleship for Teenagers &amp; Families &bull; 100% Ad-Free
           </span>
           <button
             type="button"
@@ -36,7 +59,7 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
       </div>
 
       {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-border/80 px-4 sm:px-8 py-3.5">
+      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-border/80 px-4 sm:px-8 py-2">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div
             onClick={() => handleNavClick('/')}
@@ -45,7 +68,7 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && handleNavClick('/')}
           >
-            <Brand size="md" />
+            <Brand size="header" />
           </div>
 
           {/* Desktop Nav */}
@@ -68,16 +91,29 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
             >
               About Us
             </button>
+            <button
+              type="button"
+              onClick={() => handleNavClick('/contact')}
+              className={`transition-colors cursor-pointer ${
+                activeTab === 'contact' ? 'text-navy font-extrabold' : 'hover:text-navy'
+              }`}
+            >
+              Contact
+            </button>
           </nav>
 
           {/* Action CTAs */}
           <div className="hidden sm:flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => handleNavClick('/contact')}
-              className="px-5 py-2.5 rounded-xl bg-navy hover:bg-teal text-white text-sm font-bold transition-all cursor-pointer shadow-2xs hover:-translate-y-0.5"
+              onClick={() => handleNavClick('/ministry')}
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer shadow-2xs hover:-translate-y-0.5 ${
+                activeTab === 'ministry'
+                  ? 'bg-teal text-white'
+                  : 'border border-navy text-navy hover:bg-navy hover:text-white'
+              }`}
             >
-              Contact Us →
+              Sign up / Login
             </button>
           </div>
 
@@ -121,13 +157,24 @@ export function PublicHeader({ activeTab }: { activeTab?: 'home' | 'about' | 'pr
             >
               About Us
             </button>
-            <div className="pt-2 border-t border-border/60 flex items-center">
+            <button
+              type="button"
+              onClick={() => handleNavClick('/contact')}
+              className={`text-left px-3.5 py-2.5 rounded-xl text-sm font-bold ${
+                activeTab === 'contact' ? 'bg-teal-tint text-teal font-extrabold' : 'text-navy hover:bg-surface-2'
+              }`}
+            >
+              Contact Us
+            </button>
+            <div className="pt-2 border-t border-border/60 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleNavClick('/contact')}
-                className="w-full text-center py-2.5 rounded-xl bg-navy text-white text-sm font-bold"
+                onClick={() => handleNavClick('/ministry')}
+                className={`flex-1 text-center py-2.5 rounded-xl text-sm font-bold ${
+                  activeTab === 'ministry' ? 'bg-teal text-white' : 'border border-navy text-navy'
+                }`}
               >
-                Contact Us →
+                Sign up / Login
               </button>
             </div>
           </div>
@@ -214,14 +261,18 @@ export function AppStoreButton({
   );
 }
 
-export function PublicFooter() {
+export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
   const navigate = useNavigate();
 
   return (
-    <footer className="mt-auto bg-navy text-cream py-12 px-4 sm:px-8 text-xs">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 border-b border-white/10 pb-10">
+    <footer className={`mt-auto bg-navy text-cream text-xs ${stacked ? 'py-8 px-4' : 'py-12 px-4 sm:px-8'}`}>
+      <div
+        className={`max-w-7xl mx-auto grid gap-8 border-b border-white/10 pb-10 ${
+          stacked ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-4'
+        }`}
+      >
         {/* Brand Column */}
-        <div className="flex flex-col gap-3 md:col-span-1">
+        <div className={`flex flex-col gap-3 ${stacked ? '' : 'md:col-span-1'}`}>
           <div className="flex items-center gap-2">
             <span className="font-bold text-white text-base">Teen Bible Adventures</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gold font-bold">
@@ -229,14 +280,14 @@ export function PublicFooter() {
             </span>
           </div>
           <p className="text-cream/70 text-xs leading-relaxed">
-            Christian faith discipleship designed for contemporary youth. Connecting teens and families through interactive scripture journeys.
+            Christian faith discipleship designed for contemporary teenagers. Connecting teens and families through interactive scripture journeys.
           </p>
           <div className="text-[11px] text-cream/50 mt-1">
             Empowered by Teen Bible Adventures &bull; 100% Ad-free &bull; Parent-verified
           </div>
         </div>
 
-        {/* Navigation Column */}
+        {/* Explore Platform Column */}
         <div className="flex flex-col gap-2.5">
           <h4 className="font-bold text-gold text-xs uppercase tracking-wider">Explore Platform</h4>
           <a href="/#quests" className="text-cream/70 hover:text-white transition-colors">
@@ -257,29 +308,45 @@ export function PublicFooter() {
           </button>
         </div>
 
-        {/* Company & Info Column */}
+        {/* Portals & Leadership Column */}
         <div className="flex flex-col gap-2.5">
-          <h4 className="font-bold text-gold text-xs uppercase tracking-wider">About &amp; Trust</h4>
+          <h4 className="font-bold text-gold text-xs uppercase tracking-wider">Portals &amp; Operations</h4>
           <button
             type="button"
-            onClick={() => navigate('/about')}
-            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
+            onClick={() => navigate('/ministry')}
+            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            About Us &amp; Mission
+            <span>Ministry</span>
+            <span className="text-xs">⛪</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate('/contact')}
-            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
+            onClick={() => navigate('/app/dashboard')}
+            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            Support &amp; Sponsorship
+            <span>Admin Dashboard</span>
+            <span className="text-xs">🛡️</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate('/privacy')}
+            onClick={() => navigate('/p/privacy-policy')}
             className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
           >
-            Privacy Policy &amp; COPPA
+            Privacy Policy
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/p/terms-of-service')}
+            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
+          >
+            Terms of Service
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/p/data-collection')}
+            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
+          >
+            Data Collection
           </button>
           <button
             type="button"
@@ -296,56 +363,68 @@ export function PublicFooter() {
           <p className="text-cream/70 text-xs leading-relaxed">
             Download Teen Bible Adventures for Android and iOS devices.
           </p>
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 pt-1">
-            <GooglePlayButton />
-            <AppStoreButton />
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            <GooglePlayButton className="w-[168px] shrink-0 justify-start" />
+            <AppStoreButton className="w-[168px] shrink-0 justify-start" />
           </div>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 text-xs text-cream/60 border-t border-white/5">
+      <div
+        className={`max-w-7xl mx-auto flex items-center justify-between gap-3 pt-6 text-xs text-cream/60 ${
+          stacked ? 'flex-col text-center' : 'flex-col sm:flex-row'
+        }`}
+      >
         <p>&copy; {new Date().getFullYear()} Teen Bible Adventures. All rights reserved.</p>
-        <div className="flex items-center gap-4 flex-wrap justify-center">
+        <div className={`flex items-center gap-4 text-cream/70 ${stacked ? 'flex-wrap justify-center' : ''}`}>
+          <button
+            type="button"
+            onClick={() => navigate('/ministry')}
+            className="hover:text-gold transition-colors cursor-pointer"
+          >
+            Ministry
+          </button>
+          <span>&bull;</span>
+          <button
+            type="button"
+            onClick={() => navigate('/app/dashboard')}
+            className="hover:text-gold transition-colors cursor-pointer"
+          >
+            Admin Dashboard
+          </button>
+          <span>&bull;</span>
           <button
             type="button"
             onClick={() => navigate('/privacy')}
-            className="hover:text-gold transition-colors cursor-pointer text-cream/75 hover:underline"
+            className="hover:text-gold transition-colors cursor-pointer"
           >
-            Privacy Policy
+            Privacy
           </button>
           <span>&bull;</span>
           <button
             type="button"
-            onClick={() => navigate('/contact')}
-            className="hover:text-gold transition-colors cursor-pointer text-cream/75 hover:underline"
+            onClick={() => navigate('/terms')}
+            className="hover:text-gold transition-colors cursor-pointer"
           >
-            Support &amp; Sponsorship
+            Terms
           </button>
-          <span>&bull;</span>
-          <button
-            type="button"
-            onClick={() => navigate('/contact')}
-            className="hover:text-gold transition-colors cursor-pointer text-cream/75 hover:underline"
-          >
-            Contact
-          </button>
-          <span>&bull;</span>
-          <span>Zero Advertising</span>
-          <span>&bull;</span>
-          <span>Family-Verified Discipleship</span>
         </div>
       </div>
     </footer>
   );
 }
 
-export function PublicLayout({ children, activeTab }: PublicLayoutProps) {
+export function PublicLayout({ children, activeTab, stacked = false }: PublicLayoutProps) {
   return (
-    <div className="min-h-screen bg-cream text-navy flex flex-col selection:bg-teal selection:text-white">
-      <PublicHeader activeTab={activeTab} />
+    <div
+      className={`bg-cream text-navy flex flex-col selection:bg-teal selection:text-white ${
+        stacked ? 'min-h-0' : 'min-h-screen'
+      }`}
+    >
+      <PublicHeader activeTab={activeTab} stacked={stacked} />
       <main className="flex-1">{children}</main>
-      <PublicFooter />
+      <PublicFooter stacked={stacked} />
     </div>
   );
 }

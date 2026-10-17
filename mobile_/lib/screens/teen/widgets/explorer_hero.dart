@@ -1,56 +1,75 @@
 import 'package:flutter/material.dart';
+import '../../../providers/hero_copy.dart';
 import '../../../theme.dart';
 import '../../shared/widgets/mascot_scene.dart';
 
 class ExplorerHero extends StatelessWidget {
-  const ExplorerHero({super.key});
+  const ExplorerHero({
+    super.key,
+    this.greeting = HeroCopy.defaultGreeting,
+    this.tagline = HeroCopy.defaultTagline,
+    this.abi,
+    this.zack,
+  });
+
+  final String greeting;
+  final String tagline;
+  final ImageProvider? abi;
+  final ImageProvider? zack;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
-      child: const CustomPaint(
-        painter: _ExplorerWashPainter(),
+      child: CustomPaint(
+        painter: const _ExplorerWashPainter(),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 2, 0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 6, bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.explore, color: AppColors.gold, size: 22),
-                      SizedBox(height: 6),
-                      Text(
-                        'Hey, Explorer!',
-                        style: TextStyle(
-                          color: AppColors.navy,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          height: 1.05,
-                          letterSpacing: -0.8,
+          padding: const EdgeInsets.fromLTRB(16, 14, 2, 0),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.explore, color: AppColors.gold, size: 22),
+                        const SizedBox(height: 6),
+                        Text(
+                          greeting,
+                          style: const TextStyle(
+                            color: AppColors.navy,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                            height: 1.05,
+                            letterSpacing: -0.8,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        "Ready for today's adventure in God's Word?",
-                        style: TextStyle(
-                          color: AppColors.navy,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                          height: 1.3,
-                          letterSpacing: -0.2,
+                        const SizedBox(height: 6),
+                        Text(
+                          tagline,
+                          style: const TextStyle(
+                            color: AppColors.navy,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            height: 1.3,
+                            letterSpacing: -0.2,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(child: MascotScene(height: 168)),
-            ],
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: MascotScene(height: 168, abi: abi, zack: zack),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

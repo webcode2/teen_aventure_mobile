@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../adventure_assets.dart';
+import '../../../providers/hero_copy.dart';
 
 class MascotScene extends StatelessWidget {
-  const MascotScene({super.key, this.height = 168});
+  const MascotScene({super.key, this.height = 168, this.abi, this.zack});
 
   final double height;
+  final ImageProvider? abi;
+  final ImageProvider? zack;
 
   @override
   Widget build(BuildContext context) {
+    final dashboard = _dashboardHero(context);
+    final abiImage = abi ?? dashboard?.abiImage;
+    final zackImage = zack ?? dashboard?.zackImage;
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -19,18 +26,28 @@ class MascotScene extends StatelessWidget {
           final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
               ? constraints.maxWidth
               : null;
-          return _MascotBody(height: h, maxWidth: w);
+          return _MascotBody(height: h, maxWidth: w, abi: abiImage, zack: zackImage);
         },
       ),
     );
   }
 }
 
+HeroCopyController? _dashboardHero(BuildContext context) {
+  try {
+    return context.watch<HeroCopyController>();
+  } catch (_) {
+    return null;
+  }
+}
+
 class _MascotBody extends StatelessWidget {
-  const _MascotBody({required this.height, this.maxWidth});
+  const _MascotBody({required this.height, this.maxWidth, this.abi, this.zack});
 
   final double height;
   final double? maxWidth;
+  final ImageProvider? abi;
+  final ImageProvider? zack;
 
   // Pixel aspect from assets/abi.png and assets/zack.png.
   static const _abiAspect = 1214 / 1295;
@@ -85,7 +102,8 @@ class _MascotBody extends StatelessWidget {
                       left: 0,
                       bottom: bottomPad,
                       child: _MascotColumn(
-                        image: AdventureAssets.abi,
+                        image: abi ?? const AssetImage(AdventureAssets.abi),
+                        fallback: AdventureAssets.abi,
                         imageHeight: abiHeight,
                         imageWidth: abiWidth,
                       ),
@@ -94,7 +112,8 @@ class _MascotBody extends StatelessWidget {
                       right: 0,
                       bottom: bottomPad,
                       child: _MascotColumn(
-                        image: AdventureAssets.zack,
+                        image: zack ?? const AssetImage(AdventureAssets.zack),
+                        fallback: AdventureAssets.zack,
                         imageHeight: zackHeight,
                         imageWidth: zackWidth,
                       ),
@@ -113,11 +132,13 @@ class _MascotBody extends StatelessWidget {
 class _MascotColumn extends StatelessWidget {
   const _MascotColumn({
     required this.image,
+    required this.fallback,
     required this.imageHeight,
     required this.imageWidth,
   });
 
-  final String image;
+  final ImageProvider image;
+  final String fallback;
   final double imageHeight;
   final double imageWidth;
 
@@ -127,10 +148,20 @@ class _MascotColumn extends StatelessWidget {
       child: SizedBox(
         width: imageWidth,
         height: imageHeight,
-        child: AdventureArt(
-          image,
+        child: Image(
+          image: image,
           width: imageWidth,
           height: imageHeight,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => Image.asset(
+            fallback,
+            width: imageWidth,
+            height: imageHeight,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          ),
         ),
       ),
     );

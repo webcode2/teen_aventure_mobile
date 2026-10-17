@@ -25,15 +25,23 @@ export function legacyHashToPath(hash: string): string | null {
   if (page === 'landing' || page === 'home' || page === 'public') return '/';
   if (page === 'about') return '/about';
   if (page === 'privacy') return '/privacy';
+  if (page === 'terms') return '/terms';
+  if (page === 'legal') return '/app/dashboard/legal';
   if (page === 'contact') return '/contact';
   if (page === 'login') return '/app/login';
   if (page === 'forgot') return '/app/forgot';
   if (page === 'reset') return `/app/reset${qs}`;
-  if (page === 'pastor' || page === 'church-portal') {
+  if (page === 'pastor' || page === 'church-portal' || page === 'groups') {
     const church = sub || new URLSearchParams(queryPart).get('church') || '';
-    return church ? `/groups/${church}` : '/groups';
+    return church ? `/ministry/${church}/families` : '/ministry';
   }
-  if (page === 'church') return sub ? `/groups/${sub}` : '/groups';
+  if (page === 'church') return sub ? `/ministry/${sub}/families` : '/ministry';
+  if (page === 'ministry') {
+    if (!sub) return '/ministry';
+    const section = segments[2] || '';
+    if (section) return `/ministry/${sub}/${section}`;
+    return `/ministry/${sub}/families`;
+  }
   if (page === 'dashboard' || page === '') return '/app/dashboard';
   if ((TABS as readonly string[]).includes(page) && page !== 'dashboard') {
     return `/app/dashboard/${page}${qs}`;

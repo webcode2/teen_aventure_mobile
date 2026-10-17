@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'week_quest_flow.dart';
 import '../../models/game_controller.dart';
 import '../../theme.dart';
 import 'widgets/grid_panel.dart';
@@ -7,6 +10,7 @@ import 'widgets/clue_panel.dart';
 import 'widgets/custom_keyboard.dart';
 import 'widgets/verse_dialog.dart';
 import 'widgets/puzzle_status_cards.dart';
+import 'widgets/puzzle_win_dialog.dart';
 
 class PuzzleScreen extends StatefulWidget {
   const PuzzleScreen({super.key});
@@ -17,6 +21,28 @@ class PuzzleScreen extends StatefulWidget {
 
 class _PuzzleScreenState extends State<PuzzleScreen> {
   bool _handledCatchUp = false;
+  bool _handledWin = false;
+  Timer? _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<GameController>().beginPuzzleTimer();
+    });
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final game = context.read<GameController>();
+      if (!game.isPuzzleComplete) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +65,10 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
             child: SafeArea(
               child: PuzzleRejectCard(
                 message: game.puzzleStatusMessage ??
-                    'This puzzle couldn’t be loaded.',
+                    kPuzzleTechnicalIssueMessage,
+                onRetry: () => game.loadLiveFromDatabase(
+                  puzzleId: game.boundPuzzleId,
+                ),
               ),
             ),
           ),
@@ -61,6 +90,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isTabletLandscape = screenWidth > 720;
+    final elapsedLabel = GameController.formatPuzzleElapsed(game.puzzleElapsed);
 
     return Scaffold(
       body: Container(
@@ -68,7 +98,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Compact Top Bar (Replaces bulky AppBar to maximize full screen)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
@@ -80,8 +109,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
-
-                    // Compact Progress Bar & Counter
                     Expanded(
                       child: Row(
                         children: [
@@ -101,7 +128,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${game.solvedWordsCount}/${game.totalWords} words',
+                            '${game.solvedWordsCount}/${game.totalWords}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
@@ -112,8 +139,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-
-                    // Gems & Score Counter Pill
                     Container(
                       padding:
                           const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -124,6 +149,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          const Icon(Icons.timer_outlined,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            elapsedLabel,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           const Text('💎', style: TextStyle(fontSize: 12)),
                           const SizedBox(width: 3),
                           Text(
@@ -134,25 +172,12 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                               fontSize: 12,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const Text('⭐', style: TextStyle(fontSize: 12)),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${game.score}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Main Game Split-Screen Body
               Expanded(
                 child: Container(
                   color: TeenAppTheme.cream,
@@ -187,8 +212,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                         ),
                 ),
               ),
-
-              // Custom QWERTY Keyboard
               const CustomKeyboard(),
             ],
           ),
@@ -206,7 +229,23 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       context: context,
       builder: (_) => VerseDialog(word: word),
     );
-    if (!mounted || _handledCatchUp || !game.weekQuest.isCaughtUp) return;
+    if (!mounted || !game.isPuzzleComplete) return;
+
+    if (!_handledWin) {
+      _handledWin = true;
+      _clock?.cancel();
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PuzzleWinDialog(elapsed: game.puzzleElapsed),
+      );
+      if (!mounted) return;
+      await WeekQuestFlow.recordPuzzleIfSolved(context);
+    }
+
+    if (!mounted || _handledCatchUp) return;
+    final week = WeekQuestFlow.progress(context);
+    if (!(week.videosFinished && week.quizDone)) return;
     _handledCatchUp = true;
     await showDialog<void>(
       context: context,

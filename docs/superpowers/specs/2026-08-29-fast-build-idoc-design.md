@@ -1,4 +1,4 @@
-# ASK Hub Teen — Fast Build IDOC
+# Teen Bible Adventures Teen — Fast Build IDOC
 
 **Date:** 2026-08-29  
 **Type:** Implementation document (status + remaining work)  

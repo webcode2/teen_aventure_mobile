@@ -36,7 +36,7 @@ class VideoProvider extends ChangeNotifier {
             thumbnailUrl: first?.thumbnailUrl ?? '',
             keyVerse: q.scripture,
             keyVerseText: q.content,
-            takeaways: const [],
+            takeaways: first?.takeaways ?? const [],
             timestamps: const [],
             quizQuestions: q.objectiveQuiz.map((item) => item.toQuizQuestion()).toList(),
             videoUrl: first?.videoUrl ?? '',

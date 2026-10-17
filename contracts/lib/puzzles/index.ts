@@ -8,3 +8,5 @@ export * from './compile.js';
 export * from './drop.js';
 export * from './snap.js';
 export * from './publish.js';
+export * from './matching-publish.js';
+export * from './quest-game.js';

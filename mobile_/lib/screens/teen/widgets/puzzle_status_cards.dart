@@ -2,29 +2,31 @@ import 'package:flutter/material.dart';
 
 import '../../../theme.dart';
 
-/// Shown when a puzzle fails the thin client guard (bounds / collision / empty).
+/// Shown when the live puzzle is missing or fails to build for play.
 class PuzzleRejectCard extends StatelessWidget {
   const PuzzleRejectCard({
     super.key,
     required this.message,
-    this.onSkip,
-    this.onReport,
+    this.onBack,
+    this.onRetry,
   });
 
   final String message;
-  final VoidCallback? onSkip;
-  final VoidCallback? onReport;
+  final VoidCallback? onBack;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     return _PuzzleStatusCard(
       icon: Icons.error_outline_rounded,
-      title: 'This puzzle can’t be played',
+      title: 'Technical issue encountered',
       body: message,
-      primaryLabel: 'Skip',
-      onPrimary: onSkip ?? () => Navigator.maybePop(context),
-      secondaryLabel: 'Report',
-      onSecondary: onReport,
+      primaryLabel: onRetry != null ? 'Try again' : 'Back',
+      onPrimary: onRetry ?? onBack ?? () => Navigator.maybePop(context),
+      secondaryLabel: onRetry != null ? 'Back' : null,
+      onSecondary: onRetry != null
+          ? (onBack ?? () => Navigator.maybePop(context))
+          : null,
     );
   }
 }

@@ -10,23 +10,17 @@ class ChildAchievementRecordScreen extends StatelessWidget {
   const ChildAchievementRecordScreen({
     super.key,
     required this.child,
-    required this.familyJar,
-    this.activities = const [],
-    this.positions = const [],
+    required this.familyPoints,
   });
 
-  final FamilyChildScore child;
-  final int familyJar;
-  final List<FamilyActivity> activities;
-  final List<GroupPosition> positions;
+  final AchievementRecord child;
+  final int familyPoints;
 
   @override
   Widget build(BuildContext context) {
-    final first = child.name.trim().split(' ').first;
-    final ownActivities =
-        activities.where((a) => a.childId == child.childId).toList();
+    final first = child.firstName;
     final share =
-        familyJar <= 0 ? 0 : ((child.askScore / familyJar) * 100).round();
+        familyPoints <= 0 ? 0 : ((child.points / familyPoints) * 100).round();
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -39,9 +33,8 @@ class ChildAchievementRecordScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           CircleStatsCard(
-            
             title: '$first’s Journey',
-            subtitle: 'Share, streak, and family points',
+            subtitle: profileMilestoneLine(name: first, weeksCompleted: child.weeksCompleted),
             stats: [
               CircleStat(
                 icon: Icons.pie_chart_rounded,
@@ -58,11 +51,20 @@ class ChildAchievementRecordScreen extends StatelessWidget {
               CircleStat(
                 icon: Icons.stars_rounded,
                 iconColor: AppColors.gold,
-                value: '${child.askScore}',
+                value: '${child.points}',
                 label: 'Points',
                 emphasize: true,
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          AdventureListCard(
+            title: child.totalWeeks > 0
+                ? '${child.weeksCompleted} of ${child.totalWeeks} weeks complete'
+                : '${child.weeksCompleted} weeks complete',
+            subtitle: nextMilestoneLine(child.weeksCompleted),
+            icon: Icons.flag_rounded,
+            accent: AdventureListAccent.teal,
           ),
           const SizedBox(height: 20),
           const Text(
@@ -73,32 +75,15 @@ class ChildAchievementRecordScreen extends StatelessWidget {
                 color: AppColors.navy),
           ),
           const SizedBox(height: 10),
-          if (positions.isEmpty)
+          if (child.groups.isEmpty)
             const AdventureListCard(
               title: 'No group ranks yet',
-              subtitle: 'Finish an opened class quiz to appear here.',
+              subtitle: 'Join a family, church or class group to see ranks here.',
               icon: Icons.groups_rounded,
               accent: AdventureListAccent.navy,
             )
           else
-            for (final row in positions) ...[
-              AdventureListCard(
-                title: row.className,
-                subtitle:
-                    '${ordinalRank(row.entry.rank)} · ${row.entry.points} pts',
-                icon: Icons.emoji_events_rounded,
-                accent: AdventureListAccent.gold,
-                trailing: Text(
-                  ordinalRank(row.entry.rank),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.gold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
+            for (final place in child.groups) GroupPlaceTile(place: place),
           const SizedBox(height: 10),
           const Text(
             'Journey',
@@ -108,14 +93,14 @@ class ChildAchievementRecordScreen extends StatelessWidget {
                 color: AppColors.navy),
           ),
           const SizedBox(height: 10),
-          if (ownActivities.isEmpty)
+          if (child.recent.isEmpty)
             const AdventureListCard(
               title: 'No scored activities yet',
               icon: Icons.timeline_rounded,
               accent: AdventureListAccent.navy,
             )
           else
-            for (final activity in ownActivities) ...[
+            for (final activity in child.recent) ...[
               AdventureListCard(
                 title: activityCaption(activity.activityType),
                 subtitle: compactWhen(activity.createdAt),

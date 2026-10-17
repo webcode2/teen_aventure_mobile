@@ -12,9 +12,12 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "askhub_alerts",
-                "ASK Hub alerts",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
+                "Teen Bible Adventures alerts",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = "Cheers, group notes, and account alerts"
+                enableVibration(true)
+            }
             getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)
         }

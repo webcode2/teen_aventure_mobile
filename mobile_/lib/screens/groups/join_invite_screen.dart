@@ -22,12 +22,18 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     with WidgetsBindingObserver {
   final _token = TextEditingController();
   InviteQrScannerController? _scanner;
+  Key _scannerKey = UniqueKey();
   Map<String, dynamic>? _preview;
   String? _error;
+  String? _selectedChildId;
   bool _busy = false;
   bool _handlingScan = false;
   bool _showPaste = false;
   bool _torchOn = false;
+  /// True once the camera has successfully started at least once this session.
+  /// Until then we must not call stop() on inactive — the permission dialog
+  /// itself triggers inactive and would race the first start().
+  bool _cameraEverStarted = false;
 
   bool get _useScanner =>
       widget.showScanner && inviteQrScannerSupported && _scanner != null;
@@ -42,12 +48,41 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     }
   }
 
+  /// Parent on the adult shell joining an explorer into a group.
+  bool get _parentJoiningForExplorer {
+    try {
+      final session = context.read<AuthSession>();
+      return session.isParent && !session.isChild && session.children.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  List<FamilyChildProfile> get _familyExplorers {
+    try {
+      return context.read<AuthSession>().children;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  void _ensureChildSelection() {
+    if (!_parentJoiningForExplorer) return;
+    final kids = _familyExplorers;
+    if (kids.isEmpty) return;
+    final stillValid = kids.any((c) => c.id == _selectedChildId);
+    if (!stillValid) {
+      _selectedChildId = kids.length == 1 ? kids.first.id : (_selectedChildId ?? kids.first.id);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     if (widget.showScanner && inviteQrScannerSupported) {
       _scanner = createInviteQrScannerController();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _safeStartCamera());
     }
     _showPaste = !_useScanner;
   }
@@ -60,17 +95,68 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     super.dispose();
   }
 
+  Future<void> _safeStartCamera({bool allowAutoRetry = true}) async {
+    final controller = _scanner;
+    if (controller == null || !mounted) return;
+    try {
+      await controller.start();
+      if (!mounted) return;
+      if (controller.isRunning) {
+        setState(() => _cameraEverStarted = true);
+        return;
+      }
+      // start() often swallows MobileScannerException into state.error.
+      if (allowAutoRetry && controller.hasError) {
+        await _retryCamera(allowAutoRetry: false);
+      } else if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {
+      if (allowAutoRetry && mounted) {
+        await _retryCamera(allowAutoRetry: false);
+      } else if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _retryCamera({bool allowAutoRetry = true}) async {
+    final old = _scanner;
+    _scanner = null;
+    _cameraEverStarted = false;
+    _torchOn = false;
+    setState(() => _scannerKey = UniqueKey());
+    await old?.dispose();
+    if (!mounted) return;
+    // Brief pause so CameraX can release the previous session (release builds).
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+    final next = createInviteQrScannerController();
+    setState(() => _scanner = next);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _safeStartCamera(allowAutoRetry: allowAutoRetry);
+    });
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _scanner;
     if (controller == null || !_useScanner) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        controller.start();
+        if (controller.hasError) {
+          _retryCamera();
+        } else {
+          _safeStartCamera();
+        }
       case AppLifecycleState.inactive:
+        // Never stop on inactive — the permission dialog triggers this and
+        // racing stop/start leaves CameraX in genericError on many devices.
+        return;
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
+        if (!_cameraEverStarted || controller.isStarting) return;
         controller.stop();
     }
   }
@@ -96,19 +182,22 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     try {
       final preview = await family.previewInvite(token);
       if (!mounted) return;
-      setState(() => _preview = preview);
+      setState(() {
+        _preview = preview;
+        _ensureChildSelection();
+      });
       await _scanner?.stop();
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _error = e.message);
         _handlingScan = false;
-        await _scanner?.start();
+        await _safeStartCamera();
       }
     } catch (e) {
       if (mounted) {
         setState(() => _error = '$e');
         _handlingScan = false;
-        await _scanner?.start();
+        await _safeStartCamera();
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -122,6 +211,11 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     }
     final token = parseJoinToken(_token.text.trim());
     if (token == null || token.isEmpty) return;
+    _ensureChildSelection();
+    if (_parentJoiningForExplorer && (_selectedChildId == null || _selectedChildId!.isEmpty)) {
+      setState(() => _error = 'Choose which explorer to join this group.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -129,19 +223,28 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     final family = context.read<FamilyService>();
     final session = context.read<AuthSession>();
     try {
-      await family.acceptInvite(token);
+      await family.acceptInvite(
+        token,
+        childId: _parentJoiningForExplorer ? _selectedChildId : null,
+      );
       await session.refreshProfile();
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context, true);
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You joined. Welcome in.'),
+        SnackBar(
+          content: Text(
+            _parentJoiningForExplorer
+                ? 'Join requested. The group leader will approve it.'
+                : 'You joined. Welcome in.',
+          ),
           backgroundColor: AppColors.navy,
         ),
       );
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) {
+        setState(() => _error = e.message);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
@@ -162,7 +265,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
       _handlingScan = false;
       _token.clear();
     });
-    await _scanner?.start();
+    await _safeStartCamera();
   }
 
   Future<void> _toggleTorch() async {
@@ -209,10 +312,12 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                 if (widget.showScanner) ...[
                   const SizedBox(height: 14),
                   buildInviteQrScanner(
+                    key: _scannerKey,
                     controller: _scanner,
                     onDetect: _onDetect,
                     busy: _busy,
                     paused: _preview != null,
+                    onRetry: _busy ? null : _retryCamera,
                   ),
                   if (_busy && _useScanner) ...[
                     const SizedBox(height: 12),
@@ -306,14 +411,65 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          joinKindLabel(_preview!['kind'] as String? ?? ''),
+                          joinKindLabel(
+                            (_preview!['groupKind'] as String?) ??
+                                (_preview!['kind'] as String? ?? ''),
+                          ),
                           style: const TextStyle(color: AppColors.textSecondary),
                         ),
+                        if ((_preview!['description'] as String?)?.trim().isNotEmpty == true) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            (_preview!['description'] as String).trim(),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                        if (_parentJoiningForExplorer) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Who is joining?',
+                            style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedChildId,
+                            items: _familyExplorers
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: _busy
+                                ? null
+                                : (v) => setState(() => _selectedChildId = v),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppColors.cream,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Under-age explorers (14 and under) join through your account. The group leader approves the request.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         FilledButton(
                           onPressed: _busy ? null : _accept,
                           style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
-                          child: const Text('Accept invite'),
+                          child: Text(
+                            _parentJoiningForExplorer ? 'Request join' : 'Accept invite',
+                          ),
                         ),
                         if (_useScanner)
                           TextButton(

@@ -14,7 +14,8 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
     label: 'Operate',
     items: [
       ['dashboard', 'Dashboard'],
-      ['people', 'People'],
+      ['people', 'Users'],
+      ['pastors', 'Pastors'],
       ['churches', 'Churches'],
       ['groups', 'Groups'],
       ['notifications', 'Notifications'],
@@ -23,24 +24,37 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
   {
     label: 'Publish',
     items: [
-      ['weeks', 'Published weeks'],
       ['quests', 'Quest'],
       ['puzzles', 'Puzzle Studio'],
+      ['matching', 'Match Studio'],
+    ],
+  },
+  {
+    label: 'Content Management',
+    items: [
+      ['content-mobile', 'Mobile'],
+      ['content-web', 'Web'],
+      ['legal', 'Site pages'],
     ],
   },
   {
     label: 'Care',
     items: [
       ['reports', 'Safeguarding'],
-      ['consent', 'Consent'],
+      ['cheers', 'Student nudges'],
       ['deletions', 'Deletions'],
     ],
   },
   {
     label: 'Settings',
     items: [
+      ['staff', 'Staff'],
       ['scoring', 'Quest points'],
     ],
+  },
+  {
+    label: 'Archive',
+    items: [['archive', 'Church archive']],
   },
 ];
 
@@ -56,6 +70,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
   const navigate = useNavigate();
   const user = getUser();
   const [alertCount, setAlertCount] = useState(0);
+  const [navBadges, setNavBadges] = useState<Partial<Record<Tab, number>>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
@@ -112,15 +127,40 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
     };
   }, [mobileNavOpen]);
 
-  useEffect(() => {
-    api<{ openReports?: number; queuedNotifications?: number; pendingDeletions?: number }>('/api/admin/stats')
+  const refreshNavBadges = useCallback(() => {
+    api<{
+      openReports?: number;
+      queuedNotifications?: number;
+      pendingDeletions?: number;
+      pendingChurchApplications?: number;
+    }>('/api/admin/stats')
       .then((stats) => {
-        setAlertCount(
-          (stats.openReports ?? 0) + (stats.queuedNotifications ?? 0) + (stats.pendingDeletions ?? 0),
-        );
+        const reports = stats.openReports ?? 0;
+        const deletions = stats.pendingDeletions ?? 0;
+        const churches = stats.pendingChurchApplications ?? 0;
+        // Notifications is an outbound composer — do not badge the bell or nav on outbox queue.
+        setAlertCount(0);
+        setNavBadges({
+          reports,
+          deletions,
+          churches,
+        });
       })
-      .catch(() => setAlertCount(0));
-  }, [tab]);
+      .catch(() => {
+        setAlertCount(0);
+        setNavBadges({});
+      });
+  }, []);
+
+  useEffect(() => {
+    refreshNavBadges();
+  }, [tab, refreshNavBadges]);
+
+  useEffect(() => {
+    const onRefresh = () => refreshNavBadges();
+    window.addEventListener('askhub:admin-stats-refresh', onRefresh);
+    return () => window.removeEventListener('askhub:admin-stats-refresh', onRefresh);
+  }, [refreshNavBadges]);
 
   const initials = (() => {
     const source = user?.name?.trim() || user?.email?.trim() || 'AM';
@@ -151,13 +191,13 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
       <aside
         className={`bg-navy text-cream flex flex-col p-3 z-40 transition-all duration-200 ${
           isMobile
-            ? `fixed inset-y-0 left-0 w-64 shadow-2xl transform ${
+            ? `fixed inset-y-0 left-0 w-64 shadow-2xl transform overflow-y-auto scrollbar-none ${
                 mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
               }`
-            : 'sticky top-0 h-screen overflow-y-auto overflow-x-hidden'
+            : 'sticky top-0 h-screen overflow-hidden'
         }`}
       >
-        <div className={`flex items-center gap-2 pb-3 pt-1 border-b border-white/10 ${
+        <div className={`flex items-center gap-2 pb-3 pt-1 border-b border-white/10 shrink-0 ${
           isCollapsed ? 'flex-col justify-center' : 'justify-between px-2'
         }`}>
           <Brand size={isCollapsed ? 'sm' : 'md'} />
@@ -172,7 +212,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
           </button>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-4 py-4 overflow-y-auto">
+        <nav className="flex-1 min-h-0 flex flex-col gap-4 py-4 overflow-y-auto overflow-x-hidden scrollbar-none">
           {GROUPS.map((group) => (
             <div className="flex flex-col gap-1" key={group.label}>
               {!isCollapsed ? (
@@ -182,25 +222,41 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
               ) : null}
               {group.items.map(([id, label]) => {
                 const active = tab === id;
+                const badge = navBadges[id] ?? 0;
+                const title = badge > 0 ? `${label} (${badge})` : label;
                 return (
                   <button
                     key={id}
-                    className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`relative flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isCollapsed ? 'justify-center' : 'w-full text-left'
                     } ${
                       active
                         ? 'bg-white/15 text-white shadow-xs'
-                        : 'text-cream/75 hover:bg-white/8 hover:text-white'
+                        : badge > 0
+                          ? 'text-white bg-white/8 hover:bg-white/12'
+                          : 'text-cream/75 hover:bg-white/8 hover:text-white'
                     }`}
-                    aria-label={label}
-                    title={label}
+                    aria-label={title}
+                    title={title}
                     onClick={() => {
                       closeMobileNav();
                       navigate(id === 'dashboard' ? '/app/dashboard' : `/app/dashboard/${id}`);
                     }}
                   >
-                    <NavIcon tab={id} />
-                    {!isCollapsed ? <span className="truncate">{label}</span> : null}
+                    <span className="relative shrink-0">
+                      <NavIcon tab={id} />
+                      {isCollapsed && badge > 0 ? (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 px-0.5 items-center justify-center rounded-full bg-orange text-[8px] font-bold text-white">
+                          {badge > 9 ? '9+' : badge}
+                        </span>
+                      ) : null}
+                    </span>
+                    {!isCollapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+                    {!isCollapsed && badge > 0 ? (
+                      <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-orange px-1 text-[9px] font-bold text-white tabular-nums">
+                        {badge > 9 ? '9+' : badge}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -208,7 +264,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
           ))}
         </nav>
 
-        <div className="pt-3 border-t border-white/10 mt-auto">
+        <div className="pt-3 border-t border-white/10 mt-auto shrink-0">
           {isCollapsed ? (
             <div
               className="flex h-9 w-9 mx-auto items-center justify-center rounded-full bg-surface-2 text-navy text-xs font-bold shadow-xs"

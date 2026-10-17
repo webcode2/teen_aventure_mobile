@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../family/family_account_rules.dart';
 import '../../models/api_models.dart';
 import '../../nudge_copy.dart';
+import '../../services/engagement_service.dart';
 import '../../theme.dart';
 
-/// Inbox for parent cheers and group deletion notices (not the same as sticker nudges).
-class NotificationsScreen extends StatelessWidget {
+/// Result popped back to home so the badge and list stay in sync after clear/dismiss.
+class NotificationsResult {
+  const NotificationsResult({required this.nudges});
+
+  final List<Nudge> nudges;
+}
+
+/// Inbox for approved encouragements and group deletion notices.
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
     super.key,
     this.nudges = const [],
@@ -16,41 +25,141 @@ class NotificationsScreen extends StatelessWidget {
   final List<Map<String, dynamic>> deletionNotices;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cream,
-      appBar: AppBar(
-        title: const Text(
-          'Notifications',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-        children: [
-          if (deletionNotices.isNotEmpty) ...[
-            const _SectionLabel('Group deletion'),
-            const SizedBox(height: 8),
-            for (var i = 0; i < deletionNotices.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              _DeletionNoticeTile(item: deletionNotices[i]),
-            ],
-            const SizedBox(height: 20),
-          ],
-          if (nudges.isNotEmpty) ...[
-            const _SectionLabel('Encouragements'),
-            const SizedBox(height: 8),
-            for (var i = 0; i < nudges.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              _NotificationTile(nudge: nudges[i]),
-            ],
-          ] else if (deletionNotices.isEmpty)
-            const _EmptyCard(
-              icon: Icons.notifications_none_rounded,
-              title: 'No notifications yet',
-              body: 'Cheers from your parent and group deletion notices appear here.',
-            ),
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late List<Nudge> _nudges;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nudges = List<Nudge>.from(widget.nudges);
+  }
+
+  bool get _canClear => _nudges.isNotEmpty;
+
+  void _popResult() {
+    Navigator.of(context).pop(NotificationsResult(nudges: _nudges));
+  }
+
+  Future<void> _clearAll() async {
+    if (_busy || !_canClear) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear notifications?'),
+        content: const Text('This removes encouragements from your inbox.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
         ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _busy = true);
+    final engagement = context.read<EngagementService>();
+    try {
+      await engagement.clearNudges();
+      if (!mounted) return;
+      setState(() {
+        _nudges = [];
+        _busy = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not clear notifications.')),
+      );
+    }
+  }
+
+  Future<void> _dismissNudge(Nudge nudge) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final engagement = context.read<EngagementService>();
+    try {
+      await engagement.deleteNudge(nudge.id);
+      if (!mounted) return;
+      setState(() {
+        _nudges = [for (final n in _nudges) if (n.id != nudge.id) n];
+        _busy = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not remove that notification.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deletions = widget.deletionNotices;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _popResult();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.cream,
+        appBar: AppBar(
+          title: const Text(
+            'Notifications',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          actions: [
+            if (_canClear)
+              TextButton(
+                onPressed: _busy ? null : _clearAll,
+                child: const Text(
+                  'Clear all',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+          children: [
+            if (deletions.isNotEmpty) ...[
+              const _SectionLabel('Group deletion'),
+              const SizedBox(height: 8),
+              for (var i = 0; i < deletions.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _DeletionNoticeTile(item: deletions[i]),
+              ],
+              const SizedBox(height: 20),
+            ],
+            if (_nudges.isNotEmpty) ...[
+              const _SectionLabel('Encouragements'),
+              const SizedBox(height: 8),
+              for (var i = 0; i < _nudges.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _NotificationTile(
+                  nudge: _nudges[i],
+                  onDismiss: _busy ? null : () => _dismissNudge(_nudges[i]),
+                ),
+              ],
+            ] else if (deletions.isEmpty)
+              const _EmptyCard(
+                icon: Icons.notifications_none_rounded,
+                title: 'No notifications yet',
+                body: 'Approved encouragements and group deletion notices appear here.',
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -133,9 +242,10 @@ class _EmptyCard extends StatelessWidget {
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.nudge});
+  const _NotificationTile({required this.nudge, this.onDismiss});
 
   final Nudge nudge;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -168,10 +278,12 @@ class _NotificationTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Encouragement',
-                        style: TextStyle(
+                        nudge.sourceLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
                           color: AppColors.orange,
@@ -191,7 +303,7 @@ class _NotificationTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  messageForNudge(nudge.stickerKey),
+                  messageForNudge(nudge.stickerKey, message: nudge.message),
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
@@ -210,6 +322,14 @@ class _NotificationTile extends StatelessWidget {
               ],
             ),
           ),
+          if (onDismiss != null)
+            IconButton(
+              tooltip: 'Remove',
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded, size: 20),
+              color: AppColors.textMuted,
+              visualDensity: VisualDensity.compact,
+            ),
         ],
       ),
     );
@@ -230,8 +350,8 @@ class _DeletionNoticeTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDAD6),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFDAD6),
         borderRadius: AppRadii.cardRadius,
       ),
       child: Column(

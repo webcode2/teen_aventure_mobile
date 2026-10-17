@@ -1,0 +1,22 @@
+---
+description: Current ministry-account plan and what is still open
+alwaysApply: true
+---
+
+# Open plan
+
+Done: ministry URL and titles, unverified welcome, profile drawer, borderless centered welcome, single-page apply form inside the dashboard, ministry wording on the operations dashboard, logo on header welcome and apply form, full admin review, approve converts the account and can create a group, reject emails the reason. API end-to-end of that path passed. The account Week / Month / Year chart reads ActivityBucket keys for the signed-in explorer.
+
+Also done (apply + teacher):
+
+- Purpose is one answer (who will use it / about how many families) stored as `purpose`.
+- Country on apply → `Church.jurisdiction` on approve.
+- Terms checkbox links to `#/terms`.
+- Private identity document upload; Care can open via admin-only stream/presign.
+- Teachers keep the adult mobile shell; assigned church groups appear under Groups with full roster, approve/reject, and cheer all or selected members.
+- Assigned teachers can activate Objective Quiz (not owner-only).
+- Ministry portal class cards: Quiz + Standing alongside Roster / Streaks.
+
+Still open: none tracked. Do not invent features unless asked.
+
+Admin Churches and the Church model stay named for the data model. Applicant and portal speech uses ministry; the portal URL is `/ministry`.

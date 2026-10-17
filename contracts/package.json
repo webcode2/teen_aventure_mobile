@@ -4,18 +4,14 @@
   "private": true,
   "type": "module",
   "description": "Shared TBA puzzle contracts + pure lib/puzzles (TS ↔ Dart)",
-  "main": "./lib/puzzles/index.ts",
-  "types": "./lib/puzzles/index.ts",
+  "main": "./dist/lib/puzzles/index.js",
+  "types": "./dist/lib/puzzles/index.d.ts",
+  "files": ["dist"],
   "exports": {
     ".": {
-      "types": "./lib/puzzles/index.ts",
-      "import": "./lib/puzzles/index.ts",
-      "default": "./lib/puzzles/index.ts"
-    },
-    "./lib/puzzles": {
-      "types": "./lib/puzzles/index.ts",
-      "import": "./lib/puzzles/index.ts",
-      "default": "./lib/puzzles/index.ts"
+      "types": "./dist/lib/puzzles/index.d.ts",
+      "import": "./dist/lib/puzzles/index.js",
+      "default": "./dist/lib/puzzles/index.js"
     }
   },
   "bin": {

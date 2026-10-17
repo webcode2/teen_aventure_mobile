@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci --include=dev --prefix contracts && npm run build --prefix contracts && npm ci --include=dev --prefix admin",
+  "buildCommand": "npm run build --prefix admin",
+  "outputDirectory": "admin/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

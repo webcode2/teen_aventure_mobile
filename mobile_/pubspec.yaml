@@ -1,5 +1,5 @@
 name: teen_aventure
-description: ASK Hub Teen Discipleship & Bible Puzzles Mobile App
+description: Teen Bible Adventures Teen Discipleship & Bible Puzzles Mobile App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -27,6 +27,8 @@ dependencies:
   share_plus: ^10.1.4
   flutter_inappwebview: ^6.1.5
   google_fonts: ^8.2.1
+  url_launcher: ^6.3.1
+  device_info_plus: ^12.4.0
 
 dev_dependencies:
   flutter_test:
@@ -39,4 +41,3 @@ flutter:
   assets:
     - assets/
     - assets/maps/
-    - assets/puzzles/

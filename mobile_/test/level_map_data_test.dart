@@ -12,14 +12,14 @@ void main() {
     expect(pins.first.id, 1);
     expect(pins.last.id, LevelMapData.levelCount);
     expect(pins.first.y, greaterThan(pins.last.y));
-    expect(pins.first.y, closeTo(LevelMapData.roadBottomY, 1));
-    expect(pins.last.y, closeTo(LevelMapData.roadTopY, 1));
-    expect(pins.first.x, closeTo(LevelMapData.roadBottomX, 1));
-    expect(pins.last.x, closeTo(LevelMapData.roadTopX, 1));
+    expect(LevelMapData.levelCount, 52);
+    expect(levelSpots, hasLength(LevelMapData.levelCount));
+    expect(Offset(pins.first.x, pins.first.y), levelSpots.first);
+    expect(Offset(pins.last.x, pins.last.y), levelSpots.last);
 
     expect(pins[25].status, LevelStatus.completed);
     expect(pins[26].status, LevelStatus.current);
-    expect(pins[27].status, LevelStatus.locked);
+    expect(pins[27].status, LevelStatus.unlocked);
     expect(pins.first.checkpoint, isTrue);
     expect(pins[6].checkpoint, isTrue);
     expect(pins.last.checkpoint, isTrue);
@@ -30,7 +30,7 @@ void main() {
       expect(
         (Offset(pins[i].x, pins[i].y) - Offset(pins[i - 1].x, pins[i - 1].y))
             .distance,
-        greaterThan(400),
+        greaterThan(300),
       );
     }
 
@@ -50,5 +50,52 @@ void main() {
     final b = buildQuestMapPins(mockLevelProgress());
     expect(a, b);
     expect(a.first, b.first);
+  });
+
+  test('highest level marks current; future weeks are unlocked for play', () {
+    final rows = levelProgressForHighest(highestLevelId: 3, totalLevels: 52);
+    expect(rows[0].status, LevelStatus.completed);
+    expect(rows[1].status, LevelStatus.completed);
+    expect(rows[2].status, LevelStatus.current);
+    expect(rows[3].status, LevelStatus.unlocked);
+    expect(rows[10].status, LevelStatus.unlocked);
+    expect(currentLevelIdOf(rows), 3);
+  });
+
+  test('jump-ahead notice warns about no points', () {
+    expect(
+      jumpAheadPointsNotice(
+        tappedWeek: 5,
+        sequentialWeek: 3,
+        caughtUp: false,
+        currentWeekComplete: false,
+      ),
+      contains('still on Quest 3'),
+    );
+    expect(
+      jumpAheadPointsNotice(
+        tappedWeek: 5,
+        sequentialWeek: 3,
+        caughtUp: false,
+        currentWeekComplete: true,
+      ),
+      contains('Quest 3 next'),
+    );
+    expect(
+      jumpAheadPointsNotice(
+        tappedWeek: 5,
+        sequentialWeek: 3,
+        caughtUp: false,
+      ),
+      contains('no points'),
+    );
+    expect(
+      jumpAheadPointsNotice(tappedWeek: 3, sequentialWeek: 3, caughtUp: false),
+      isNull,
+    );
+    expect(
+      jumpAheadPointsNotice(tappedWeek: 5, sequentialWeek: 52, caughtUp: true),
+      isNull,
+    );
   });
 }

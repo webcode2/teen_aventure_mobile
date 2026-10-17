@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "match-forgiveness-1",
+  "title": "Forgiven and Cleansed",
+  "scripture": "1 John 1:9",
+  "rewards": { "points": 3 },
+  "type": "MATCHING",
+  "data": {
+    "prompt": "Draw a line from each word for sin to a word that describes God's mercy.",
+    "ref": "1 John 1:9",
+    "leftColumn": ["Sins", "Transgressions", "Iniquity", "Unrighteousness"],
+    "rightColumn": ["Forgiven", "Cleansed", "Washed", "Blotted"],
+    "correctPairs": [
+      { "left": 0, "right": 0 },
+      { "left": 1, "right": 2 },
+      { "left": 2, "right": 3 },
+      { "left": 3, "right": 1 }
+    ]
+  }
+}
