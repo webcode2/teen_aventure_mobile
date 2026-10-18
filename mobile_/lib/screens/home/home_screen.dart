@@ -522,6 +522,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       );
                     },
                   ),
+                  for (final resource in const [
+                    (LegalDoc.dataCollection, 'Data Collection', Icons.policy_outlined),
+                    (LegalDoc.about, 'About', Icons.info_outline),
+                    (LegalDoc.contact, 'Contact & Support', Icons.support_agent_outlined),
+                  ])
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      leading: Icon(resource.$3, color: AppColors.textMuted),
+                      title: Text(resource.$2, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => LegalScreen(doc: resource.$1)));
+                      },
+                    ),
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     leading: const Icon(Icons.privacy_tip_outlined,
@@ -546,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     leading: const Icon(Icons.description_outlined,
                         color: AppColors.textMuted),
                     title: const Text(
-                      'Terms of Use',
+                      'Terms & Conditions',
                       style: TextStyle(
                           color: AppColors.textSecondary, fontSize: 14),
                     ),

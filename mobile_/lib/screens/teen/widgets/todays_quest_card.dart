@@ -1,3 +1,4 @@
+import '../../../providers/cms_text.dart';
 import 'package:flutter/material.dart';
 import '../../../models/week_quest_progress.dart';
 import '../../../theme.dart';
@@ -42,13 +43,14 @@ class TodaysQuestSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final heading = cmsText(context, 'home', 'todayTitle', "Today's Quest");
     return Padding(
       padding: EdgeInsets.fromLTRB(sidePadding, 20, sidePadding, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            weekLabel == null ? "Today's Quest" : "Today's Quest · $weekLabel",
+            weekLabel == null ? heading : '$heading · $weekLabel',
             maxLines: 2,
             style: const TextStyle(
               color: AppColors.navy,
@@ -89,7 +91,7 @@ class TodaysQuestSlide extends StatelessWidget {
             key: ValueKey('home-video-$index'),
             icon: Icons.check_rounded,
             title: title,
-            subtitle: 'Watched',
+            subtitle: cmsText(context, 'home', 'watched', 'Watched'),
             accent: AdventureListAccent.green,
             onTap: () => onOpenVideo(index),
           ),
@@ -129,7 +131,7 @@ class TodaysQuestSlide extends StatelessWidget {
                 key: const ValueKey('home-quiz'),
                 icon: Icons.check_rounded,
                 title: 'Quiz',
-                subtitle: 'Finished',
+                subtitle: cmsText(context, 'home', 'finished', 'Finished'),
                 accent: AdventureListAccent.green,
                 onTap: onQuiz,
               )
@@ -151,7 +153,7 @@ class TodaysQuestSlide extends StatelessWidget {
                 key: const ValueKey('home-puzzle'),
                 icon: Icons.check_rounded,
                 title: gameStepTitle,
-                subtitle: 'Finished',
+                subtitle: cmsText(context, 'home', 'finished', 'Finished'),
                 accent: AdventureListAccent.green,
                 onTap: onPuzzle,
               )
@@ -170,7 +172,7 @@ class TodaysQuestSlide extends StatelessWidget {
       rows.add(const SizedBox(height: 12));
       rows.add(
         Text(
-          allWeeksDone ? "You've finished every week!" : "You're caught up",
+          allWeeksDone ? cmsText(context, 'home', 'allDone', "You've finished every week!") : cmsText(context, 'home', 'caughtUp', "You're caught up"),
           style: TextStyle(
             color: AppColors.navy,
             fontWeight: FontWeight.w700,
@@ -338,8 +340,8 @@ class TodaysQuestCard extends StatelessWidget {
                                 borderRadius: AppRadii.cardRadius,
                               ),
                             ),
-                            child: const Text(
-                              'Start Reading',
+                            child: Text(
+                              cmsText(context, 'home', 'startReading', 'Start Reading'),
                               style: TextStyle(
                                   fontWeight: FontWeight.w600, fontSize: 13),
                             ),

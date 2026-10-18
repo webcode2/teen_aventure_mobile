@@ -1,3 +1,4 @@
+import { AppResourceAlerts } from './app-resource-alerts';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import { RichTextEditor, richTextHasContent } from './rich-text-editor';
@@ -67,6 +68,7 @@ export function LegalDocsPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<'edit' | 'preview'>('edit');
 
   const selected = useMemo(
     () => pages.find((p) => p.id === selectedId) ?? null,
@@ -84,6 +86,7 @@ export function LegalDocsPage() {
     setSlugTouched(true);
     setEditorKey((k) => k + 1);
     setEditing(false);
+    setView('edit');
   }
 
   async function load(preferId?: string | null) {
@@ -120,6 +123,7 @@ export function LegalDocsPage() {
     setForm(EMPTY_FORM);
     setSlugTouched(false);
     setEditorKey((k) => k + 1);
+    setView('edit');
     setEditing(true);
     setMessage('');
     setError('');
@@ -134,6 +138,7 @@ export function LegalDocsPage() {
   }
 
   function beginEdit() {
+    setView('edit');
     setEditing(true);
     setEditorKey((k) => k + 1);
     setMessage('');
@@ -201,16 +206,20 @@ export function LegalDocsPage() {
 
   async function removePage() {
     if (!selectedId || !selected) return;
-    const ok = await askConfirm(`Delete “${selected.title}”? This cannot be undone.`, {
+    let usage: { label: string }[];
+    try { usage = await api<{ label: string }[]>(`/api/admin/site-pages/${selectedId}/usage`); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not check page usage. Try again before deleting.'); return; }
+    const warning = usage.length ? `This resource is currently in use by: ${usage.map(row => row.label).join(', ')}. Deleting it will break these app links. Update them in App content → Legal & resource links, or confirm deletion anyway. ` : '';
+    const ok = await askConfirm(`${warning}Delete “${selected.title}”? This cannot be undone.`, {
       title: 'Delete page',
-      confirmLabel: 'Delete',
+      confirmLabel: usage.length ? 'Delete linked page anyway' : 'Delete',
       tone: 'danger',
     });
     if (!ok) return;
     setError('');
     setMessage('');
     try {
-      await api(`/api/admin/site-pages/${selectedId}`, { method: 'DELETE' });
+      await api(`/api/admin/site-pages/${selectedId}${usage.length ? '?confirmInUse=true' : ''}`, { method: 'DELETE' });
       setMessage('Page deleted.');
       await load(null);
     } catch (err: unknown) {
@@ -242,23 +251,25 @@ export function LegalDocsPage() {
   const hasContent = Boolean(selectedId) || editing;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-end">
+    <div className="flex flex-col gap-6 lg:h-[calc(100dvh-5.25rem)] lg:min-h-0">
+      <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-4">
+        <div><h1 className="m-0 text-xl font-bold tracking-tight text-navy">Site pages</h1><p className="m-0 mt-1 text-sm text-muted">Manage your public policies and documents.</p></div>
         <Button type="button" size="sm" onClick={startNew}>
           New page
         </Button>
       </div>
 
+      <AppResourceAlerts refreshKey={pages.map(page => `${page.id}:${page.updatedAt}`).join()} />
       {error ? <Alert kind="error">{error}</Alert> : null}
       {message ? <Alert kind="ok">{message}</Alert> : null}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[18rem_1fr] items-start">
-        <aside className="rounded-card border border-border bg-surface p-3 shadow-xs">
-          <h3 className="m-0 px-1 pb-2 text-xs font-bold uppercase tracking-wider text-muted">Pages</h3>
+      <div className="grid min-h-0 flex-1 grid-cols-1 items-start gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <aside className="flex max-h-[calc(100dvh-12rem)] min-h-0 flex-col lg:h-full lg:max-h-full">
+          <h3 className="m-0 shrink-0 px-1 pb-2 text-xs font-bold uppercase tracking-wider text-muted">Pages</h3>
           {pages.length === 0 ? (
             <Empty title="No pages yet" body="Create a privacy policy, terms page, or any policy for your site." />
           ) : (
-            <ul className="m-0 flex list-none flex-col gap-1 p-0">
+            <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto overscroll-contain p-0 pb-1">
               {pages.map((page) => {
                 const active = page.id === selectedId;
                 return (
@@ -267,17 +278,16 @@ export function LegalDocsPage() {
                       type="button"
                       onClick={() => selectPage(page)}
                       className={`flex w-full cursor-pointer flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                        active ? 'bg-navy text-white' : 'text-navy hover:bg-cream'
+                        active ? 'bg-teal/10 text-navy' : 'text-navy hover:bg-cream'
                       }`}
                     >
                       <span className="text-sm font-bold leading-snug">{page.title}</span>
-                      <span className={`text-[11px] ${active ? 'text-white/70' : 'text-muted'}`}>
+                      <span className={`text-[11px] ${'text-muted'}`}>
                         /p/{page.slug}
                       </span>
-                      <span className="pt-0.5">
-                        <Badge kind={page.published ? 'ok' : 'warn'}>
-                          {page.published ? 'Published' : 'Draft'}
-                        </Badge>
+                      <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                        <span className={`h-1.5 w-1.5 rounded-full ${page.published ? 'bg-teal' : 'bg-amber-500'}`} />
+                        {page.published ? 'Published' : 'Draft'}
                       </span>
                     </button>
                   </li>
@@ -290,7 +300,7 @@ export function LegalDocsPage() {
         {!hasContent ? (
           <Empty title="No page selected" body="Choose a page from the list or create a new one." />
         ) : (
-          <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-5 shadow-xs">
+          <div className="flex min-w-0 flex-col gap-5 rounded-2xl border border-border/60 bg-surface p-5 sm:p-7 lg:h-full lg:min-h-0 lg:overflow-y-auto">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="m-0 text-xl font-extrabold tracking-tight text-navy">
@@ -312,48 +322,25 @@ export function LegalDocsPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 rounded-xl border border-border bg-cream/70 px-3 py-2.5 text-xs text-navy">
-              <span>
-                <strong className="text-muted">Created:</strong>{' '}
-                {selected ? formatWhen(selected.createdAt) : '— (new page)'}
-              </span>
-              <span className="text-border">·</span>
-              <span>
-                <strong className="text-muted">Updated:</strong>{' '}
-                {selected ? formatWhen(selected.updatedAt) : '—'}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4 text-xs text-muted">
+              <span>{selected ? `Updated ${formatWhen(selected.updatedAt)}` : 'New page'}</span>
+              {form.published && displaySlug ? <div className="flex min-w-0 items-center gap-3">
+                <a href={publicPathForSlug(displaySlug)} target="_blank" rel="noreferrer" className="truncate text-teal hover:underline" title={publicUrl}>View public page ↗</a>
+                <button type="button" onClick={() => void copyPublicLink()} className="min-h-10 shrink-0 cursor-pointer px-2 font-semibold text-navy hover:text-teal">{copied ? 'Copied!' : 'Copy link'}</button>
+              </div> : <span>Draft · Publish to share</span>}
             </div>
-
-            {form.published && displaySlug ? (
-              <div className="flex flex-col gap-2 rounded-xl border border-teal/30 bg-teal-tint/40 px-3 py-3 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
-                  <p className="m-0 text-[11px] font-bold uppercase tracking-wider text-teal">Public page link</p>
-                  <a
-                    href={publicPathForSlug(displaySlug)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-0.5 block truncate font-mono text-xs font-semibold text-navy underline-offset-2 hover:underline"
-                  >
-                    {publicUrl}
-                  </a>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void copyPublicLink()}
-                  className="cursor-pointer shrink-0 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-bold text-navy hover:border-teal hover:text-teal"
-                >
-                  {copied ? 'Copied!' : 'Copy link'}
-                </button>
+            <details className="text-xs text-muted">
+              <summary className="w-fit cursor-pointer py-1">Page details</summary>
+              <div className="mt-2 space-y-1 break-all">
+                <p>Created: {selected ? formatWhen(selected.createdAt) : 'New page'}</p>
+                <p>Updated: {selected ? formatWhen(selected.updatedAt) : '—'}</p>
+                {form.published && publicUrl && <p>{publicUrl}</p>}
               </div>
-            ) : (
-              <p className="m-0 rounded-xl border border-dashed border-border bg-cream/50 px-3 py-2 text-xs text-muted">
-                Publish this page to get a shareable public link for Play Store / website use.
-              </p>
-            )}
+            </details>
 
             {editing ? (
               <form className="flex flex-col gap-4" onSubmit={save}>
-                <div className="flex flex-wrap items-end gap-3">
+                <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                   <Field label="Title">
                     <input
                       required
@@ -367,10 +354,10 @@ export function LegalDocsPage() {
                         }));
                       }}
                       placeholder="Privacy Policy"
-                      className="w-full min-w-[14rem] rounded-xl border border-border bg-cream px-3 py-2 text-sm font-semibold text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
+                      className="w-full min-w-0 rounded-lg border border-border bg-cream px-3 py-2 text-sm font-semibold text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
                     />
                   </Field>
-                  <Field label="URL slug" hint="Used in the public link">
+                  <Field label="URL slug">
                     <input
                       required
                       value={form.slug}
@@ -379,10 +366,10 @@ export function LegalDocsPage() {
                         setForm({ ...form, slug: slugify(e.target.value) });
                       }}
                       placeholder="privacy-policy"
-                      className="w-full min-w-[12rem] rounded-xl border border-border bg-cream px-3 py-2 font-mono text-sm text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
+                      className="w-full min-w-0 rounded-lg border border-border bg-cream px-3 py-2 font-mono text-sm text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
                     />
                   </Field>
-                  <label className="mb-1 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-cream px-3 py-2 text-xs font-bold text-navy">
+                  <label className="mt-6 inline-flex min-h-10 cursor-pointer items-center gap-2 px-1 text-sm font-medium text-navy">
                     <input
                       type="checkbox"
                       checked={form.published}
@@ -393,31 +380,22 @@ export function LegalDocsPage() {
                   </label>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-navy">Editor</span>
-                    <RichTextEditor
-                      key={editorKey}
-                      html={form.html}
-                      onChange={(html) => setForm({ ...form, html })}
-                      minHeightClass="min-h-[18rem] max-h-[28rem]"
-                    />
+                <div>
+                  <div role="tablist" aria-label="Page workspace" className="mb-4 flex gap-6 border-b border-border/60">
+                    {(['edit', 'preview'] as const).map(mode => <button key={mode} id={`page-tab-${mode}`} type="button" role="tab" aria-selected={view === mode} aria-controls={`page-panel-${mode}`} onClick={() => setView(mode)} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) { event.preventDefault(); const next = event.key === 'Home' ? 'edit' : event.key === 'End' ? 'preview' : view === 'edit' ? 'preview' : 'edit'; setView(next); document.getElementById(`page-tab-${next}`)?.focus(); } }} tabIndex={view === mode ? 0 : -1} className={`min-h-11 cursor-pointer border-b-2 px-1 text-sm font-semibold ${view === mode ? 'border-teal text-navy' : 'border-transparent text-muted hover:text-navy'}`}>{mode === 'edit' ? 'Write' : 'Preview'}</button>)}
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">Live preview</span>
-                    <article className="min-h-[18rem] max-h-[28rem] overflow-y-auto rounded-card border border-border bg-cream px-5 py-4">
-                      <h1 className="mb-3 mt-0 text-xl font-extrabold tracking-tight text-navy">
-                        {form.title || 'Untitled page'}
-                      </h1>
-                      <div
-                        className={PREVIEW_BODY_CLASS}
-                        dangerouslySetInnerHTML={{ __html: form.html }}
-                      />
+                  <div role="tabpanel" id="page-panel-edit" aria-labelledby="page-tab-edit" hidden={view !== 'edit'}>
+                    <RichTextEditor key={editorKey} html={form.html} onChange={(html) => setForm(prev => ({ ...prev, html }))} minHeightClass="min-h-[26rem] max-h-[65vh]" />
+                  </div>
+                  <div role="tabpanel" id="page-panel-preview" aria-labelledby="page-tab-preview" hidden={view !== 'preview'}>
+                    <article className="mx-auto min-h-[26rem] max-w-3xl px-1 py-3 sm:px-6">
+                      <h1 className="mb-6 mt-0 text-2xl font-bold tracking-tight text-navy">{form.title || 'Untitled page'}</h1>
+                      <div className={PREVIEW_BODY_CLASS} dangerouslySetInnerHTML={{ __html: form.html }} />
                     </article>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
                   <Button type="submit" disabled={saving}>
                     {saving ? 'Saving…' : selectedId ? 'Save changes' : 'Create page'}
                   </Button>
@@ -432,7 +410,7 @@ export function LegalDocsPage() {
                 </div>
               </form>
             ) : (
-              <article className="rounded-card border border-border bg-cream px-5 py-5 sm:px-6">
+              <article className="mx-auto w-full max-w-3xl py-3 sm:px-4">
                 <div
                   className={PREVIEW_BODY_CLASS}
                   dangerouslySetInnerHTML={{ __html: form.html }}

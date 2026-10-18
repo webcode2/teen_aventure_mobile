@@ -128,7 +128,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
   List<AssignedClass> _standingClasses(AuthSession session) {
     final classes = session.allAssignedClasses;
-    if (classes.isNotEmpty) return classes;
+    // Memberships include groups joined by linked explorers, even after independent invites.
+    if (_items.isEmpty && classes.isNotEmpty) return classes;
     return [
       for (final item in _items)
         if ((item['kind'] == 'CLASS' || item['kind'] == 'FAMILY') && item['id'] is String)

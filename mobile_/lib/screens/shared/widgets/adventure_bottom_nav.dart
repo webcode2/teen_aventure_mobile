@@ -1,3 +1,4 @@
+import '../../../providers/cms_text.dart';
 import 'package:flutter/material.dart';
 import '../../../theme.dart';
 
@@ -19,11 +20,11 @@ class AdventureBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <({AdventureTab tab, String label, IconData icon})>[
-      (tab: AdventureTab.home, label: 'Home', icon: Icons.home_rounded),
-      (tab: AdventureTab.rewards, label: 'Achievements', icon: Icons.emoji_events_rounded),
-      (tab: AdventureTab.quests, label: 'Quest', icon: Icons.explore_rounded),
-      (tab: AdventureTab.groups, label: groupsLabel, icon: Icons.groups_rounded),
-      (tab: AdventureTab.account, label: 'Profile', icon: Icons.person_outline_rounded),
+      (tab: AdventureTab.home, label: cmsText(context, 'navigation', 'home', 'Home'), icon: Icons.home_rounded),
+      (tab: AdventureTab.rewards, label: cmsText(context, 'navigation', 'achievements', 'Achievements'), icon: Icons.emoji_events_rounded),
+      (tab: AdventureTab.quests, label: cmsText(context, 'navigation', 'quest', 'Quest'), icon: Icons.explore_rounded),
+      (tab: AdventureTab.groups, label: cmsText(context, 'navigation', groupsLabel == 'Classes' ? 'classes' : 'groups', groupsLabel), icon: Icons.groups_rounded),
+      (tab: AdventureTab.account, label: cmsText(context, 'navigation', 'profile', 'Profile'), icon: Icons.person_outline_rounded),
     ];
     return Container(
       key: const ValueKey('nav-color-v3'),

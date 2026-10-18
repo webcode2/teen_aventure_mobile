@@ -1,3 +1,4 @@
+import { usePageCopy } from './use-page-copy';
 import { useNavigate } from 'react-router';
 import { PublicLayout } from './public-shell';
 
@@ -36,7 +37,8 @@ function PuzzleIcon() {
   );
 }
 
-export function AboutPage() {
+export function AboutPage({ content }: { content?: Record<string, string> } = {}) {
+  const pageCopy = usePageCopy('aboutPage', content);
   const navigate = useNavigate();
 
   return (
@@ -50,32 +52,25 @@ export function AboutPage() {
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-tint border border-teal/20 text-teal text-xs font-bold tracking-wide">
             <BookOpenIcon />
-            <span>OUR MISSION &amp; STORY</span>
+            <span>{pageCopy['ourMissionStory']}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black text-navy tracking-tight leading-[1.15]">
-            Discipleship Built for the <span className="text-teal">Next Generation</span>
+          <h1 className="text-3xl sm:text-5xl font-black text-navy tracking-tight leading-[1.15]">{pageCopy['discipleshipBuiltForThe']}{' '}<span className="text-teal">{pageCopy['nextGeneration']}</span>
           </h1>
 
-          <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed">
-            Teen Bible Adventures (TBA) bridges eternal biblical truth with modern youth culture through gamified quests, interactive puzzles, and faith-connected Christian mentorship.
-          </p>
+          <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed">{pageCopy['teenBibleAdventuresTbaBridgesEternalBiblical']}</p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               type="button"
               onClick={() => navigate('/#quests')}
               className="px-6 py-3 rounded-xl bg-teal hover:bg-teal/90 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              Explore Weekly Quests →
-            </button>
+            >{pageCopy['exploreWeeklyQuests']}</button>
             <button
               type="button"
               onClick={() => navigate('/contact')}
               className="px-6 py-3 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Get in Touch
-            </button>
+            >{pageCopy['getInTouch']}</button>
           </div>
         </div>
       </section>
@@ -84,15 +79,9 @@ export function AboutPage() {
       <section className="py-20 px-4 sm:px-8 bg-surface border-b border-border/60">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-bold text-teal uppercase tracking-widest">
-              Meet Your Companions
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">
-              Guided by Abi &amp; Zack
-            </h2>
-            <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">
-              Every week in Teen Bible Adventures, teens journey alongside Abi and Zack as they explore scripture, solve puzzles, and unpack real-life challenges.
-            </p>
+            <span className="text-xs font-bold text-teal uppercase tracking-widest">{pageCopy['meetYourCompanions']}</span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">{pageCopy['guidedByAbiZack']}</h2>
+            <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">{pageCopy['everyWeekInTeenBibleAdventuresTeens']}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
@@ -106,23 +95,17 @@ export function AboutPage() {
                     className="w-32 h-auto object-contain drop-shadow-md"
                   />
                 </div>
-                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-navy text-white text-[10px] font-extrabold tracking-wider">
-                  QUEST GUIDE
-                </span>
+                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-navy text-white text-[10px] font-extrabold tracking-wider">{pageCopy['questGuide']}</span>
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                  <h3 className="text-xl font-black text-navy">Zack</h3>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gold/20 text-navy font-bold">
-                    Action &amp; Discovery
-                  </span>
+                  <h3 className="text-xl font-black text-navy">{pageCopy['zack']}</h3>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gold/20 text-navy font-bold">{pageCopy['actionDiscovery']}</span>
                 </div>
-                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">
-                  Energetic, inquisitive, and tech-savvy. Zack loves taking on weekly scripture challenges, word puzzles, and showing how faith applies to sports, friendship, and everyday teenage life.
-                </p>
+                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">{pageCopy['energeticInquisitiveAndTechsavvyZackLovesTaking']}</p>
                 <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start text-xs font-semibold text-teal">
-                  <span className="px-3 py-1 rounded-lg bg-teal-tint">#BoldFaith</span>
-                  <span className="px-3 py-1 rounded-lg bg-teal-tint">#Puzzles</span>
+                  <span className="px-3 py-1 rounded-lg bg-teal-tint">{pageCopy['boldfaith']}</span>
+                  <span className="px-3 py-1 rounded-lg bg-teal-tint">{pageCopy['puzzles']}</span>
                 </div>
               </div>
             </div>
@@ -137,24 +120,18 @@ export function AboutPage() {
                     className="w-32 h-auto object-contain drop-shadow-md"
                   />
                 </div>
-                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-navy text-white text-[10px] font-extrabold tracking-wider">
-                  REFLECTION GUIDE
-                </span>
+                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-navy text-white text-[10px] font-extrabold tracking-wider">{pageCopy['reflectionGuide']}</span>
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                  <h3 className="text-xl font-black text-navy">Abi</h3>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-gold/20 text-navy font-bold">
-                    Wisdom &amp; Heart
-                  </span>
+                  <h3 className="text-xl font-black text-navy">{pageCopy['abi']}</h3>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-gold/20 text-navy font-bold">{pageCopy['wisdomHeart']}</span>
                 </div>
-                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">
-                  Thoughtful, empathetic, and scripture-grounded. Abi inspires teens to dig deeper into the Word, pray with vulnerability, and navigate doubts with the confidence that God loves them unconditionally.
-                </p>
+                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">{pageCopy['thoughtfulEmpatheticAndScripturegroundedAbiInspiresTeens']}</p>
                 <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start text-xs font-semibold text-navy">
-                  <span className="px-3 py-1 rounded-lg bg-surface-2">#ScriptureStudy</span>
-                  <span className="px-3 py-1 rounded-lg bg-surface-2">#HeartPrayer</span>
-                  <span className="px-3 py-1 rounded-lg bg-surface-2">#Puzzles</span>
+                  <span className="px-3 py-1 rounded-lg bg-surface-2">{pageCopy['scripturestudy']}</span>
+                  <span className="px-3 py-1 rounded-lg bg-surface-2">{pageCopy['heartprayer']}</span>
+                  <span className="px-3 py-1 rounded-lg bg-surface-2">{pageCopy['puzzles21']}</span>
                 </div>
               </div>
             </div>
@@ -166,22 +143,13 @@ export function AboutPage() {
       <section className="py-20 px-4 sm:px-8 bg-cream border-b border-border/60">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-6 text-center sm:text-left">
-            <span className="text-xs font-bold text-teal uppercase tracking-widest">
-              The Genesis of Teen Bible Adventures
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-navy tracking-tight">
-              Why We Built This Platform
-            </h2>
+            <span className="text-xs font-bold text-teal uppercase tracking-widest">{pageCopy['theGenesisOfTeenBibleAdventures']}</span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-navy tracking-tight">{pageCopy['whyWeBuiltThisPlatform']}</h2>
             <div className="space-y-4 text-sm sm:text-base text-text-2 leading-relaxed">
+              <p>{pageCopy['todaysTeenagersLiveInAHyperconnectedDigital']}</p>
               <p>
-                Today’s teenagers live in a hyper-connected digital landscape flooded with competing voices, algorithmic echo chambers, and endless distractions. While screen time is at an all-time high, genuine engagement with scripture and authentic Christian fellowship often struggle to compete.
-              </p>
-              <p>
-                <strong>Teen Bible Adventures</strong> saw an urgent need: not to fight the screen, but to redeem it. We set out to create a vibrant, safe, and engaging mobile discipleship experience that speaks the language of youth without compromising the depth and authority of the Bible.
-              </p>
-              <p>
-                Rather than passive reading or disconnected quizzes, <em>Teen Bible Adventures</em> immerses youth in weekly biblical narrative quests, thoughtful reflection, and puzzle challenges—while connecting them to Christian peers, mentors, and families through verified study circles.
-              </p>
+                <strong>{pageCopy['teenBibleAdventures']}</strong>{pageCopy['sawAnUrgentNeedNotToFight']}</p>
+              <p>{pageCopy['ratherThanPassiveReadingOrDisconnectedQuizzes']}<em>{pageCopy['teenBibleAdventures28']}</em>{pageCopy['immersesYouthInWeeklyBiblicalNarrativeQuests']}</p>
             </div>
           </div>
         </div>
@@ -191,12 +159,8 @@ export function AboutPage() {
       <section className="py-20 px-4 sm:px-8 bg-surface border-b border-border/60">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-bold text-teal uppercase tracking-widest">
-              Core Foundations
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">
-              The Four Discipleship Pillars
-            </h2>
+            <span className="text-xs font-bold text-teal uppercase tracking-widest">{pageCopy['coreFoundations']}</span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">{pageCopy['theFourDiscipleshipPillars']}</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -204,40 +168,32 @@ export function AboutPage() {
               <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                 <BookOpenIcon />
               </div>
-              <h3 className="font-extrabold text-lg text-navy">1. Biblical Integrity</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Christ-centered, doctrinally sound weekly lessons designed by seasoned educators, youth mentors, and theologians.
-              </p>
+              <h3 className="font-extrabold text-lg text-navy">{pageCopy['1BiblicalIntegrity']}</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">{pageCopy['christcenteredDoctrinallySoundWeeklyLessonsDesignedBy']}</p>
             </div>
 
             <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3.5">
               <div className="h-12 w-12 rounded-xl bg-gold/20 text-navy flex items-center justify-center shrink-0">
                 <PuzzleIcon />
               </div>
-              <h3 className="font-extrabold text-lg text-navy">2. Creative Puzzles</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Scripture puzzles that turn Bible memory into joyful mastery.
-              </p>
+              <h3 className="font-extrabold text-lg text-navy">{pageCopy['2CreativePuzzles']}</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">{pageCopy['scripturePuzzlesThatTurnBibleMemoryInto']}</p>
             </div>
 
             <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3.5">
               <div className="h-12 w-12 rounded-xl bg-forest/15 text-forest flex items-center justify-center shrink-0">
                 <HeartHandshakeIcon />
               </div>
-              <h3 className="font-extrabold text-lg text-navy">3. Christian Fellowship</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Youth connect with Christian peers, mentors, and family study circles to walk together in daily faith and biblical encouragement.
-              </p>
+              <h3 className="font-extrabold text-lg text-navy">{pageCopy['3ChristianFellowship']}</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">{pageCopy['youthConnectWithChristianPeersMentorsAnd']}</p>
             </div>
 
             <div className="p-6 sm:p-7 rounded-2xl bg-cream border border-border/80 flex flex-col gap-3.5">
               <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                 <ShieldCheckIcon />
               </div>
-              <h3 className="font-extrabold text-lg text-navy">4. Digital Safety</h3>
-              <p className="text-sm sm:text-base text-text-2 leading-relaxed">
-                Strict adherence to COPPA and global child protection standards. Zero advertising, no data sales, and parent-verified controls.
-              </p>
+              <h3 className="font-extrabold text-lg text-navy">{pageCopy['4DigitalSafety']}</h3>
+              <p className="text-sm sm:text-base text-text-2 leading-relaxed">{pageCopy['strictAdherenceToCoppaAndGlobalChild']}</p>
             </div>
           </div>
         </div>
@@ -248,19 +204,19 @@ export function AboutPage() {
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div className="flex flex-col gap-1">
             <span className="text-3xl sm:text-4xl font-black text-gold">52+</span>
-            <span className="text-xs text-cream/70 font-medium">Weekly Scriptural Quests</span>
+            <span className="text-xs text-cream/70 font-medium">{pageCopy['weeklyScripturalQuests']}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-3xl sm:text-4xl font-black text-teal">3</span>
-            <span className="text-xs text-cream/70 font-medium">Puzzle Game Studios</span>
+            <span className="text-xs text-cream/70 font-medium">{pageCopy['puzzleGameStudios']}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-3xl sm:text-4xl font-black text-gold">100%</span>
-            <span className="text-xs text-cream/70 font-medium">Parent-Supervised Safety</span>
+            <span className="text-xs text-cream/70 font-medium">{pageCopy['parentsupervisedSafety']}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-3xl sm:text-4xl font-black text-teal">0</span>
-            <span className="text-xs text-cream/70 font-medium">Commercial Ads or Trackers</span>
+            <span className="text-xs text-cream/70 font-medium">{pageCopy['commercialAdsOrTrackers']}</span>
           </div>
         </div>
       </section>
@@ -268,27 +224,19 @@ export function AboutPage() {
       {/* Call to Action Banner */}
       <section className="py-16 px-4 sm:px-8 bg-cream">
         <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-surface border border-border shadow-xs text-center flex flex-col items-center gap-6">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-navy">
-            Ready to Start the Christian Discipleship Journey?
-          </h2>
-          <p className="text-xs sm:text-sm text-muted max-w-xl leading-relaxed">
-            Get your study pass code, print your barcode card, and empower your teens to grow in Christ every week.
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-navy">{pageCopy['readyToStartTheChristianDiscipleshipJourney']}</h2>
+          <p className="text-xs sm:text-sm text-muted max-w-xl leading-relaxed">{pageCopy['getYourStudyPassCodePrintYour']}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/#quests')}
               className="px-6 py-3 rounded-xl bg-teal hover:bg-teal/90 text-white font-bold text-xs shadow-sm transition-all cursor-pointer"
-            >
-              Explore Weekly Quests →
-            </button>
+            >{pageCopy['exploreWeeklyQuests46']}</button>
             <button
               type="button"
               onClick={() => navigate('/contact')}
               className="px-6 py-3 rounded-xl border border-border bg-cream hover:bg-surface text-navy font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Contact Our Team
-            </button>
+            >{pageCopy['contactOurTeam']}</button>
           </div>
         </div>
       </section>

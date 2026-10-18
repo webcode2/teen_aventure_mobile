@@ -13,11 +13,13 @@ import '../theme.dart';
 class QuestMapView extends StatefulWidget {
   const QuestMapView({
     super.key,
+    this.copy = const {},
     required this.pins,
     required this.revealId,
     required this.onOpenLevel,
   });
 
+  final Map<String, String> copy;
   final List<QuestMapPin> pins;
   final int revealId;
   final ValueChanged<int> onOpenLevel;
@@ -55,6 +57,7 @@ class _QuestMapViewState extends State<QuestMapView> {
   Future<void> _push({required bool levels, required bool reveal}) async {
     final controller = _controller;
     if (controller == null || !_ready || !mounted) return;
+    await controller.evaluateJavascript(source: 'QuestMap.setCopy(${jsonEncode(widget.copy)});');
     if (levels) {
       final json = jsonEncode([for (final pin in widget.pins) pin.toJson()]);
       await controller.evaluateJavascript(source: 'QuestMap.setLevels($json);');
@@ -84,7 +87,8 @@ class _QuestMapViewState extends State<QuestMapView> {
     super.didUpdateWidget(oldWidget);
     final levelsChanged = !listEquals(oldWidget.pins, widget.pins);
     final revealChanged = oldWidget.revealId != widget.revealId;
-    if (levelsChanged || revealChanged) {
+    final copyChanged = !mapEquals(oldWidget.copy, widget.copy);
+    if (levelsChanged || revealChanged || copyChanged) {
       unawaited(_push(levels: levelsChanged, reveal: revealChanged));
     }
   }

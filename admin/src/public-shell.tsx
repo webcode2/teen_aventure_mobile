@@ -1,11 +1,16 @@
-import { useState, type ReactNode } from 'react';
+import { publicApi } from './api';
+import type { LandingCmsContent } from './pages-landing';
+import { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { Brand } from './ui';
+
+const PublicCopy = createContext<LandingCmsContent | null>(null);
 
 type PublicTab = 'home' | 'about' | 'privacy' | 'contact' | 'ministry' | 'portal';
 
 export interface PublicLayoutProps {
   children: ReactNode;
+  content?: LandingCmsContent | null;
   activeTab?: PublicTab;
   /** CMS mini preview: compact chrome that fits a narrow column. */
   stacked?: boolean;
@@ -18,6 +23,7 @@ export function PublicHeader({
   activeTab?: PublicTab;
   stacked?: boolean;
 }) {
+  const copy = useContext(PublicCopy);
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -28,11 +34,11 @@ export function PublicHeader({
 
   if (stacked) {
     return (
-      <header className="border-b border-border/80 bg-surface px-3 py-2.5">
+      <header data-cms-section="header" className="border-b border-border/80 bg-surface px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <Brand size="header" />
           <span className="rounded-lg border border-navy px-2.5 py-1 text-[10px] font-bold text-navy">
-            Sign up / Login
+            {copy?.header?.signInLabel ?? 'Sign up / Login'}
           </span>
         </div>
       </header>
@@ -46,14 +52,14 @@ export function PublicHeader({
         <div className="flex items-center gap-2 mx-auto text-center flex-wrap justify-center">
           <span className="inline-block w-2 h-2 rounded-full bg-gold shrink-0" />
           <span className="font-medium text-cream/90">
-            Faith-Rooted Christian Discipleship for Teenagers &amp; Families &bull; 100% Ad-Free
+            {copy?.header?.banner ?? 'Faith-Rooted Christian Discipleship for Teenagers & Families • 100% Ad-Free'}
           </span>
           <button
             type="button"
             onClick={() => handleNavClick('/about')}
             className="font-bold text-gold hover:text-white underline decoration-gold transition-colors cursor-pointer ml-1"
           >
-            Learn About Our Christian Mission →
+            {copy?.header?.missionLink ?? 'Learn About Our Christian Mission →'}
           </button>
         </div>
       </div>
@@ -113,7 +119,7 @@ export function PublicHeader({
                   : 'border border-navy text-navy hover:bg-navy hover:text-white'
               }`}
             >
-              Sign up / Login
+              {copy?.header?.signInLabel ?? 'Sign up / Login'}
             </button>
           </div>
 
@@ -174,7 +180,7 @@ export function PublicHeader({
                   activeTab === 'ministry' ? 'bg-teal text-white' : 'border border-navy text-navy'
                 }`}
               >
-                Sign up / Login
+                {copy?.header?.signInLabel ?? 'Sign up / Login'}
               </button>
             </div>
           </div>
@@ -262,10 +268,14 @@ export function AppStoreButton({
 }
 
 export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
+  const copy = useContext(PublicCopy);
   const navigate = useNavigate();
 
   return (
-    <footer className={`mt-auto bg-navy text-cream text-xs ${stacked ? 'py-8 px-4' : 'py-12 px-4 sm:px-8'}`}>
+    <footer
+      data-cms-section="footer"
+      className={`mt-auto bg-navy text-cream text-xs ${stacked ? 'py-8 px-4' : 'py-12 px-4 sm:px-8'}`}
+    >
       <div
         className={`max-w-7xl mx-auto grid gap-8 border-b border-white/10 pb-10 ${
           stacked ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-4'
@@ -280,7 +290,7 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
             </span>
           </div>
           <p className="text-cream/70 text-xs leading-relaxed">
-            Christian faith discipleship designed for contemporary teenagers. Connecting teens and families through interactive scripture journeys.
+            {copy?.footer?.tagline ?? 'Christian faith discipleship designed for contemporary teenagers. Connecting teens and families through interactive scripture journeys.'}
           </p>
           <div className="text-[11px] text-cream/50 mt-1">
             Empowered by Teen Bible Adventures &bull; 100% Ad-free &bull; Parent-verified
@@ -360,6 +370,7 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
         {/* Connect & Mobile App Column */}
         <div className="flex flex-col gap-3">
           <h4 className="font-bold text-gold text-xs uppercase tracking-wider">Get the Mobile App</h4>
+          {copy?.footer?.supportEmail && <a className="break-words text-cream/80" href={`mailto:${copy.footer.supportEmail}`}>{copy.footer.supportEmail}</a>}
           <p className="text-cream/70 text-xs leading-relaxed">
             Download Teen Bible Adventures for Android and iOS devices.
           </p>
@@ -376,7 +387,7 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
           stacked ? 'flex-col text-center' : 'flex-col sm:flex-row'
         }`}
       >
-        <p>&copy; {new Date().getFullYear()} Teen Bible Adventures. All rights reserved.</p>
+        <p>{copy?.footer?.copyright ?? `© ${new Date().getFullYear()} Teen Bible Adventures. All rights reserved.`}</p>
         <div className={`flex items-center gap-4 text-cream/70 ${stacked ? 'flex-wrap justify-center' : ''}`}>
           <button
             type="button"
@@ -415,16 +426,19 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
   );
 }
 
-export function PublicLayout({ children, activeTab, stacked = false }: PublicLayoutProps) {
-  return (
-    <div
-      className={`bg-cream text-navy flex flex-col selection:bg-teal selection:text-white ${
-        stacked ? 'min-h-0' : 'min-h-screen'
-      }`}
-    >
+export function PublicLayout({ children, activeTab, stacked = false, content }: PublicLayoutProps) {
+  const [remote, setRemote] = useState<LandingCmsContent | null>(null);
+  useEffect(() => {
+    if (content !== undefined) return;
+    let cancelled = false;
+    publicApi<LandingCmsContent>('/api/content/web').then(value => { if (!cancelled) setRemote(value); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [content]);
+  return <PublicCopy.Provider value={content === undefined ? remote : content}>
+    <div className="flex min-h-screen flex-col bg-cream font-sans text-navy">
       <PublicHeader activeTab={activeTab} stacked={stacked} />
       <main className="flex-1">{children}</main>
       <PublicFooter stacked={stacked} />
     </div>
-  );
+  </PublicCopy.Provider>;
 }

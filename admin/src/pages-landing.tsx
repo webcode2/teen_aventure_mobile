@@ -1,3 +1,5 @@
+import { LANDING_EXTRA } from './landing-extra';
+import { mergeCms, safeCmsUrl } from './cms-fields';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { publicApi } from './api';
@@ -36,13 +38,17 @@ function BookHeartIcon() {
 }
 
 /** CMS-shaped copy used by the public landing and the admin live preview. */
-export type LandingCmsContent = {
+export type LandingCmsContent = Partial<typeof LANDING_EXTRA> & {
   hero?: {
     badge?: string;
     title?: string;
     subtitle?: string;
     primaryCta?: string;
     secondaryCta?: string;
+    primaryCtaHref?: string;
+    secondaryCtaHref?: string;
+    abiUrl?: string;
+    zackUrl?: string;
   };
   pillars?: {
     eyebrow?: string;
@@ -68,7 +74,7 @@ export type LandingCmsContent = {
   };
 };
 
-export const DEFAULT_LANDING_CONTENT: Required<{
+export const DEFAULT_LANDING_CONTENT: typeof LANDING_EXTRA & Required<{
   hero: Required<NonNullable<LandingCmsContent['hero']>>;
   pillars: {
     eyebrow: string;
@@ -82,11 +88,16 @@ export const DEFAULT_LANDING_CONTENT: Required<{
   about: Required<NonNullable<LandingCmsContent['about']>>;
   footer: Required<NonNullable<LandingCmsContent['footer']>>;
 }> = {
+  ...LANDING_EXTRA,
   hero: {
     badge: 'Biblical Discipleship for the Next Generation',
     title: 'Nurturing Christian Teens Through Biblical Truth & Faith Adventures.',
     subtitle:
       'Teen Bible Adventures inspires Christian teenagers and families through structured weekly scripture quests, video reflections, interactive Bible quizzes, and engaging scripture puzzles.',
+    primaryCtaHref: '#quests',
+    secondaryCtaHref: '/about',
+    abiUrl: '/abi.png',
+    zackUrl: '/zack.png',
     primaryCta: 'Explore Weekly Quests',
     secondaryCta: 'Our Christian Mission',
   },
@@ -128,8 +139,7 @@ export const DEFAULT_LANDING_CONTENT: Required<{
 };
 
 function pick(value: string | undefined, fallback: string) {
-  const trimmed = (value ?? '').trim();
-  return trimmed || fallback;
+  return typeof value === 'string' ? value.trim() : fallback;
 }
 
 /** Badge can be cleared in the CMS — empty string hides it on the public site. */
@@ -142,7 +152,12 @@ function pickBadge(value: string | undefined, fallback: string, fromCms: boolean
 export function mergeLandingContent(extra?: LandingCmsContent | null): typeof DEFAULT_LANDING_CONTENT {
   const fromCms = extra != null;
   return {
+    ...mergeCms(LANDING_EXTRA, extra),
     hero: {
+      primaryCtaHref: safeCmsUrl(extra?.hero?.primaryCtaHref, '#quests'),
+      secondaryCtaHref: safeCmsUrl(extra?.hero?.secondaryCtaHref, '/about'),
+      abiUrl: safeCmsUrl(extra?.hero?.abiUrl, '/abi.png'),
+      zackUrl: safeCmsUrl(extra?.hero?.zackUrl, '/zack.png'),
       badge: pickBadge(extra?.hero?.badge, DEFAULT_LANDING_CONTENT.hero.badge, fromCms),
       title: pick(extra?.hero?.title, DEFAULT_LANDING_CONTENT.hero.title),
       subtitle: pick(extra?.hero?.subtitle, DEFAULT_LANDING_CONTENT.hero.subtitle),
@@ -223,6 +238,8 @@ export function LandingPageSections({
     <>
       {/* Hero Section */}
       <section
+        data-cms-section="hero"
+        hidden={!copy.layout.hero}
         className={`relative overflow-hidden border-b border-border/60 ${
           stacked ? 'px-4 pt-10 pb-12' : 'pt-16 pb-24 sm:pt-28 sm:pb-36 px-4 sm:px-8'
         }`}
@@ -306,7 +323,7 @@ export function LandingPageSections({
             {!stacked ? (
               <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
                 <img
-                  src="/zack.png"
+                  src={copy.hero.zackUrl}
                   alt="Zack — Teen Bible Adventures character"
                   className="w-52 h-auto object-contain drop-shadow-xl"
                 />
@@ -341,7 +358,7 @@ export function LandingPageSections({
               >
                 <figure className="m-0 flex flex-col rounded-2xl border border-orange/25 bg-surface shadow-xs overflow-hidden">
                   <div className="bg-gradient-to-b from-orange/5 to-orange/20 pt-4 px-3 flex items-end justify-center">
-                    <img src="/zack.png" alt="Zack" className="w-full max-w-[160px] h-auto object-contain block" />
+                    <img src={copy.hero.zackUrl} alt="Zack" className="w-full max-w-[160px] h-auto object-contain block" />
                   </div>
                   <figcaption className="flex flex-col items-center gap-1 py-2.5 px-2">
                     <span className="text-sm font-extrabold text-navy">Zack</span>
@@ -352,7 +369,7 @@ export function LandingPageSections({
                 </figure>
                 <figure className="m-0 flex flex-col rounded-2xl border border-teal/25 bg-surface shadow-xs overflow-hidden">
                   <div className="bg-gradient-to-b from-teal/5 to-teal/20 pt-4 px-3 flex items-end justify-center">
-                    <img src="/abi.png" alt="Abi" className="w-full max-w-[160px] h-auto object-contain block" />
+                    <img src={copy.hero.abiUrl} alt="Abi" className="w-full max-w-[160px] h-auto object-contain block" />
                   </div>
                   <figcaption className="flex flex-col items-center gap-1 py-2.5 px-2">
                     <span className="text-sm font-extrabold text-navy">Abi</span>
@@ -369,7 +386,7 @@ export function LandingPageSections({
                 }`}
               >
                 {interactive ? (
-                  <a href="#quests" className={`${primaryCtaClass} cursor-pointer hover:-translate-y-0.5 hover:shadow-lg`}>
+                  <a href={copy.hero.primaryCtaHref} className={`${primaryCtaClass} cursor-pointer hover:-translate-y-0.5 hover:shadow-lg`}>
                     <span>{copy.hero.primaryCta}</span>
                     <span>→</span>
                   </a>
@@ -382,7 +399,7 @@ export function LandingPageSections({
                 {interactive ? (
                   <button
                     type="button"
-                    onClick={() => navigate('/about')}
+                    onClick={() => { if (copy.hero.secondaryCtaHref.startsWith('/')) navigate(copy.hero.secondaryCtaHref); else window.location.assign(copy.hero.secondaryCtaHref); }}
                     className={`${secondaryCtaClass} cursor-pointer hover:-translate-y-0.5`}
                   >
                     {copy.hero.secondaryCta}
@@ -421,7 +438,7 @@ export function LandingPageSections({
             {!stacked ? (
               <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
                 <img
-                  src="/abi.png"
+                  src={copy.hero.abiUrl}
                   alt="Abi — Teen Bible Adventures character"
                   className="w-52 h-auto object-contain drop-shadow-xl"
                 />
@@ -439,6 +456,8 @@ export function LandingPageSections({
 
       {/* 3 Pillars */}
       <section
+        data-cms-section="pillars"
+        hidden={!copy.layout.pillars}
         id="quests"
         className={`bg-surface border-b border-border/60 ${stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'}`}
       >
@@ -499,6 +518,9 @@ export function LandingPageSections({
 
       {/* Discipleship + barcode */}
       <section
+        data-cms-section="mission"
+        data-cms-section-also="about"
+        hidden={!copy.layout.mission}
         id="discipleship"
         className={`relative overflow-hidden border-b border-border/60 bg-cream ${
           stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'
@@ -516,7 +538,7 @@ export function LandingPageSections({
                 stacked ? 'text-2xl' : 'text-3xl sm:text-5xl'
               }`}
             >
-              A Faith-Filled Digital Sanctuary for Today’s Christian Youth.
+              {copy.mission.title}
             </h2>
 
             <p className={`text-text-2 leading-relaxed ${stacked ? 'text-sm' : 'text-base sm:text-lg'}`}>
@@ -526,23 +548,8 @@ export function LandingPageSections({
               {copy.about.vision}
             </p>
 
-            <ul className={`flex flex-col gap-3 text-navy font-medium ${stacked ? 'text-sm' : 'text-sm sm:text-base'}`}>
-              <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
-                <span>Active scripture journeys: 52 weekly guided Bible quests with reflection questions.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
-                <span>Engaging video teachings that unpack biblical truth for everyday teen challenges.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
-                <span>Creative Bible puzzles that make learning enjoyable.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <span className="text-teal font-extrabold text-base shrink-0 mt-0.5">✓</span>
-                <span>Family study passes with instant barcode cards for Christian households and study circles.</span>
-              </li>
+            <ul className="flex flex-col gap-3 text-sm font-medium text-navy">
+              {copy.mission.benefits.map((benefit, index) => <li key={index} className="flex items-start gap-2.5"><span aria-hidden className="text-teal">✓</span><span>{benefit}</span></li>)}
             </ul>
 
             <div className={`pt-2 flex gap-3 ${stacked ? 'w-full flex-col' : 'flex-wrap items-center'}`}>
@@ -555,12 +562,12 @@ export function LandingPageSections({
                   href="#quests"
                   className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface hover:bg-surface-2 text-navy font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-xs hover:shadow-md"
                 >
-                  <span>Start Weekly Quests</span>
+                  <span>{copy.mission.actionLabel}</span>
                   <span>→</span>
                 </a>
               ) : (
                 <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-navy/20 bg-surface text-navy font-bold text-xs shadow-xs">
-                  <span>Start Weekly Quests</span>
+                  <span>{copy.mission.actionLabel}</span>
                   <span>→</span>
                 </span>
               )}
@@ -581,6 +588,9 @@ export function LandingPageSections({
 
       {/* Onboarding */}
       <section
+        data-cms-section="onboarding"
+        data-cms-section-also="passSection"
+        hidden={!copy.layout.onboarding}
         id="onboarding"
         className={`bg-surface border-b border-border/60 ${stacked ? 'py-12 px-4' : 'py-16 sm:py-24 px-4 sm:px-8'}`}
       >
@@ -604,36 +614,21 @@ export function LandingPageSections({
               stacked ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3 gap-6'
             }`}
           >
-            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 1</div>
-              <h4 className="font-extrabold text-base text-navy">Get Your Study Pass</h4>
-              <p className="text-sm text-text-2 leading-relaxed">
-                Families and youth study circles receive a unique 6-character pass code or barcode card to connect
-                together.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 2</div>
-              <h4 className="font-extrabold text-base text-navy">Download Mobile App</h4>
-              <p className="text-sm text-text-2 leading-relaxed">
-                Parents and teens download the Teen Bible Adventures app for Android or iOS, and scan the pass code.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-cream border border-border/80 flex flex-col gap-2.5 shadow-2xs">
-              <div className="text-xs font-extrabold text-teal uppercase tracking-wider">Step 3</div>
-              <h4 className="font-extrabold text-base text-navy">Grow in Faith Together</h4>
-              <p className="text-sm text-text-2 leading-relaxed">
-                Complete weekly quests, solve creative scripture puzzles, and build lifelong Christian habits.
-              </p>
-            </div>
+            {copy.onboarding.steps.map((step, index) => (
+              <div key={index} className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-cream p-5">
+                <div className="text-xs font-extrabold uppercase tracking-wider text-teal">Step {index + 1}</div>
+                <h4 className="text-base font-extrabold text-navy">{step.title}</h4>
+                <p className="text-sm leading-relaxed text-text-2">{step.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Safeguarding */}
       <section
+        data-cms-section="safeguarding"
+        hidden={!copy.layout.safeguarding}
         id="safeguarding"
         className={`bg-cream border-b border-border/60 ${stacked ? 'py-10 px-4' : 'py-16 px-4 sm:px-8'}`}
       >
@@ -647,12 +642,10 @@ export function LandingPageSections({
           </div>
           <div className="flex-1">
             <h3 className="text-lg sm:text-xl font-extrabold text-navy">
-              Uncompromising Commitment to Teen &amp; Family Safety
+              {copy.safeguarding.title}
             </h3>
             <p className="text-sm sm:text-base text-text-2 mt-2 leading-relaxed">
-              We adhere strictly to COPPA (US), Age-Appropriate Design Code (UK), and national child safety regulations.
-              Children under 13 cannot create unverified accounts; teen logins remain parent-managed; and all family
-              safety reports remain strictly confidential.
+              {copy.safeguarding.description}
             </p>
           </div>
           {interactive ? (
@@ -663,7 +656,7 @@ export function LandingPageSections({
                 stacked ? 'w-full' : ''
               }`}
             >
-              Safety &amp; Privacy Policy →
+              {copy.safeguarding.actionLabel}
             </button>
           ) : (
             <span
@@ -671,7 +664,7 @@ export function LandingPageSections({
                 stacked ? 'w-full' : ''
               }`}
             >
-              Safety &amp; Privacy Policy →
+              {copy.safeguarding.actionLabel}
             </span>
           )}
         </div>
@@ -698,7 +691,7 @@ export function PublicLandingPage() {
   }, []);
 
   return (
-    <PublicLayout activeTab="home">
+    <PublicLayout activeTab="home" content={content}>
       <LandingPageSections content={content} />
     </PublicLayout>
   );

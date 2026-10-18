@@ -5,6 +5,7 @@ import '../../data/level_map_data.dart';
 import '../../models/level_node.dart';
 import '../../platform/quest_map_view.dart';
 import '../../providers/current_quest_provider.dart';
+import '../../providers/hero_copy.dart';
 import '../../theme.dart';
 
 /// Copy for a pin that cannot open. Null when the level can be selected.
@@ -158,8 +159,11 @@ class _LevelMapScreenState extends State<LevelMapScreen> {
       quests = null;
     }
     final rows = _rowsFor(quests);
+    Map<String, String> copy = const {};
+    try { copy = context.watch<HeroCopyController>().questCopy; } catch (_) {}
     // Pulse stays on the highest/current level, not the browsed quest-of-the-day.
     return QuestMapView(
+      copy: copy,
       pins: buildQuestMapPins(rows),
       revealId: currentLevelIdOf(rows),
       onOpenLevel: _openLevel,

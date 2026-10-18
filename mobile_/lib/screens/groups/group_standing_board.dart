@@ -219,6 +219,12 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
           _CheerAllButton(enabled: canNudge, cheers: _cheers, onSelected: _nudgeAll),
           const SizedBox(height: 10),
         ],
+        if (parentView && _rows.any((row) => row.isBlurred)) ...[
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('Only your explorers’ full names and points are visible.', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          ),
+        ],
         _StandingListCard(
           child: Column(
             children: [
@@ -346,7 +352,7 @@ class _StandingActivityRow extends StatelessWidget {
   ];
 
   String get _displayName {
-    if (item.isBlurred) return 'Participant #${item.rank}';
+    if (item.isBlurred) return '${item.childName.trim().split(RegExp(r'\s+')).first} ••••';
     return item.childName;
   }
 
@@ -431,7 +437,7 @@ class _StandingActivityRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${item.points} pts',
+                  isBlurred ? '••• pts' : '${item.points} pts',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,

@@ -1,3 +1,4 @@
+import '../../providers/cms_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -178,7 +179,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              practice ? 'Practice complete' : 'Quiz finished!',
+              practice ? 'Practice complete' : cmsText(context, 'messages', 'quizSuccess', 'Quiz finished!'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontWeight: FontWeight.w700,

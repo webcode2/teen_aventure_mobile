@@ -1,3 +1,4 @@
+import { usePageCopy } from './use-page-copy';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { PublicLayout } from './public-shell';
@@ -219,7 +220,8 @@ export function WorldMapBackground() {
   );
 }
 
-export function ContactPage() {
+export function ContactPage({ content }: { content?: Record<string, string> } = {}) {
+  const pageCopy = usePageCopy('contactPage', content);
   const navigate = useNavigate();
 
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
@@ -251,24 +253,7 @@ export function ContactPage() {
     }, 700);
   };
 
-  const faqs = [
-    {
-      q: 'How do I generate a Study Pass Code for our youth group or family?',
-      a: 'Families and youth mentors can generate a 6-character study code and printable barcode card directly in the Teen Bible Adventures mobile app during family and group onboarding.',
-    },
-    {
-      q: 'Is Teen Bible Adventures really free to use?',
-      a: 'Yes! Teen Bible Adventures is a Christian discipleship initiative provided through Teen Bible Adventures to serve youth, mentors, and Christian families. There are no fees or commercial ads.',
-    },
-    {
-      q: 'How do parents verify their teens account?',
-      a: 'Parents download the mobile app and link their family profile. From their settings, they can approve study circle connections and monitor weekly quest streaks.',
-    },
-    {
-      q: 'What platforms is the mobile app available on?',
-      a: 'The Teen Bible Adventures app is available on Android via Google Play and iOS via the App Store, as well as offline-capable for study circle sessions.',
-    },
-  ];
+  const faqs = usePageCopy('faq').items;
 
   return (
     <PublicLayout activeTab="contact">
@@ -279,16 +264,12 @@ export function ContactPage() {
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-5">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-tint border border-teal/20 text-teal text-xs font-bold tracking-wide">
             <MailIcon />
-            <span>CONTACT &amp; FELLOWSHIP SUPPORT</span>
+            <span>{pageCopy['contactFellowshipSupport']}</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black text-navy tracking-tight">
-            We’re Here to Help
-          </h1>
+          <h1 className="text-3xl sm:text-5xl font-black text-navy tracking-tight">{pageCopy['wereHereToHelp']}</h1>
 
-          <p className="text-xs sm:text-sm text-muted max-w-xl leading-relaxed">
-            Have questions about bringing Teen Bible Adventures to your family, youth circle, mobile app support, or child safeguarding? Reach out to our team.
-          </p>
+          <p className="text-xs sm:text-sm text-muted max-w-xl leading-relaxed">{pageCopy['haveQuestionsAboutBringingTeenBibleAdventures']}</p>
         </div>
       </section>
 
@@ -302,19 +283,17 @@ export function ContactPage() {
                 <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                   <UsersIcon />
                 </div>
-                <h3 className="font-extrabold text-base sm:text-lg text-navy">Youth Circles &amp; Study Groups</h3>
-                <p className="text-sm text-text-2 leading-relaxed">
-                  Pass codes, multi-group setup, youth circle onboarding.
-                </p>
+                <h3 className="font-extrabold text-base sm:text-lg text-navy">{pageCopy['youthCirclesStudyGroups']}</h3>
+                <p className="text-sm text-text-2 leading-relaxed">{pageCopy['passCodesMultigroupSetupYouthCircleOnboarding']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">fellowship@askhub.org</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['fellowshipaskhuborg']}</span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard('fellowship@askhub.org')}
+                  onClick={() => copyToClipboard(pageCopy['fellowshipEmail'])}
                   className="text-left text-xs text-muted hover:text-navy cursor-pointer transition-colors"
                 >
-                  {copiedEmail === 'fellowship@askhub.org' ? '✓ Copied!' : 'Click to copy email'}
+                  {copiedEmail === pageCopy['fellowshipEmail'] ? '✓ Copied!' : 'Click to copy email'}
                 </button>
               </div>
             </div>
@@ -325,19 +304,17 @@ export function ContactPage() {
                 <div className="h-12 w-12 rounded-xl bg-gold/20 text-navy flex items-center justify-center shrink-0">
                   <SmartphoneIcon />
                 </div>
-                <h3 className="font-extrabold text-base sm:text-lg text-navy">App &amp; Tech Support</h3>
-                <p className="text-sm text-text-2 leading-relaxed">
-                  Device sync, barcode scan assistance, app bugs.
-                </p>
+                <h3 className="font-extrabold text-base sm:text-lg text-navy">{pageCopy['appTechSupport']}</h3>
+                <p className="text-sm text-text-2 leading-relaxed">{pageCopy['deviceSyncBarcodeScanAssistanceAppBugs']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">support@askhub.org</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['supportaskhuborg']}</span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard('support@askhub.org')}
+                  onClick={() => copyToClipboard(pageCopy['supportEmail'])}
                   className="text-left text-xs text-muted hover:text-navy cursor-pointer transition-colors"
                 >
-                  {copiedEmail === 'support@askhub.org' ? '✓ Copied!' : 'Click to copy email'}
+                  {copiedEmail === pageCopy['supportEmail'] ? '✓ Copied!' : 'Click to copy email'}
                 </button>
               </div>
             </div>
@@ -348,19 +325,17 @@ export function ContactPage() {
                 <div className="h-12 w-12 rounded-xl bg-forest/15 text-forest flex items-center justify-center shrink-0">
                   <ShieldCheckIcon />
                 </div>
-                <h3 className="font-extrabold text-base sm:text-lg text-navy">Safeguarding &amp; Privacy</h3>
-                <p className="text-sm text-text-2 leading-relaxed">
-                  Parental consent, COPPA inquiries, data erasure.
-                </p>
+                <h3 className="font-extrabold text-base sm:text-lg text-navy">{pageCopy['safeguardingPrivacy']}</h3>
+                <p className="text-sm text-text-2 leading-relaxed">{pageCopy['parentalConsentCoppaInquiriesDataErasure']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">safety@askhub.org</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['safetyaskhuborg']}</span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard('safety@askhub.org')}
+                  onClick={() => copyToClipboard(pageCopy['safetyEmail'])}
                   className="text-left text-xs text-muted hover:text-navy cursor-pointer transition-colors"
                 >
-                  {copiedEmail === 'safety@askhub.org' ? '✓ Copied!' : 'Click to copy email'}
+                  {copiedEmail === pageCopy['safetyEmail'] ? '✓ Copied!' : 'Click to copy email'}
                 </button>
               </div>
             </div>
@@ -371,19 +346,17 @@ export function ContactPage() {
                 <div className="h-12 w-12 rounded-xl bg-teal-tint text-teal flex items-center justify-center shrink-0">
                   <MailIcon />
                 </div>
-                <h3 className="font-extrabold text-base sm:text-lg text-navy">Support &amp; Sponsorship</h3>
-                <p className="text-sm text-text-2 leading-relaxed">
-                  Ministry sponsorship, curriculum suggestions, partnerships.
-                </p>
+                <h3 className="font-extrabold text-base sm:text-lg text-navy">{pageCopy['supportSponsorship']}</h3>
+                <p className="text-sm text-text-2 leading-relaxed">{pageCopy['ministrySponsorshipCurriculumSuggestionsPartnerships']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">support@askhub.org</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['supportaskhuborg14']}</span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard('support@askhub.org')}
+                  onClick={() => copyToClipboard(pageCopy['supportEmail'])}
                   className="text-left text-xs text-muted hover:text-navy cursor-pointer transition-colors"
                 >
-                  {copiedEmail === 'support@askhub.org' ? '✓ Copied!' : 'Click to copy email'}
+                  {copiedEmail === pageCopy['supportEmail'] ? '✓ Copied!' : 'Click to copy email'}
                 </button>
               </div>
             </div>
@@ -397,22 +370,16 @@ export function ContactPage() {
           {/* Contact Form (7 cols) */}
           <div className="lg:col-span-7">
             <div className="p-6 sm:p-8 rounded-3xl bg-surface border border-border shadow-xs">
-              <h2 className="text-2xl sm:text-3xl font-black text-navy mb-1.5">
-                Send Us a Message
-              </h2>
-              <p className="text-sm text-text-2 mb-6 leading-relaxed">
-                Fill out the form below and our ministry support team will respond within 24 business hours.
-              </p>
+              <h2 className="text-2xl sm:text-3xl font-black text-navy mb-1.5">{pageCopy['sendUsAMessage']}</h2>
+              <p className="text-sm text-text-2 mb-6 leading-relaxed">{pageCopy['fillOutTheFormBelowAndOur']}</p>
 
               {submitted ? (
                 <div className="p-6 rounded-2xl bg-sage border border-forest/30 flex flex-col items-center text-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-forest text-white flex items-center justify-center">
                     <CheckIcon />
                   </div>
-                  <h3 className="font-extrabold text-forest text-base sm:text-lg">Message Sent Successfully!</h3>
-                  <p className="text-sm text-navy leading-relaxed max-w-md">
-                    Thank you for reaching out, <strong>{name}</strong>. A confirmation has been noted for <strong>{email}</strong>. Our team will review your inquiry regarding <em>{topic}</em> shortly.
-                  </p>
+                  <h3 className="font-extrabold text-forest text-base sm:text-lg">{pageCopy['messageSentSuccessfully']}</h3>
+                  <p className="text-sm text-navy leading-relaxed max-w-md">{pageCopy['thankYouForReachingOut']}{' '}<strong>{name}</strong>{pageCopy['aConfirmationHasBeenNotedFor']}{' '}<strong>{email}</strong>{pageCopy['ourTeamWillReviewYourInquiryRegarding']}<em>{topic}</em>{pageCopy['shortly']}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -420,33 +387,31 @@ export function ContactPage() {
                       setMessage('');
                     }}
                     className="mt-2 px-5 py-2.5 rounded-xl bg-white border border-forest/20 text-forest text-sm font-bold hover:bg-forest/10 cursor-pointer transition-colors"
-                  >
-                    Send Another Message
-                  </button>
+                  >{pageCopy['sendAnotherMessage']}</button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                      <span>Your Name *</span>
+                      <span>{pageCopy['yourName']}</span>
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Sarah Jenkins"
+                        placeholder={pageCopy['namePlaceholder']}
                         className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal"
                       />
                     </label>
 
                     <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                      <span>Email Address *</span>
+                      <span>{pageCopy['emailAddress']}</span>
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="sarah@example.com"
+                        placeholder={pageCopy['emailPlaceholder']}
                         className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal"
                       />
                     </label>
@@ -454,63 +419,63 @@ export function ContactPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                      <span>Your Role</span>
+                      <span>{pageCopy['yourRole']}</span>
                       <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
                         className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal"
                       >
-                        <option>Christian Youth Mentor / Leader</option>
-                        <option>Parent / Guardian</option>
-                        <option>Teen / Student</option>
-                        <option>Family Study Circle Host</option>
-                        <option>Christian Educator / Teacher</option>
-                        <option>Other Fellowship Partner</option>
+                        <option>{pageCopy['christianYouthMentorLeader']}</option>
+                        <option>{pageCopy['parentGuardian']}</option>
+                        <option>{pageCopy['teenStudent']}</option>
+                        <option>{pageCopy['familyStudyCircleHost']}</option>
+                        <option>{pageCopy['christianEducatorTeacher']}</option>
+                        <option>{pageCopy['otherFellowshipPartner']}</option>
                       </select>
                     </label>
 
                     <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                      <span>Group / Study Circle (Optional)</span>
+                      <span>{pageCopy['groupStudyCircleOptional']}</span>
                       <input
                         type="text"
                         value={group}
                         onChange={(e) => setGroup(e.target.value)}
-                        placeholder="Grace Youth Fellowship"
+                        placeholder={pageCopy['groupPlaceholder']}
                         className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal"
                       />
                     </label>
                   </div>
 
                   <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                    <span>Inquiry Topic</span>
+                    <span>{pageCopy['inquiryTopic']}</span>
                     <select
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
                       className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal"
                     >
-                      <option>Study Circle Pass &amp; Code Setup</option>
-                      <option>Support &amp; Sponsorship Inquiries</option>
-                      <option>Mobile App Help &amp; Troubleshooting</option>
-                      <option>Safeguarding &amp; Parental Consent</option>
-                      <option>Bible Curriculum &amp; Puzzle Ideas</option>
-                      <option>Other Questions</option>
+                      <option>{pageCopy['studyCirclePassCodeSetup']}</option>
+                      <option>{pageCopy['supportSponsorshipInquiries']}</option>
+                      <option>{pageCopy['mobileAppHelpTroubleshooting']}</option>
+                      <option>{pageCopy['safeguardingParentalConsent']}</option>
+                      <option>{pageCopy['bibleCurriculumPuzzleIdeas']}</option>
+                      <option>{pageCopy['otherQuestions']}</option>
                     </select>
                   </label>
 
                   <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
-                    <span>Message *</span>
+                    <span>{pageCopy['message']}</span>
                     <textarea
                       required
                       rows={5}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="How can our team assist you today?"
+                      placeholder={pageCopy['messagePlaceholder']}
                       className="px-4 py-2.5 rounded-xl border border-border bg-cream text-navy text-sm focus:outline-none focus:border-teal resize-none"
                     />
                   </label>
 
                   <div className="pt-2 flex items-center justify-between gap-4">
-                    <span className="text-xs text-muted">* Required fields</span>
+                    <span className="text-xs text-muted">{pageCopy['requiredFields']}</span>
                     <button
                       type="submit"
                       disabled={submitting}
@@ -527,12 +492,8 @@ export function ContactPage() {
           {/* FAQs (5 cols) */}
           <div className="lg:col-span-5 flex flex-col gap-6">
             <div>
-              <span className="text-xs font-bold text-teal uppercase tracking-widest">
-                Quick Answers
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-navy mt-1">
-                Frequently Asked Questions
-              </h2>
+              <span className="text-xs font-bold text-teal uppercase tracking-widest">{pageCopy['quickAnswers']}</span>
+              <h2 className="text-2xl sm:text-3xl font-black text-navy mt-1">{pageCopy['frequentlyAskedQuestions']}</h2>
             </div>
 
             <div className="space-y-4">
@@ -550,17 +511,13 @@ export function ContactPage() {
 
             {/* Quick Explore Quests Card */}
             <div className="p-6 sm:p-7 rounded-2xl bg-navy text-cream flex flex-col gap-3.5">
-              <h4 className="font-bold text-white text-base">Ready to Begin Your Adventure?</h4>
-              <p className="text-sm text-cream/80 leading-relaxed">
-                Explore 52 weekly guided Bible quests with engaging video teachings, objective quizzes, and creative scripture puzzles.
-              </p>
+              <h4 className="font-bold text-white text-base">{pageCopy['readyToBeginYourAdventure']}</h4>
+              <p className="text-sm text-cream/80 leading-relaxed">{pageCopy['explore52WeeklyGuidedBibleQuestsWith']}</p>
               <button
                 type="button"
                 onClick={() => navigate('/#quests')}
                 className="mt-1 px-5 py-3 rounded-xl bg-gold hover:bg-gold/90 text-navy font-bold text-sm transition-colors cursor-pointer text-center"
-              >
-                Explore Weekly Quests →
-              </button>
+              >{pageCopy['exploreWeeklyQuests']}</button>
             </div>
           </div>
         </div>

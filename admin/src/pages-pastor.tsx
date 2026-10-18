@@ -457,6 +457,12 @@ export function PastorPortalPage({
   const [errorMsg, setErrorMsg] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!feedbackMsg) return;
+    const timer = window.setTimeout(() => setFeedbackMsg(''), 4500);
+    return () => window.clearTimeout(timer);
+  }, [feedbackMsg]);
+
   // Custom Groups / Classes management state
   const [classQuery, setClassQuery] = useState('');
   const [createClassModalOpen, setCreateClassModalOpen] = useState(false);
@@ -548,6 +554,8 @@ export function PastorPortalPage({
   // Nudge template creation (private to this ministry; Care approves)
   const [nudgeTemplates, setNudgeTemplates] = useState<NudgeTemplate[]>([]);
   const [nudgeDraft, setNudgeDraft] = useState('');
+  const [nudgePane, setNudgePane] = useState<'new' | 'custom' | 'system'>('new');
+
   const [loadingNudges, setLoadingNudges] = useState(false);
   const [savingNudge, setSavingNudge] = useState(false);
   const [editingNudgeId, setEditingNudgeId] = useState<string | null>(null);
@@ -580,6 +588,11 @@ export function PastorPortalPage({
 
   // Determine active church ID (enforcing one pastor, one church)
   const effectiveChurchId = assignedChurchId || pastorUser?.churchId || churchIdFromRoute || '';
+  const customNudgeCount = nudgeTemplates.filter(row => row.churchId === effectiveChurchId).length;
+  const nudgeLimitReached = customNudgeCount >= 30;
+  const visibleNudges = (nudgePane === 'system'
+    ? nudgeTemplates.filter(row => !row.churchId)
+    : nudgeTemplates.filter(row => row.churchId === effectiveChurchId));
 
   // Refresh church dataset
   async function refreshChurchData() {
@@ -901,7 +914,7 @@ export function PastorPortalPage({
 
   async function handleSubmitNudgeTemplate(e: React.FormEvent) {
     e.preventDefault();
-    if (!effectiveChurchId || !nudgeDraft.trim()) return;
+    if (!effectiveChurchId || !nudgeDraft.trim() || nudgeLimitReached) return;
     setSavingNudge(true);
     setErrorMsg('');
     try {
@@ -2032,40 +2045,78 @@ export function PastorPortalPage({
               </p>
             </div>
 
+            <div role="tablist" aria-label="Nudge templates" className="flex gap-6 border-b border-border/60">
+              {(['new', 'custom', 'system'] as const).map((id) => (
+                <button
+                  key={id}
+                  id={`nudge-tab-${id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={nudgePane === id}
+                  aria-controls={`nudge-panel-${id}`}
+                  tabIndex={nudgePane === id ? 0 : -1}
+                  onClick={() => setNudgePane(id)}
+                  onKeyDown={(event) => {
+                    const order = ['new', 'custom', 'system'] as const;
+                    const index = order.indexOf(nudgePane);
+                    const next = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? order[(index + 1) % 3]
+                      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? order[(index + 2) % 3]
+                      : event.key === 'Home' ? 'new'
+                      : event.key === 'End' ? 'system'
+                      : null;
+                    if (!next) return;
+                    event.preventDefault();
+                    setNudgePane(next);
+                    document.getElementById(`nudge-tab-${next}`)?.focus();
+                  }}
+                  className={`min-h-11 cursor-pointer border-b-2 px-1 text-sm font-semibold ${nudgePane === id ? 'border-teal text-navy' : 'border-transparent text-muted hover:text-navy'}`}
+                >
+                  {id === 'new' ? 'New' : id === 'custom' ? 'Custom' : 'System'}
+                </button>
+              ))}
+            </div>
+
+            <div role="tabpanel" id="nudge-panel-new" aria-labelledby="nudge-tab-new" hidden={nudgePane !== 'new'}>
             <form
               onSubmit={(e) => void handleSubmitNudgeTemplate(e)}
               className="rounded-xl border border-border bg-cream/70 p-4 flex flex-col gap-3"
             >
-              <span className="text-xs font-bold text-navy">New private template</span>
+              <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-bold text-navy">New private template</span><span className="text-xs text-muted">{customNudgeCount} / 30 custom messages</span></div>
+              {nudgeLimitReached && <p role="status" className="text-sm text-muted">You’ve reached the 30-message limit. System nudges remain available, and rejected messages can still be edited and resubmitted.</p>}
               <textarea
                 required
                 rows={3}
                 maxLength={200}
                 value={nudgeDraft}
+                disabled={nudgeLimitReached || loadingNudges}
                 onChange={(e) => setNudgeDraft(e.target.value)}
                 placeholder="e.g. Keep your daily streak going"
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
               />
               <div className="flex justify-end">
-                <Button size="sm" type="submit" disabled={savingNudge || !nudgeDraft.trim()}>
+                <Button size="sm" type="submit" disabled={savingNudge || loadingNudges || nudgeLimitReached || !nudgeDraft.trim()}>
                   {savingNudge ? 'Submitting…' : 'Submit for review'}
                 </Button>
               </div>
             </form>
+            </div>
 
+            {nudgePane !== 'new' ? (
+            <div role="tabpanel" id={`nudge-panel-${nudgePane}`} aria-labelledby={`nudge-tab-${nudgePane}`}>
             {loadingNudges ? (
               <Spinner label="Loading templates…" />
-            ) : nudgeTemplates.length === 0 ? (
+            ) : visibleNudges.length === 0 ? (
               <Empty
-                title="No templates yet"
-                body="Submit a message above. Pending items wait for Teen Bible Adventures approval."
+                title={nudgePane === 'custom' ? 'No custom messages' : 'No system nudges'}
+                body={nudgePane === 'custom' ? 'Submit one from the New tab. Approved messages stay private to this ministry.' : 'Shared platform messages will show up here.'}
               />
             ) : (
               <ul className="divide-y divide-border rounded-xl border border-border">
-                {nudgeTemplates.map((row) => (
+                {visibleNudges.map((row) => (
                   <li key={row.id} className="flex flex-col gap-2 px-4 py-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
+                        <p className="mb-1 text-[11px] font-semibold text-muted">{row.churchId ? 'Private ministry message' : 'System nudge · Available to all ministries'}</p>
                         <p className="text-sm font-semibold text-navy">{row.message}</p>
                         {row.status === 'REJECTED' && row.rejectionReason ? (
                           <p className="mt-1 text-[11px] text-muted">Feedback: {row.rejectionReason}</p>
@@ -2091,7 +2142,7 @@ export function PastorPortalPage({
                                 ? 'Rejected'
                                 : 'Pending review'}
                         </Badge>
-                        {row.status === 'REJECTED' ? (
+                        {row.churchId && row.status === 'REJECTED' ? (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -2146,6 +2197,8 @@ export function PastorPortalPage({
                 ))}
               </ul>
             )}
+            </div>
+            ) : null}
           </div>
         )}
         </div>

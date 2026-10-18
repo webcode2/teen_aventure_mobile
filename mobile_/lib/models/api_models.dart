@@ -710,7 +710,7 @@ class LeaderboardEntry {
       rank: json['rank'] as int? ?? 0,
       childId: json['childId'] as String?,
       childName: json['childName'] as String? ?? 'Participant',
-      points: json['points'] as int,
+      points: (json['points'] as num?)?.toInt() ?? 0,
       isMine: json['isMine'] as bool? ?? false,
       isBlurred: json['isBlurred'] as bool? ?? false,
     );
@@ -728,6 +728,7 @@ class GroupDetail {
   final int memberCount;
   final int points;
   final List<LeaderboardEntry> standings;
+  final bool pointsHidden;
 
   const GroupDetail({
     required this.id,
@@ -739,6 +740,7 @@ class GroupDetail {
     this.memberCount = 0,
     this.points = 0,
     this.standings = const [],
+    this.pointsHidden = false,
   });
 
   factory GroupDetail.fromJson(Map<String, dynamic> json) {
@@ -751,6 +753,7 @@ class GroupDetail {
       creatorEmail: json['creatorEmail'] as String?,
       memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
       points: (json['points'] as num?)?.toInt() ?? 0,
+      pointsHidden: json['pointsHidden'] == true,
       standings: (json['standings'] as List? ?? [])
           .map((e) => LeaderboardEntry.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
@@ -765,7 +768,8 @@ class GroupDetail {
       if (creatorName != null) 'creatorName': creatorName,
       if (creatorEmail != null) 'creatorEmail': creatorEmail,
       'memberCount': memberCount,
-      'points': points,
+      'points': pointsHidden ? null : points,
+      'pointsHidden': pointsHidden,
     };
   }
 }

@@ -12,11 +12,13 @@ import '../data/level_map_data.dart';
 class QuestMapView extends StatefulWidget {
   const QuestMapView({
     super.key,
+    this.copy = const {},
     required this.pins,
     required this.revealId,
     required this.onOpenLevel,
   });
 
+  final Map<String, String> copy;
   final List<QuestMapPin> pins;
   final int revealId;
   final ValueChanged<int> onOpenLevel;
@@ -98,6 +100,7 @@ class _QuestMapViewState extends State<QuestMapView> {
   void _push({required bool levels, required bool reveal}) {
     final win = _iframe?.contentWindow;
     if (win == null || !_ready) return;
+    win.postMessage(jsonEncode({'type': 'setCopy', 'copy': widget.copy}), _origin);
     if (levels) {
       win.postMessage(
         jsonEncode({
@@ -117,7 +120,8 @@ class _QuestMapViewState extends State<QuestMapView> {
     super.didUpdateWidget(oldWidget);
     final levelsChanged = !listEquals(oldWidget.pins, widget.pins);
     final revealChanged = oldWidget.revealId != widget.revealId;
-    if (levelsChanged || revealChanged) {
+    final copyChanged = !mapEquals(oldWidget.copy, widget.copy);
+    if (levelsChanged || revealChanged || copyChanged) {
       _push(levels: levelsChanged, reveal: revealChanged);
     }
   }

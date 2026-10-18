@@ -45,7 +45,7 @@ button:disabled{opacity:.5}
 <path d="M41 81V102M132 91H147M139 81V102M34 91H49M90 55V75" stroke="#fff2c6" stroke-width="2"/>
 <path d="M72 126H108L115 135H65Z" fill="#f4b942" stroke="#011f3b" stroke-width="2"/>
 <g fill="#2f7d5a"><circle cx="22" cy="120" r="10"/><circle cx="158" cy="120" r="10"/></g>
-</svg><strong>Journey finish · Quest 52</strong></div></div>
+</svg><strong id="finish-label">Journey finish · Quest 52</strong></div></div>
 <script>
 (()=>{
 'use strict';
@@ -58,7 +58,16 @@ const parentOrigin=(()=>{
  try{return new URL(document.referrer).origin;}catch(_){}
  return location.origin;
 })();
-let current=null,height=MIN_HEIGHT,levels=[];
+let current=null,height=MIN_HEIGHT,levels=[],copy={};
+const text=(key,fallback)=>typeof copy[key]==='string'&&copy[key].trim()?copy[key]:fallback;
+function updateStatus(){status.textContent=levels.length?text('progress','Quest {current} of {total}').replaceAll('{current}',String(current??levels[levels.length-1].id)).replaceAll('{total}',String(levels.length)):text('loading','Loading your trail…');}
+function setCopy(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return;
+ copy=value;document.querySelector('h1').textContent=text('title','Quest journey');back.textContent=text('myQuest','My quest');
+ document.getElementById('finish-label').textContent=text('finish','Journey finish · Quest 52');
+ for(const label of document.querySelectorAll('.current-label'))label.textContent=text('youAreHere','YOU ARE HERE');
+ updateStatus();
+}
 const viewport=document.getElementById('camera');
 const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d',{alpha:false});
 const finishLandmark=document.getElementById('finish-landmark');
@@ -204,7 +213,7 @@ function setLevels(input){
   b.setAttribute('aria-label','Quest '+l.id+(l.id===52?', journey finish':'')+', '+l.status+(l.checkpoint?', checkpoint':''));
   const number=document.createElement('span');number.textContent=l.id;b.appendChild(number);
   if(l.status==='completed'){const stars=document.createElement('small');stars.className='stars';stars.textContent='★'.repeat(Math.max(0,Math.min(3,l.stars|0)));b.appendChild(stars);}
-  if(l.status==='current'){const label=document.createElement('span');label.className='current-label';label.textContent='YOU ARE HERE';b.appendChild(label);}
+  if(l.status==='current'){const label=document.createElement('span');label.className='current-label';label.textContent=text('youAreHere','YOU ARE HERE');b.appendChild(label);}
   if(l.status==='locked'){const lock=document.createElement('span');lock.className='lock';lock.setAttribute('aria-hidden','true');lock.innerHTML='<svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="6" width="10" height="7" rx="2"/><path d="M3 6V4a3 3 0 0 1 6 0v2"/></svg>';b.appendChild(lock);}
   else if(l.checkpoint){const flag=document.createElement('span');flag.className='checkpoint';flag.textContent='⚑';flag.setAttribute('aria-hidden','true');b.appendChild(flag);}
   b.onclick=()=>notify(l.id);pins.appendChild(b);
@@ -213,15 +222,16 @@ function setLevels(input){
  if(active)current=active.id;
  back.disabled=!levels.length;
  if(!initialized&&levels.length)focusLevel(current??levels[0].id,true);else drawCamera();
- status.textContent=levels.length?'Quest '+(current??levels[levels.length-1].id)+' of '+levels.length:'Your quest trail is being prepared';
+ updateStatus();
 }
-window.QuestMap={setLevels,reveal(id){if(!Number.isInteger(id))return;current=id;scrollToLevel(id,false);if(levels.length)status.textContent='Quest '+id+' of '+levels.length;}};
+window.QuestMap={setLevels,setCopy,reveal(id){if(!Number.isInteger(id))return;current=id;scrollToLevel(id,false);updateStatus();}};
 back.onclick=()=>scrollToLevel(current,true);
 addEventListener('message',event=>{
  if(event.source!==parent)return;
  if(event.origin!==parentOrigin&&event.origin!=='null')return;
  let data=event.data;if(typeof data==='string'){try{data=JSON.parse(data);}catch(_){return;}}
  if(!data||typeof data!=='object')return;
+ if(data.type==='setCopy')setCopy(data.copy);
  if(data.type==='setLevels')setLevels(data.levels);
  if(data.type==='reveal')window.QuestMap.reveal(data.id);
 });

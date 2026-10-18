@@ -260,11 +260,24 @@ class HeroCopyController extends ChangeNotifier {
     _copy = HeroCopyCache.read(_prefs);
     _storedAnnouncement = HeroCopyCache.readAnnouncement(_prefs);
     _storedWelcome = HeroCopyCache.readWelcome(_prefs);
+    try {
+      final saved = jsonDecode(_prefs.getString('cms_quest_copy') ?? '{}');
+      if (saved is Map) _questCopy = Map<String, String>.fromEntries(saved.entries.where((e) => e.key is String && e.value is String).map((e) => MapEntry(e.key as String, e.value as String)));
+    } catch (_) { /* use built-in quest labels */ }
+    try { final raw = jsonDecode(_prefs.getString('cms_app_text') ?? '{}'); if (raw is Map) _appText = Map<String, dynamic>.from(raw); } catch (_) {}
   }
 
   final ApiClient _api;
   final SharedPreferences _prefs;
   late HeroCopy _copy;
+  Map<String, dynamic> _appText = {};
+  String text(String section, String key, String fallback) {
+    final group = _appText[section];
+    final value = group is Map ? group[key] : null;
+    return value is String && value.trim().isNotEmpty ? value : fallback;
+  }
+  Map<String, String> _questCopy = {};
+  Map<String, String> get questCopy => Map.unmodifiable(_questCopy);
 
   /// Nullable so a hot reload of an already-created controller still shows the banner.
   HomeAnnouncement? _storedAnnouncement;
@@ -291,6 +304,21 @@ class HeroCopyController extends ChangeNotifier {
     try {
       final response = await _api.dio.get('/api/content/mobile');
       final previous = _copy;
+      var questChanged = false;
+      if (response.data is Map) {
+        final next = Map<String, dynamic>.from(response.data as Map);
+        questChanged = jsonEncode(next) != jsonEncode(_appText);
+        _appText = next;
+        await _prefs.setString('cms_app_text', jsonEncode(next));
+      }
+      final payload = response.data;
+      if (payload is Map && payload['quest'] is Map) {
+        final raw = payload['quest'] as Map;
+        final next = Map<String, String>.fromEntries(raw.entries.where((e) => e.key is String && e.value is String).map((e) => MapEntry(e.key as String, e.value as String)));
+        questChanged = questChanged || jsonEncode(next) != jsonEncode(_questCopy);
+        _questCopy = next;
+        await _prefs.setString('cms_quest_copy', jsonEncode(next));
+      }
       final previousAnnouncement = announcement;
       var copy = HeroCopy.resolve(response.data, previous).copyWith(
         abiFile: previous.abiFile,
@@ -309,7 +337,7 @@ class HeroCopyController extends ChangeNotifier {
       final welcomeChanged = welcome.title != previousWelcome.title ||
           welcome.subtitle != previousWelcome.subtitle ||
           welcome.quote != previousWelcome.quote;
-      if (textChanged ||
+      if (questChanged || textChanged ||
           announcementChanged ||
           welcomeChanged ||
           (imagesChanged && !heroImageUsesFiles)) {

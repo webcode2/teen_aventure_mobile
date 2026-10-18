@@ -1,3 +1,4 @@
+import '../../../providers/cms_text.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -118,10 +119,10 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Great work finishing this scripture puzzle.',
+                    Text(
+                      cmsText(context, 'messages', 'puzzleSuccess', 'Great work finishing this scripture puzzle.'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         height: 1.35,
                         color: AppColors.textMuted,

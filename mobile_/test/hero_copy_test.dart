@@ -1,8 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teen_aventure/providers/hero_copy.dart';
+import 'package:teen_aventure/services/api_client.dart';
 
 void main() {
+  test('CMS navigation, home and quest copy survive an offline restart', () async {
+    SharedPreferences.setMockInitialValues({
+      'cms_app_text': '{"home":{"todayTitle":"This week"},"navigation":{"home":"Start"},"legalLinks":{"privacyUrl":"/p/current-privacy"}}',
+      'cms_quest_copy': '{"title":"Our journey","myQuest":"Continue"}',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final controller = HeroCopyController(await ApiClient.create(), prefs);
+    expect(controller.text('home', 'todayTitle', 'Today'), 'This week');
+    expect(controller.text('navigation', 'home', 'Home'), 'Start');
+    expect(controller.text('legalLinks', 'privacyUrl', '/p/privacy-policy'), '/p/current-privacy');
+    expect(controller.text('home', 'missing', 'Fallback'), 'Fallback');
+    expect(controller.questCopy['title'], 'Our journey');
+    controller.dispose();
+  });
   test('keeps the cached hero until a database payload arrives', () async {
     SharedPreferences.setMockInitialValues({
       HeroCopyCache.key: '{"greeting":"Hey, cached!","tagline":"Last line","abiUrl":"/api/v1/content/files/abi-1.png","zackUrl":"","abiFile":"/tmp/abi.png"}',

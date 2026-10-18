@@ -23,7 +23,7 @@ vi.mock('./api', async () => {
           openReports: 0,
         };
       }
-      if (path === '/api/admin/people') {
+      if (path === '/api/admin/people' || path.startsWith('/api/admin/people?')) {
         return { users: [], children: [], families: [] };
       }
       if (path === '/api/admin/groups') return [];

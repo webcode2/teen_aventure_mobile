@@ -1,3 +1,4 @@
+import { AppResourceAlerts } from './app-resource-alerts';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, getUser } from './api';
@@ -68,6 +69,7 @@ export function OverviewPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <AppResourceAlerts />
       {/* Command Hero Banner */}
       <section className="relative overflow-hidden rounded-card bg-gradient-to-r from-navy via-navy-deep to-navy text-cream p-4 sm:p-5 md:py-4 md:px-6 border border-white/10 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-teal/10 rounded-full blur-3xl pointer-events-none" />

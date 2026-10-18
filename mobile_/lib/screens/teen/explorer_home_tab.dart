@@ -1,3 +1,4 @@
+import '../../providers/cms_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/api_models.dart';
@@ -203,11 +204,11 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                     : () => WeekQuestFlow.openNext(context),
               ),
               if (current != null && quests?.isOffline == true)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(sidePadding, 16, sidePadding, 0),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(sidePadding, 16, sidePadding, 0),
                   child: Text(
-                    "You're offline",
-                    style: TextStyle(
+                    cmsText(context, 'home', 'offline', "You're offline"),
+                    style: const TextStyle(
                       color: AppColors.textMuted,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -249,6 +250,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: sidePadding),
                   child: WordDeclarationCard(
+                    title: cmsText(context, 'home', 'declarationTitle', 'Word Declaration'),
                     key: ValueKey('word-declaration-${current.quest.id}'),
                     declaration: current.quest.declarationText.trim(),
                     reference: _memoryVerse(current.quest.scripture),
