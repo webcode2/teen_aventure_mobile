@@ -1,0 +1,8 @@
+{
+  "compute": "google-cloud-run-functions",
+  "database": "postgresql",
+  "runtimeDatabase": "postgresql",
+  "orm": "prisma",
+  "project": "tbadventure-f712a",
+  "region": "europe-southwest1"
+}

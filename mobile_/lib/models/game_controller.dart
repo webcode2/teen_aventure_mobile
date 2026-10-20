@@ -545,19 +545,6 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _advanceCursor() {
-    if (activeWord == null) return;
-    final isDown = activeWord!.direction == Direction.down;
-    final endRow = isDown ? activeWord!.startRow + activeWord!.answer.length - 1 : activeWord!.startRow;
-    final endCol = isDown ? activeWord!.startCol : activeWord!.startCol + activeWord!.answer.length - 1;
-
-    if (isDown) {
-      if (cursorRow < endRow) cursorRow += 1;
-    } else {
-      if (cursorCol < endCol) cursorCol += 1;
-    }
-  }
-
   /// Move to the next cell in the active word that is still editable (not locked).
   void _advancePastCurrent() {
     if (activeWord == null) return;

@@ -63,6 +63,14 @@ beforeEach(() => {
         churches: 2,
         dashboardAdmins: 1,
         openReports: 1,
+        activeUsers: {
+          day: 1,
+          week: 2,
+          month: 4,
+          threeMonths: 5,
+          sixMonths: 6,
+          year: 8,
+        },
       };
     }
     if (path.startsWith('/api/admin/people')) {
@@ -95,6 +103,9 @@ describe('Teen Bible Adventures Admin', () => {
     setToken('test-token');
     renderApp('/app/dashboard');
     expect(await screen.findByText('Community snapshot')).toBeTruthy();
+    expect(screen.getByText('Active users')).toBeTruthy();
+    expect(screen.getByText('Bar Graph')).toBeTruthy();
+    expect(screen.getByText('Line Graph')).toBeTruthy();
     expect(screen.getByText('Kids on parent account')).toBeTruthy();
     expect(screen.getAllByText('Groups').length).toBeGreaterThan(0);
     expect(screen.queryByText('Ministry Network & Operations')).toBeNull();

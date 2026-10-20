@@ -1,7 +1,9 @@
+import { DEFAULT_MINISTRY_COPY } from './ministry-copy';
 import { PUBLIC_PAGE_COPY } from './public-page-copy';
 /** Public sections formerly embedded directly in the page JSX. */
 export const LANDING_EXTRA = {
   ...PUBLIC_PAGE_COPY,
+  ministryPage: DEFAULT_MINISTRY_COPY,
   header: {
     banner: 'Faith-Rooted Christian Discipleship for Teenagers & Families • 100% Ad-Free',
     missionLink: 'Learn About Our Christian Mission →',

@@ -72,7 +72,7 @@ The API refuses to start when `NODE_ENV=production` and `JWT_SECRET` is shorter 
 6. Publish BIY weeks in admin (YouTube URLs)
 7. Point the AAB at the same HTTPS API
 8. Play Console: `docs/play-store/console-checklist.md`
-9. Email (Resend): set `RESEND_API_KEY` from https://resend.com/api-keys. Default `MAIL_FROM` is the sandbox `Teen Bible Adventures <onboarding@resend.dev>` (delivers only to the Resend account email). For production, verify a domain and set `MAIL_FROM` to an address on that domain. Optional `RESEND_WEBHOOK_SECRET` if you add delivery webhooks. Without `RESEND_API_KEY`, emails stay `PENDING` in `GET /api/admin/notifications`. Twilio vars are still optional for SMS.
+9. Email (Resend): set `RESEND_API_KEY` from https://resend.com/api-keys. Default `MAIL_FROM` is the sandbox `Teen Bible Adventures <onboarding@resend.dev>` (delivers only to the Resend account email). For production, verify a domain and set `MAIL_FROM` to an address on that domain. Optional `RESEND_WEBHOOK_SECRET` if you add delivery webhooks. Without `RESEND_API_KEY`, emails stay `PENDING` in `GET /api/admin/notifications`. Device alerts use FCM. The app does not send SMS.
 10. Push (FCM, Android first) — get values from [Firebase Console](https://console.firebase.google.com/):
 
    1. Create or open a project (same one for API + app).

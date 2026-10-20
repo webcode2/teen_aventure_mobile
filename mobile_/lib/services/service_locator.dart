@@ -33,7 +33,8 @@ class ServiceLocator {
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
     _secureStorage = const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      // v10 migrates existing encrypted preferences on first access.
+      aOptions: AndroidOptions(migrateWithBackup: true),
       iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
     );
     _connectivity = Connectivity();
@@ -47,7 +48,7 @@ class ServiceLocator {
     _pushService = PushService(_apiClient!);
     PushHooks.onSync = _pushService!.syncIdentity;
     PushHooks.onLogout = _pushService!.logout;
-    await _pushService!.start();
+    // Optional push initialization starts after the first frame in main().
   }
 
   /// Get API Client

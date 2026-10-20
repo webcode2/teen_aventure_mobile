@@ -1,3 +1,4 @@
+import { AccountDeletionQueue } from './account-deletion-queue';
 import { AppResourceAlerts } from './app-resource-alerts';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
@@ -7,16 +8,16 @@ import {
   type ChurchApplicationRow,
 } from './church-applications';
 import { GroupJoinPassImages } from './barcode';
-import { askConfirm } from './prompt-dialog';
+import { askConfirm, askPrompt } from './prompt-dialog';
 import { Alert, Badge, Button, Dialog, Drawer, Empty, Field, Pager, slicePage, Spinner } from './ui';
+import { ActiveUsersTrendChart, type ActiveUserWindows } from './active-users-chart';
+import { CommunityReachDonut } from './community-reach-donut';
 import {
   ChildIcon,
   ChurchIcon,
-  CommunityChart,
   getDashboardGreeting,
   HomeIcon,
   MailIcon,
-  QuestIcon,
   ShieldIcon,
   StatCard,
   TrashIcon,
@@ -37,6 +38,7 @@ type Stats = {
   queuedNotifications?: number;
   teenQuestWeeks?: number;
   users?: number;
+  activeUsers?: ActiveUserWindows;
 };
 
 export function OverviewPage() {
@@ -212,48 +214,28 @@ export function OverviewPage() {
         </div>
       </section>
 
-      {/* Community Snapshot & Operational Controls */}
+      {/* Active users (full) + community doughnut / ops rail */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         <div className="lg:col-span-2 bg-surface border border-border rounded-card p-4 sm:p-5 shadow-xs flex flex-col gap-3">
-          <div>
-            <h3 className="text-sm sm:text-base font-bold text-navy">Community snapshot</h3>
-            <p className="text-xs text-muted mt-0.5">Live counts from the same API the Flutter app reads.</p>
-          </div>
-          <CommunityChart points={chartPoints} />
+          <ActiveUsersTrendChart />
         </div>
 
         <div className="flex flex-col gap-3.5">
           <div className="bg-surface border border-border rounded-card p-4 sm:p-4.5 shadow-xs flex flex-col gap-2.5">
-            <div className="flex items-center gap-2 text-navy font-bold text-xs sm:text-sm">
-              <span className="p-1.5 rounded-lg bg-teal-tint text-teal ring-1 ring-teal/20"><QuestIcon /></span>
-              <span>Discipleship Desk Scope</span>
+            <div>
+              <h3 className="text-sm font-bold text-navy">Community snapshot</h3>
+              <p className="text-[11px] text-muted mt-0.5">
+                Live counts from the same API the Flutter app reads.
+              </p>
+            </div>
+            <CommunityReachDonut points={chartPoints} />
           </div>
-            <p className="text-xs text-muted leading-relaxed">
-              This desk publishes weekly Teen Quest discipleship and studio puzzles. Teachers activate class quizzes during church hours — live child chats and custom messages are disabled for safeguarding.
-            </p>
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
-              <button
-                type="button"
-                className="px-3 py-1.5 rounded-xl border border-teal/30 bg-teal-tint text-teal hover:bg-teal hover:text-white font-semibold text-xs transition-colors cursor-pointer"
-                onClick={() => navigate('/app/dashboard/quests/new')}
-              >
-                + New quest week
-              </button>
-              <button
-                type="button"
-                className="px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-2 text-navy font-semibold text-xs transition-colors cursor-pointer"
-                onClick={() => navigate('/app/dashboard/puzzles')}
-              >
-                Puzzle Studio
-              </button>
-          </div>
-        </div>
 
           <div className="bg-surface border border-border rounded-card p-4 sm:p-4.5 shadow-xs flex flex-col gap-2.5">
             <div className="flex items-center gap-2 text-navy font-bold text-xs sm:text-sm">
               <span className="p-1.5 rounded-lg bg-navy-tint text-navy ring-1 ring-navy/20"><ShieldIcon /></span>
               <span>Operational Pulse</span>
-      </div>
+            </div>
             <div className="flex flex-col gap-2 text-xs">
               <div className="flex items-start gap-2.5 p-2 rounded-xl bg-cream border border-border/60">
                 <span className={`h-2 w-2 rounded-full mt-1 shrink-0 ${stats.openReports > 0 ? 'bg-error animate-pulse' : 'bg-forest'}`} />
@@ -474,10 +456,12 @@ export function ChurchDetailPage() {
       { title: 'Archive ministry', confirmLabel: 'Archive' },
     );
     if (!ok) return;
+    const password = await askPrompt('Confirm your password', { inputType: 'password' });
+    if (!password) return;
     setSaving(true);
     setError('');
     try {
-      await api(`/api/admin/churches/${churchId}/archive`, { method: 'POST' });
+      await api(`/api/admin/churches/${churchId}/archive`, { method: 'POST', body: JSON.stringify({ password }) });
       navigate('/app/dashboard/archive');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not archive ministry');
@@ -489,14 +473,16 @@ export function ChurchDetailPage() {
   async function removeMinistry() {
     if (!churchId) return;
     const ok = await askConfirm(
-      'Group memberships are removed. Member accounts stay. Staff for this ministry are removed. The ministry record stays for audit.',
+      'Start ministry deletion: 0–30 days recoverable, 30–90 days backend-only, then purge. All ministry groups and exclusive staff accounts are included; shared personal accounts remain.',
       { title: 'Delete ministry', confirmLabel: 'Delete', tone: 'danger' },
     );
     if (!ok) return;
+    const password = await askPrompt('Confirm your password', { inputType: 'password' });
+    if (!password) return;
     setSaving(true);
     setError('');
     try {
-      await api(`/api/admin/churches/${churchId}/delete`, { method: 'POST' });
+      await api(`/api/admin/churches/${churchId}/delete`, { method: 'POST', body: JSON.stringify({ password }) });
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not delete ministry');
@@ -1258,7 +1244,9 @@ export function ChurchesPage() {
       { title: 'Archive ministry', confirmLabel: 'Archive' },
     );
     if (!ok) return;
-    await api(`/api/admin/churches/${id}/archive`, { method: 'POST' });
+    const password = await askPrompt('Confirm your password', { inputType: 'password' });
+    if (!password) return;
+    await api(`/api/admin/churches/${id}/archive`, { method: 'POST', body: JSON.stringify({ password }) });
     load();
   }
 
@@ -1640,6 +1628,7 @@ export function ArchivedChurchesPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <AccountDeletionQueue archiveScope="MINISTRY" />
       {error ? <Alert kind="error">{error}</Alert> : null}
       <section className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-4 sm:p-5">
         <div className="flex flex-col gap-1">
@@ -3011,12 +3000,14 @@ export function DeletionsPage() {
 
   async function confirmRestore() {
     if (!selected) return;
+    const password = await askPrompt('Confirm your password', { inputType: 'password' });
+    if (!password) return;
     const name = selected.family?.name || 'this family';
     setRestoringId(selected.id);
     setError('');
     setFeedback('');
     try {
-      await api(`/api/admin/deletions/${selected.id}/restore`, { method: 'POST' });
+      await api(`/api/admin/deletions/${selected.id}/restore`, { method: 'POST', body: JSON.stringify({ password }) });
       setFeedback(`“${name}” was restored.`);
       setSelected(null);
       await load();
@@ -3036,6 +3027,7 @@ export function DeletionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <AccountDeletionQueue />
       <div className="bg-surface border border-border rounded-card p-6 shadow-xs flex flex-col gap-4">
         <h3 className="text-base font-bold text-navy">Deletion lifecycle (0-30d recoverable · 30-90d backend-only · 90+d purge)</h3>
         <p className="m-0 text-xs text-muted">Open a row to review who started deletion, their reason, and restore if still recoverable.</p>

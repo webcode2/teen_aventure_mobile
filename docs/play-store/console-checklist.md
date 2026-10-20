@@ -1,59 +1,28 @@
 # Play Console operator checklist
 
-Complete these outside the repo. The Android project is prepared; Play will still reject the upload if this list is incomplete.
+Read [the current readiness audit](audit-2026-10-18.md). The app is not yet ready to submit.
 
-## 1. Confirm package name
+## Release preparation
 
-`applicationId` is `com.elasctroclud.teen_aventure`. First upload locks this ID forever.
+- [ ] Confirm package ID `com.elasctroclud.teen_aventure` against the Play app before first upload; preserve existing identity.
+- [ ] Restore/configure the correct upload keystore in `mobile_/android/key.properties`. Keep passwords and keystores out of Git. Release tasks now fail when signing is absent; do not use a debug key.
+- [ ] Set an unused version code in `mobile_/pubspec.yaml`.
+- [ ] Verify the production HTTPS API and dashboard-controlled legal pages from an external network. The source default is not an offline sample-only release.
+- [x] Implement personal/ministry deletion, password verification, recovery, archive handling and backend purge/retry. See `docs/ops/account-deletion.md`.
+- [ ] Deploy the deletion page/API and scheduled lifecycle function; verify the external request URL and real-device webview.
+- [ ] Replace obsolete privacy disclosures; review `data-safety.md` against the final app and SDK inventory.
+- [ ] Resolve the audience mismatch between child-profile support and the 13+ listing. Assess Families requirements before choosing Console age groups.
+- [ ] Build from `mobile_/` with `flutter build appbundle --release --dart-define=API_BASE_URL=https://VERIFIED_PRODUCTION_HOST`.
+- [ ] Verify the signed artifact at `mobile_/build/app/outputs/bundle/release/app-release.aab`, certificate, version, permissions and native alignment. Target SDK is 36.
 
-## 2. Upload keystore (never commit)
+## Console and testing
 
-From `mobile/android/`:
-
-```bat
-keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-```
-
-Copy `key.properties.example` to `key.properties` and fill passwords. `key.properties` and `*.jks` are gitignored.
-
-## 3. Host legal pages
-
-Publish `docs/legal/privacy-policy.md` and `docs/legal/terms.md` at HTTPS URLs. Paste the privacy URL into Play Console → App content → Privacy policy.
-
-## 4. Content
-
-Paste real YouTube URLs in `mobile/lib/data/youtube_lesson_urls.dart` and `backend/prisma/seed.ts`. Empty URLs look unfinished in review.
-
-## 5. Production API (optional for student sample loop)
-
-```bat
-cd mobile
-flutter build appbundle --release --dart-define=API_BASE_URL=https://YOUR_HOST
-```
-
-Without `API_BASE_URL`, release uses local sample lessons only (no emulator host).
-
-Output: `mobile/build/app/outputs/bundle/release/app-release.aab`
-
-## 6. Play Console forms
-
-- [ ] Developer account registered
-- [ ] App created; package matches Gradle
-- [ ] Default store listing (copy in `listing.md`) + screenshots + 512 icon + 1024×500 graphic
-- [ ] App category: Education
-- [ ] Target audience: 13–17 (and 18+ if you also want adults). **Not** “Designed for Families” / under 13
-- [ ] IARC content rating questionnaire
-- [ ] Data safety (`data-safety.md`)
-- [ ] News / political (no)
-- [ ] Ads: no
-- [ ] Government apps: no
-- [ ] Financial features: no
-- [ ] Health: no
-- [ ] COVID: no
-- [ ] Data safety encryption in transit: yes if API is used
-- [ ] Countries / pricing: free
-- [ ] Upload AAB to internal testing first, then production
-
-## 7. After 31 August 2026
-
-New apps and updates must target API 36. This project sets `targetSdk = 36`.
+- [ ] Developer verification and app setup complete.
+- [ ] Accurate listing, screenshots, 512px icon and 1024×500 feature graphic.
+- [ ] App access instructions and valid review credentials for restricted flows.
+- [ ] Public privacy and account-deletion URLs; accurate Data safety answers.
+- [ ] Target audience, content rating, ads and other applicable app-content declarations match actual behavior.
+- [ ] Internal testing first; complete any account-specific testing requirement shown in Console.
+- [ ] Physical low-end-device performance, offline/cold start, notification/camera denial, webview, accessibility and account-deletion tests pass.
+- [ ] Test the final bundle on 16 KB Android and Android 15/16 devices, including edge-to-edge insets and back navigation.
+- [ ] Review pre-launch report and Android vitals before promoting to production.

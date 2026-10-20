@@ -21,6 +21,14 @@ vi.mock('./api', async () => {
           churches: 0,
           dashboardAdmins: 0,
           openReports: 0,
+          activeUsers: {
+            day: 0,
+            week: 0,
+            month: 0,
+            threeMonths: 0,
+            sixMonths: 0,
+            year: 0,
+          },
         };
       }
       if (path === '/api/admin/people' || path.startsWith('/api/admin/people?')) {

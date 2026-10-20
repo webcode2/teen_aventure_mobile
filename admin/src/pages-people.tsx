@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import { api } from './api';
-import { askConfirm } from './prompt-dialog';
+import { askConfirm, askPrompt } from './prompt-dialog';
 import { Alert, Badge, Dialog, Drawer, Empty, Field, Pager, PencilIcon, slicePage, Spinner, Button } from './ui';
 import {
   accountTypeKey,
@@ -102,7 +102,7 @@ type PeopleFamily = {
   _count: { children: number; guardians: number; jarEntries: number };
 };
 
-type Directory = { users: PeopleUser[]; children: PeopleChild[]; families: PeopleFamily[] };
+type Directory = { users: PeopleUser[]; children: PeopleChild[]; families: PeopleFamily[]; pagination?: { page: number; pageSize: number; total: number; kind: Kind } };
 
 type Kind = 'users' | 'staff' | 'pastors' | 'children' | 'families';
 
@@ -396,16 +396,18 @@ function UserAccountPanel({
 
   async function remove() {
     if (!user) return;
-    const ok = await askConfirm(`Delete ${user.name} (${user.email})? This cannot be undone.`, {
+    const ok = await askConfirm(`Request deletion of ${user.name} (${user.email})? Recovery is available for 30 days; data is backend-only until purge after 90 days.`, {
       title: 'Delete account',
       confirmLabel: 'Delete',
       tone: 'danger',
     });
     if (!ok) return;
+    const deletionPassword = await askPrompt('Confirm your password', { inputType: 'password', title: 'Verify deletion request' });
+    if (!deletionPassword) return;
     setSaveError('');
     setDeleting(true);
     try {
-      await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      await api(`/api/admin/users/${userId}`, { method: 'DELETE', body: JSON.stringify({ password: deletionPassword }) });
       onChanged();
       onClose();
     } catch (e: unknown) {
@@ -804,6 +806,10 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
   const [data, setData] = useState<Directory | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [search, setSearch] = useState('');
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const requestVersion = useRef(0);
+  useEffect(() => { const timer = window.setTimeout(() => setSearch(q.trim()), 250); return () => window.clearTimeout(timer); }, [q]);
   const [kind, setKind] = useState<Kind>(
     section === 'staff' ? 'staff' : section === 'pastors' ? 'pastors' : 'users',
   );
@@ -820,12 +826,24 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
   const apiScope = section === 'users' ? 'users' : section === 'pastors' ? 'pastors' : 'staff';
 
   const reload = useCallback(() => {
-    api<Directory>(`/api/admin/people?scope=${apiScope}`)
-      .then(setData)
-      .catch((e: Error) => setError(e.message));
-  }, [apiScope]);
+    const version = ++requestVersion.current;
+    setDirectoryLoading(true);
+    setError('');
+    const params = new URLSearchParams({ scope: apiScope, kind, page: String(page), pageSize: '40', search, status: statusFilter, userType: userTypeFilter, staffRole: staffRoleFilter, childType: childTypeFilter });
+    api<Directory>(`/api/admin/people?${params}`)
+      .then(value => {
+        if (version !== requestVersion.current) return;
+        setData(value);
+        if (value.pagination) {
+          const lastPage = Math.max(1, Math.ceil(value.pagination.total / value.pagination.pageSize));
+          if (page > lastPage) setPage(lastPage);
+        }
+      })
+      .catch((e: Error) => { if (version === requestVersion.current) setError(e.message); })
+      .finally(() => { if (version === requestVersion.current) setDirectoryLoading(false); });
+  }, [apiScope, kind, page, search, statusFilter, userTypeFilter, staffRoleFilter, childTypeFilter]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => { reload(); return () => { requestVersion.current++; }; }, [reload]);
 
   useEffect(() => {
     setKind(section === 'staff' ? 'staff' : section === 'pastors' ? 'pastors' : 'users');
@@ -845,14 +863,17 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
     setStatusFilter('all');
   }, [kind]);
 
+  const serverPaged = Boolean(data?.pagination);
   const query = q.trim().toLowerCase();
   const matchedAccounts = useMemo(() => {
     if (!data) return [];
+    if (serverPaged) return data.pagination?.kind === kind ? data.users : [];
     return data.users.filter((u) =>
       !query || `${u.name} ${u.email} ${u.platformRole} ${accountTypeLabel(u)}`.toLowerCase().includes(query),
     );
-  }, [data, query]);
+  }, [data, query, kind, serverPaged]);
   const communityUsers = useMemo(() => {
+    if (serverPaged) return matchedAccounts;
     return matchedAccounts.filter((u) => {
       if (!isMobileAppUser(u)) return false;
       if (userTypeFilter !== 'all' && accountTypeKey(u) !== userTypeFilter) return false;
@@ -860,16 +881,18 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
       if (statusFilter === 'disabled' && u.isActive) return false;
       return true;
     });
-  }, [matchedAccounts, userTypeFilter, statusFilter]);
+  }, [matchedAccounts, userTypeFilter, statusFilter, serverPaged]);
   const pastorAccounts = useMemo(() => {
+    if (serverPaged) return matchedAccounts;
     return matchedAccounts.filter((u) => {
       if (!isPastorAccount(u)) return false;
       if (statusFilter === 'active' && !u.isActive) return false;
       if (statusFilter === 'disabled' && u.isActive) return false;
       return true;
     });
-  }, [matchedAccounts, statusFilter]);
+  }, [matchedAccounts, statusFilter, serverPaged]);
   const staffAccounts = useMemo(() => {
+    if (serverPaged) return matchedAccounts;
     return matchedAccounts.filter((u) => {
       if (!isStaffAccount(u)) return false;
       if (staffRoleFilter !== 'all' && u.platformRole !== staffRoleFilter) return false;
@@ -877,9 +900,10 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
       if (statusFilter === 'disabled' && u.isActive) return false;
       return true;
     });
-  }, [matchedAccounts, staffRoleFilter, statusFilter]);
+  }, [matchedAccounts, staffRoleFilter, statusFilter, serverPaged]);
   const children = useMemo(() => {
     if (!data || section !== 'users') return [];
+    if (serverPaged) return data.pagination?.kind === kind ? data.children : [];
     return data.children.filter((c) => {
       if (query && !`${c.name} ${c.email ?? ''} ${c.family.name} ${childAccountLabel(c)}`.toLowerCase().includes(query)) {
         return false;
@@ -887,23 +911,24 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
       if (childTypeFilter !== 'all' && childAccountTypeKey(c) !== childTypeFilter) return false;
       return true;
     });
-  }, [data, query, childTypeFilter, section]);
+  }, [data, query, childTypeFilter, section, serverPaged, kind]);
   const families = useMemo(() => {
     if (!data || section !== 'users') return [];
+    if (serverPaged) return data.pagination?.kind === kind ? data.families : [];
     return data.families.filter((f) =>
       !query || `${f.name} ${f.owner.email} ${f.church?.name ?? ''}`.toLowerCase().includes(query),
     );
-  }, [data, query, section]);
+  }, [data, query, section, serverPaged, kind]);
 
   useEffect(() => {
     setPage(1);
   }, [kind, query, userTypeFilter, staffRoleFilter, childTypeFilter, statusFilter]);
 
-  const usersPage = slicePage(communityUsers, page);
-  const pastorsPage = slicePage(pastorAccounts, page);
-  const staffPage = slicePage(staffAccounts, page);
-  const childrenPage = slicePage(children, page);
-  const familiesPage = slicePage(families, page);
+  const usersPage = serverPaged ? { rows: communityUsers, total: data?.pagination?.total ?? 0 } : slicePage(communityUsers, page);
+  const pastorsPage = serverPaged ? { rows: pastorAccounts, total: data?.pagination?.total ?? 0 } : slicePage(pastorAccounts, page);
+  const staffPage = serverPaged ? { rows: staffAccounts, total: data?.pagination?.total ?? 0 } : slicePage(staffAccounts, page);
+  const childrenPage = serverPaged ? { rows: children, total: data?.pagination?.total ?? 0 } : slicePage(children, page);
+  const familiesPage = serverPaged ? { rows: families, total: data?.pagination?.total ?? 0 } : slicePage(families, page);
   const pageTotal =
     kind === 'pastors' ? pastorsPage.total
     : kind === 'staff' ? staffPage.total
@@ -928,7 +953,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
     return data.children.filter((c) =>
       !query || `${c.name} ${c.email ?? ''} ${c.family.name}`.toLowerCase().includes(query),
     ).length;
-  }, [data, query, section]);
+  }, [data, query, section, serverPaged, kind]);
 
   async function open(path: string, title: string) {
     setDetailError('');
@@ -1038,9 +1063,9 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
                   className={`cursor-pointer rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     active ? 'bg-navy text-white shadow-xs' : 'text-muted hover:bg-surface hover:text-navy'
                   }`}
-                  onClick={() => setKind(tab.id)}
+                  onClick={() => { setPage(1); setKind(tab.id); }}
                 >
-                  {tab.label} ({tab.count})
+                  {tab.label}{serverPaged ? kind === tab.id ? ` (${data.pagination?.total ?? 0})` : '' : ` (${tab.count})`}
                 </button>
               );
             })}
@@ -1057,7 +1082,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
           </span>
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setPage(1); setQ(e.target.value); }}
             placeholder="Search name, email, family…"
             aria-label="Search directory"
             className="w-full rounded-md border border-border bg-surface py-2.5 pl-10 pr-4 text-sm text-navy placeholder:text-muted/70 shadow-xs focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
@@ -1067,7 +1092,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         {kind === 'users' ? (
           <select
             value={userTypeFilter}
-            onChange={(e) => setUserTypeFilter(e.target.value as UserAccountTypeKey | 'all')}
+            onChange={(e) => { setPage(1); setUserTypeFilter(e.target.value as UserAccountTypeKey | 'all'); }}
             className={`${filterSelectClass} min-w-[11rem] shrink-0`}
             aria-label="Filter by account type"
           >
@@ -1080,7 +1105,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         {kind === 'staff' ? (
           <select
             value={staffRoleFilter}
-            onChange={(e) => setStaffRoleFilter(e.target.value as (typeof SYSTEM_ADMIN_ROLES)[number] | 'all')}
+            onChange={(e) => { setPage(1); setStaffRoleFilter(e.target.value as (typeof SYSTEM_ADMIN_ROLES)[number] | 'all'); }}
             className={`${filterSelectClass} min-w-[11rem] shrink-0`}
             aria-label="Filter by system role"
           >
@@ -1093,7 +1118,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         {kind === 'children' ? (
           <select
             value={childTypeFilter}
-            onChange={(e) => setChildTypeFilter(e.target.value as ChildAccountTypeKey | 'all')}
+            onChange={(e) => { setPage(1); setChildTypeFilter(e.target.value as ChildAccountTypeKey | 'all'); }}
             className={`${filterSelectClass} min-w-[12rem] shrink-0`}
             aria-label="Filter by child account type"
           >
@@ -1106,7 +1131,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         {kind === 'users' || kind === 'staff' || kind === 'pastors' ? (
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'disabled')}
+            onChange={(e) => { setPage(1); setStatusFilter(e.target.value as 'all' | 'active' | 'disabled'); }}
             className={`${filterSelectClass} min-w-[9rem] shrink-0`}
             aria-label="Filter by status"
           >
@@ -1140,7 +1165,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
 
       <p className="m-0 text-xs text-muted">
         {listHint}
-        {filtersActive ? ` · Showing ${showingCount} of ${sectionTotal}` : ''}
+        {serverPaged ? ` · ${data.pagination?.total ?? 0} matching records` : filtersActive ? ` · Showing ${showingCount} of ${sectionTotal}` : ''}
       </p>
 
       {kind === 'users' && (
@@ -1378,6 +1403,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         )
       )}
 
+      {directoryLoading && <p role="status" className="text-xs text-muted">Updating directory…</p>}
       <Pager page={page} total={pageTotal} onPage={setPage} />
 
       {creating ? (

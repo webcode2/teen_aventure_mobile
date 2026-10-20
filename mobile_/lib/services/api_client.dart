@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import 'read_cache.dart';
 
 /// API Client using Dio with interceptors for auth, error handling, and logging.
 /// The backend address comes from [ApiConfig.baseUrl].
@@ -14,8 +15,9 @@ class ApiClient {
 
   late final Dio _dio;
   final SharedPreferences _prefs;
+  final AppReadCache _readCache;
 
-  ApiClient._(this._prefs) {
+  ApiClient._(this._prefs, this._readCache) {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: _connectTimeout,
@@ -31,7 +33,7 @@ class ApiClient {
 
   static Future<ApiClient> create() async {
     final prefs = await SharedPreferences.getInstance();
-    return ApiClient._(prefs);
+    return ApiClient._(prefs, AppReadCache(PreferencesReadCacheStore(prefs)));
   }
 
   Dio get dio => _dio;
@@ -63,11 +65,52 @@ class ApiClient {
         // clearing auth here would soft-logout the parent and break the no-PIN switch fallback.
         if (error.response?.statusCode == 401 &&
             !_isExpectedAuthChallenge(error.requestOptions.path)) {
+          _readCache.invalidateScope(_personalScope());
           await _prefs.remove('auth_token');
           await _prefs.remove('user_id');
           await _prefs.remove('user_role');
           await _prefs.remove('family_id');
           await _prefs.remove('child_id');
+        }
+        handler.next(error);
+      },
+    ));
+
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        final cached = _cachedGet(options, fresh: true);
+        if (cached != null) {
+          options.extra['appCache'] = 'hit';
+          handler.resolve(_cachedResponse(options, cached));
+          return;
+        }
+        handler.next(options);
+      },
+      onResponse: (response, handler) {
+        final options = response.requestOptions;
+        if (options.extra['appCache'] != 'hit' &&
+            options.method.toUpperCase() == 'GET' &&
+            response.statusCode == 200) {
+          _storeGet(options, response.data);
+        }
+        if (options.method.toUpperCase() != 'GET' && (response.statusCode ?? 500) < 400) {
+          _readCache.invalidateScope(_personalScope());
+        }
+        handler.next(response);
+      },
+      onError: (error, handler) {
+        final options = error.requestOptions;
+        final status = error.response?.statusCode;
+        final network = error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout ||
+            error.type == DioExceptionType.connectionError ||
+            (status != null && status >= 500);
+        if (network) {
+          final cached = _cachedGet(options, fresh: false);
+          if (cached != null) {
+            handler.resolve(_cachedResponse(options, cached));
+            return;
+          }
         }
         handler.next(error);
       },
@@ -127,6 +170,39 @@ class ApiClient {
         p.contains('/auth/teen-login');
   }
 
+  String _personalScope() {
+    final token = _prefs.getString('auth_token') ?? '';
+    if (token.isEmpty) return 'p::';
+    return 'p:${_readCache.storageId(token)}';
+  }
+
+  String? _cacheKey(RequestOptions options) {
+    if (options.method.toUpperCase() != 'GET' || options.extra['skipCache'] == true) return null;
+    final fresh = ReadCachePolicy.freshFor(options.path);
+    if (fresh == null) return null;
+    final scope = ReadCachePolicy.isPersonal(options.path) ? _personalScope() : 'shared';
+    if (scope.startsWith('p:') && scope == 'p::') return null;
+    return _readCache.entryKey(path: options.path, query: options.queryParameters, scope: scope);
+  }
+
+  Object? _cachedGet(RequestOptions options, {required bool fresh}) {
+    final key = _cacheKey(options);
+    if (key == null) return null;
+    final ttl = fresh ? ReadCachePolicy.freshFor(options.path) : ReadCachePolicy.staleFor(options.path);
+    if (ttl == null) return null;
+    return fresh ? _readCache.fresh(key, ttl) : _readCache.stale(key, ttl);
+  }
+
+  void _storeGet(RequestOptions options, Object? body) {
+    final key = _cacheKey(options);
+    if (key == null) return;
+    _readCache.save(key, body);
+  }
+
+  Response<dynamic> _cachedResponse(RequestOptions options, Object? body) {
+    return Response(requestOptions: options, data: body, statusCode: 200);
+  }
+
   /// Set auth token (called after login)
   Future<void> setAuthToken(String token) async {
     await _prefs.setString('auth_token', token);
@@ -134,6 +210,7 @@ class ApiClient {
 
   /// Clear auth token (called on logout)
   Future<void> clearAuthToken() async {
+    _readCache.invalidateScope(_personalScope());
     await _prefs.remove('auth_token');
     await _prefs.remove('user_id');
     await _prefs.remove('user_role');

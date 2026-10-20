@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,11 @@ void main() async {
     debugPrint('Service init failed: $e\n$stack');
   }
   runApp(const AskHubTeenApp());
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(ServiceLocator.instance.pushService.start().catchError((Object _) {
+      if (kDebugMode) debugPrint('Optional notification setup is unavailable.');
+    }));
+  });
 }
 
 class AskHubTeenApp extends StatelessWidget {

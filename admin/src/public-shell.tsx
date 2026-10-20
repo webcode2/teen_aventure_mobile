@@ -4,7 +4,7 @@ import { useState, useEffect, createContext, useContext, type ReactNode } from '
 import { useNavigate } from 'react-router';
 import { Brand } from './ui';
 
-const PublicCopy = createContext<LandingCmsContent | null>(null);
+export const PublicCopy = createContext<LandingCmsContent | null>(null);
 
 type PublicTab = 'home' | 'about' | 'privacy' | 'contact' | 'ministry' | 'portal';
 
@@ -47,23 +47,6 @@ export function PublicHeader({
 
   return (
     <>
-      {/* Top Banner Alert for Public / Christian Faith */}
-      <div className="bg-navy text-cream text-xs py-2 px-4 border-b border-white/10 flex items-center justify-center text-center">
-        <div className="flex items-center gap-2 mx-auto text-center flex-wrap justify-center">
-          <span className="inline-block w-2 h-2 rounded-full bg-gold shrink-0" />
-          <span className="font-medium text-cream/90">
-            {copy?.header?.banner ?? 'Faith-Rooted Christian Discipleship for Teenagers & Families • 100% Ad-Free'}
-          </span>
-          <button
-            type="button"
-            onClick={() => handleNavClick('/about')}
-            className="font-bold text-gold hover:text-white underline decoration-gold transition-colors cursor-pointer ml-1"
-          >
-            {copy?.header?.missionLink ?? 'Learn About Our Christian Mission →'}
-          </button>
-        </div>
-      </div>
-
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-border/80 px-4 sm:px-8 py-2">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -412,6 +395,8 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
           >
             Privacy
           </button>
+          <span>&bull;</span>
+          <button type="button" onClick={() => navigate('/delete-account')} className="hover:text-gold transition-colors cursor-pointer">Delete account</button>
           <span>&bull;</span>
           <button
             type="button"

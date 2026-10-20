@@ -38,7 +38,9 @@ function BookHeartIcon() {
 }
 
 /** CMS-shaped copy used by the public landing and the admin live preview. */
-export type LandingCmsContent = Partial<typeof LANDING_EXTRA> & {
+export type LandingCmsContent = Partial<Omit<typeof LANDING_EXTRA, 'header' | 'ministryPage'>> & {
+  header?: Partial<typeof LANDING_EXTRA.header>;
+  ministryPage?: Partial<typeof LANDING_EXTRA.ministryPage>;
   hero?: {
     badge?: string;
     title?: string;

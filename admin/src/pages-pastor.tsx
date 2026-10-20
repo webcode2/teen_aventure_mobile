@@ -1,3 +1,4 @@
+import { MinistryGateway } from './ministry-gateway';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { api, clearPastorSession, getPastorToken, getPastorUser, pastorLogin, type PastorUser } from './api';
@@ -1184,105 +1185,8 @@ export function PastorPortalPage({
   if (!token && !applicantHome) {
     return (
       <PublicLayout activeTab="portal">
-        {/* Hero & Login Container */}
-        <div className="max-w-6xl mx-auto w-full p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left: Mission & Mandate */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/15 border border-gold/40 text-navy text-xs font-bold w-fit">
-              <span>Shepherd the Flock &bull; 1 Peter 5:2</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-navy leading-tight">
-              Oversee Your Teenager Discipleship &amp; Ministry Groups.
-            </h1>
-
-            <p className="text-sm sm:text-base text-muted leading-relaxed">
-              Welcome to the Ministry Portal. Designed for ministry leaders, teenage ministry directors, and mentors to manage groups, review student attendance streaks, dispatch announcements, and safeguard teenage disciples.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
-                <span className="text-xs font-bold text-teal">🛡️ Safeguarding Console</span>
-                <p className="text-[11px] text-muted mt-1 leading-relaxed">
-                  Confidential reports, safety incident escalation, and care audits.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
-                <span className="text-xs font-bold text-teal">⛪ Custom Group Hub</span>
-                <p className="text-[11px] text-muted mt-1 leading-relaxed">
-                  Create cell groups, approve student enrollments, and track live activity.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
-                <span className="text-xs font-bold text-teal">📱 Barcode Onboarding Pass</span>
-                <p className="text-[11px] text-muted mt-1 leading-relaxed">
-                  Each group has its own code. A person joins that group on their own.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-surface border border-border/80 shadow-2xs">
-                <span className="text-xs font-bold text-teal">💬 Approved student nudges</span>
-                <p className="text-[11px] text-muted mt-1 leading-relaxed">
-                  Group leaders cheer members from Teen Bible Adventures–approved templates only — no freeform spam.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Pastoral & Leadership Sign In Card */}
-          <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 shadow-card flex flex-col gap-4">
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-navy">Ministry Sign In</h2>
-                <p className="text-xs text-muted mt-1">
-                  Access ministry operations and group management for your congregation.
-                </p>
-              </div>
-
-              {loginError ? <Alert kind="error">{loginError}</Alert> : null}
-
-              <form onSubmit={handleLogin} className="flex flex-col gap-3.5">
-                <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Ministry email</span>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="leader@ministry.org"
-                    className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Password</span>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
-                  />
-                </label>
-
-                <Button size="lg" className="w-full mt-1" type="submit" disabled={loginBusy}>
-                  {loginBusy ? 'Signing in…' : 'Enter ministry'}
-                </Button>
-              </form>
-            </div>
-
-            <p className="text-[11px] text-muted text-center">
-              Looking for curriculum administration?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/app/login')}
-                className="font-semibold text-navy underline hover:text-teal cursor-pointer"
-              >
-                App Manager login
-              </button>
-            </p>
-          </div>
-        </div>
+        <MinistryGateway email={email} password={password} onEmail={setEmail} onPassword={setPassword}
+          handleLogin={handleLogin} loginBusy={loginBusy} loginError={loginError} />
       </PublicLayout>
     );
   }
@@ -1417,6 +1321,7 @@ export function PastorPortalPage({
                   <div className="text-[10px] text-cream/70">{applicantHome.email}</div>
                 </button>
               ) : null}
+            {applicantHome?.application?.status === 'APPROVED' && applicantHome.application.churchId && <Button variant="secondary" onClick={() => navigate(`/delete-account?churchId=${applicantHome.application?.churchId}`)}>Delete account & ministry</Button>}
             <button
               type="button"
               onClick={handleSignOut}
@@ -1489,6 +1394,7 @@ export function PastorPortalPage({
                 {pastorUser?.churchRole || 'Pastor'}
               </div>
             </div>
+            {pastorUser?.churchRole === 'PASTOR' && effectiveChurchId && <Button variant="secondary" onClick={() => navigate(`/delete-account?churchId=${effectiveChurchId}`)}>Delete account & ministry</Button>}
             {signOutButton}
           </>
         }

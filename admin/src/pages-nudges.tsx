@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { api } from './api';
 import { askConfirm, askPrompt } from './prompt-dialog';
 import { Alert, Button, Badge, Empty, Field, PageHeader, Pager, slicePage, Spinner } from './ui';
@@ -32,6 +32,23 @@ export type NudgeTemplate = {
 
 type NudgeTab = 'platform' | 'church-pending' | 'church-approved' | 'church-rejected' | 'revoked';
 
+const NUDGE_TABS: NudgeTab[] = [
+  'platform',
+  'church-pending',
+  'church-approved',
+  'church-rejected',
+  'revoked',
+];
+
+function parseNudgeTab(value: string | null): NudgeTab | null {
+  if (!value) return null;
+  return NUDGE_TABS.includes(value as NudgeTab) ? (value as NudgeTab) : null;
+}
+
+function refreshAdminBadges() {
+  window.dispatchEvent(new Event('askhub:admin-stats-refresh'));
+}
+
 function statusBadge(status: NudgeTemplateStatus) {
   if (status === 'APPROVED') return <Badge kind="ok">Approved</Badge>;
   if (status === 'REVOKED') return <Badge kind="warn">Revoked</Badge>;
@@ -61,8 +78,11 @@ function ChurchMeta({ church }: { church: NudgeTemplateChurch }) {
 }
 
 export function NudgesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<NudgeTemplate[]>([]);
-  const [tab, setTab] = useState<NudgeTab>('platform');
+  const [tab, setTab] = useState<NudgeTab>(
+    () => parseNudgeTab(searchParams.get('tab')) ?? 'platform',
+  );
   const [messageDraft, setMessageDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,6 +106,24 @@ export function NudgesPage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const fromUrl = parseNudgeTab(searchParams.get('tab'));
+    if (fromUrl && fromUrl !== tab) setTab(fromUrl);
+  }, [searchParams, tab]);
+
+  function selectTab(next: NudgeTab) {
+    setTab(next);
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === 'platform') params.delete('tab');
+        else params.set('tab', next);
+        return params;
+      },
+      { replace: true },
+    );
+  }
+
   async function onSubmitPlatform(e: FormEvent) {
     e.preventDefault();
     if (!messageDraft.trim()) {
@@ -102,8 +140,9 @@ export function NudgesPage() {
       });
       setMessageDraft('');
       setMessage('Platform cheer registered — available to every group immediately.');
-      setTab('platform');
+      selectTab('platform');
       await load();
+      refreshAdminBadges();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not register platform template');
     } finally {
@@ -121,6 +160,7 @@ export function NudgesPage() {
           : 'Platform template approved for every group',
       );
       await load();
+      refreshAdminBadges();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not approve');
     }
@@ -142,6 +182,7 @@ export function NudgesPage() {
       });
       setMessage('Rejected — ministry can edit and resubmit');
       await load();
+      refreshAdminBadges();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not reject');
     }
@@ -158,6 +199,7 @@ export function NudgesPage() {
       await api(`/api/admin/nudge-templates/${row.id}/revoke`, { method: 'POST' });
       setMessage('Permission revoked');
       await load();
+      refreshAdminBadges();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not revoke');
     }
@@ -214,7 +256,7 @@ export function NudgesPage() {
                   className={`inline-flex cursor-pointer items-center gap-1.5 rounded-none px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     active ? 'bg-navy text-white shadow-xs' : 'text-muted hover:bg-surface hover:text-navy'
                   }`}
-                  onClick={() => setTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                 >
                   <span>{item.label}</span>
                   <span

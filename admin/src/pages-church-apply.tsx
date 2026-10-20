@@ -1,3 +1,4 @@
+import { MinistryIntro, MinistryCopy } from './ministry-gateway';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
@@ -562,61 +563,22 @@ export function ChurchApplyPage() {
 
   return (
     <PublicLayout activeTab="portal">
+      <MinistryCopy>{copy => <>
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 p-4 sm:p-8 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-7">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 text-xs font-bold text-navy">
-            <span>Shepherd the Flock &bull; 1 Peter 5:2</span>
-          </div>
-
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-navy sm:text-5xl">
-            Oversee Your Teenager Discipleship &amp; Ministry Groups.
-          </h1>
-
-          <p className="text-sm leading-relaxed text-muted sm:text-base">
-            Welcome to the Ministry Portal. Designed for ministry leaders, teenage ministry directors, and mentors to
-            manage groups, review student attendance streaks, dispatch announcements, and safeguard teenage disciples.
-          </p>
-
-          <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/80 bg-surface p-4 shadow-2xs">
-              <span className="text-xs font-bold text-teal">🛡️ Safeguarding Console</span>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Confidential reports, safety incident escalation, and care audits.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-4 shadow-2xs">
-              <span className="text-xs font-bold text-teal">⛪ Custom Group Hub</span>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Create cell groups, approve student enrollments, and track live activity.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-4 shadow-2xs">
-              <span className="text-xs font-bold text-teal">📱 Barcode Onboarding Pass</span>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Each group has its own code. A person joins that group on their own.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-surface p-4 shadow-2xs">
-              <span className="text-xs font-bold text-teal">📢 Broadcast Announcements</span>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Send announcements directly to group parents, teens, or combined rosters.
-              </p>
-            </div>
-          </div>
-        </div>
+        <MinistryIntro />
 
         <div className="flex flex-col gap-4 lg:col-span-5">
           <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-8">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-navy">
-                {mode === 'signup' ? 'Create ministry account' : mode === 'check-email' ? 'Verify email' : 'Ministry Sign In'}
+                {mode === 'signup' ? 'Create ministry account' : mode === 'check-email' ? 'Verify email' : copy.signInTitle}
               </h2>
               <p className="mt-1 text-xs text-muted">
                 {mode === 'signup'
                   ? 'Register to apply for a ministry. This account is not for the mobile app.'
                   : mode === 'check-email'
                     ? `Enter the 5-letter code sent to ${email || 'your email'}.`
-                    : 'Sign in to manage your ministry, or create an account to apply.'}
+                    : copy.signInDescription}
               </p>
             </div>
 
@@ -653,19 +615,19 @@ export function ChurchApplyPage() {
                   <span className="font-medium text-muted">How your ministry home addresses you.</span>
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Ministry email</span>
+                  <span>{copy.emailLabel}</span>
                   <input
                     type="email"
                     className={gateInputClass}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="leader@ministry.org"
+                    placeholder={copy.emailPlaceholder}
                     autoComplete="email"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Password</span>
+                  <span>{copy.passwordLabel}</span>
                   <input
                     type="password"
                     className={gateInputClass}
@@ -741,19 +703,19 @@ export function ChurchApplyPage() {
               <form onSubmit={signIn} className="flex flex-col gap-3.5">
                 {error ? <Alert kind="error">{error}</Alert> : null}
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Ministry email</span>
+                  <span>{copy.emailLabel}</span>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="leader@ministry.org"
+                    placeholder={copy.emailPlaceholder}
                     className={gateInputClass}
                     autoComplete="email"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
-                  <span>Password</span>
+                  <span>{copy.passwordLabel}</span>
                   <input
                     type="password"
                     required
@@ -765,7 +727,7 @@ export function ChurchApplyPage() {
                   />
                 </label>
                 <Button size="lg" className="mt-1 w-full" type="submit" disabled={busy}>
-                  {busy ? 'Signing in…' : 'Enter ministry'}
+                  {busy ? copy.busyLabel : copy.submitLabel}
                 </Button>
                 <button
                   type="button"
@@ -775,24 +737,25 @@ export function ChurchApplyPage() {
                     setError('');
                   }}
                 >
-                  New here? Create a ministry account
+                  {copy.newAccountLabel}
                 </button>
               </form>
             )}
           </div>
 
           <p className="text-center text-[11px] text-muted">
-            Looking for curriculum administration?{' '}
+            {copy.adminPrompt}{' '}
             <button
               type="button"
               onClick={() => navigate('/app/login')}
               className="cursor-pointer font-semibold text-navy underline hover:text-teal"
             >
-              App Manager login
+              {copy.adminLinkLabel}
             </button>
           </p>
         </div>
       </div>
+      </>}</MinistryCopy>
     </PublicLayout>
   );
 }

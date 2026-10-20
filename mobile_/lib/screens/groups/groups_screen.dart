@@ -1,3 +1,4 @@
+import '../account/individual_account_deletion_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../family/family_account_rules.dart';
@@ -178,6 +179,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }
 
   Future<void> _deleteGroup(Map<String, dynamic> item) async {
+    if (item['kind'] == 'FAMILY') {
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => const IndividualAccountDeletionScreen()));
+      if (mounted) await _load();
+      return;
+    }
     final name = item['name'] as String? ?? 'this group';
     final members = (item['memberCount'] as num?)?.toInt() ?? 1;
     final flagged = members > 1;

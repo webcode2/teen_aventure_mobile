@@ -13,6 +13,7 @@ class AccountDeletionScreen extends StatefulWidget {
 
 class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
   final _reasonCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool _busy = false;
   String? _error;
   String? _stage;
@@ -26,6 +27,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
   @override
   void dispose() {
     _reasonCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
@@ -48,12 +50,14 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
       _error = null;
     });
     try {
-      await context.read<FamilyService>().requestDeletion(reason: reason);
+      await context.read<FamilyService>().requestDeletion(reason: reason, password: _passwordCtrl.text);
       if (!mounted) return;
       await _refreshStage();
     } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.message);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -70,8 +74,10 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
       if (!mounted) return;
       await _refreshStage();
     } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.message);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -98,9 +104,10 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
           const SizedBox(height: 12),
           const Text(
             'Safeguarding investigations may extend retention until the investigation closes. '
-            'Retention periods are global product rules, not publisher-configurable settings.',
+            'A password-verified administrator may approve earlier permanent deletion unless a retention hold applies.',
           ),
           if (!recoverable) ...[
+            TextField(controller: _passwordCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm your password')),
             const SizedBox(height: 20),
             Text(
               'Reason for deletion',

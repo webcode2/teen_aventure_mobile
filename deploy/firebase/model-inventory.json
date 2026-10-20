@@ -1,0 +1,4290 @@
+{
+  "status": "design-inventory-not-runtime-schema",
+  "models": [
+    {
+      "sourceModel": "User",
+      "proposedCollection": "user",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "email"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "archivedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "accountDeletionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "passwordHash",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "platformRole",
+          "type": "PlatformRole",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "isActive",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "appLogin",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "mustChangePassword",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "emailVerifiedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "leadershipTitle",
+          "type": "ChurchAccountTitle",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "birthYear",
+          "type": "Int",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "phone",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "bio",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "avatar",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "isPuzzleReviewer",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "familiesOwned",
+          "target": "Family",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "guardianships",
+          "target": "Guardian",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "churchRoles",
+          "target": "ChurchRole",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classAssign",
+          "target": "ClassAssignment",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "nudgesSent",
+          "target": "Nudge",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "reportsFiled",
+          "target": "SafeguardingReport",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "assignedReports",
+          "target": "SafeguardingReport",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "reportEvents",
+          "target": "SafeguardingEvent",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "quizActivations",
+          "target": "ClassQuizActivation",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "consentAcceptances",
+          "target": "ConsentAcceptance",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "transitionedFrom",
+          "target": "Child",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classesOwned",
+          "target": "ClassGroup",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "resetTokens",
+          "target": "PasswordResetToken",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "pushSubscriptions",
+          "target": "DevicePushSubscription",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "joinInvitesSent",
+          "target": "JoinInvite",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classMessages",
+          "target": "ClassMessage",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "puzzleDrafts",
+          "target": "PuzzleDraft",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "matchingDrafts",
+          "target": "MatchingDraft",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "churchApplicationsReviewed",
+          "target": "ChurchApplication",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "churchApplication",
+          "target": "ChurchApplication",
+          "list": false,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "emailVerifications",
+          "target": "EmailVerificationToken",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "Family",
+      "proposedCollection": "family",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "accountDeletionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "ownerUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "jurisdiction",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "deletionStage",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "deletionAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "isPersonal",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "owner",
+          "target": "User",
+          "list": false,
+          "from": [
+            "ownerUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "guardians",
+          "target": "Guardian",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "children",
+          "target": "Child",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classes",
+          "target": "ClassGroup",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "jarEntries",
+          "target": "FamilyJarEntry",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "deletionRequests",
+          "target": "DeletionRequest",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "joinInvites",
+          "target": "JoinInvite",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "Guardian",
+      "proposedCollection": "guardian",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "familyId",
+          "userId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "relation",
+          "type": "String",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "Child",
+      "proposedCollection": "child",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "email"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "accountDeletionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "ageBand",
+          "type": "AgeBand",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "birthYear",
+          "type": "Int",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "bio",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "avatar",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "pinHash",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "independentLogin",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "transitionedToUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "transitionedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "isPuzzleReviewer",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "transitionedTo",
+          "target": "User",
+          "list": false,
+          "from": [
+            "transitionedToUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "scores",
+          "target": "ScoreLedger",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "activityBuckets",
+          "target": "ActivityBucket",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "streak",
+          "target": "Streak",
+          "list": false,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "enrollments",
+          "target": "ClassEnrollment",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "nudgesReceived",
+          "target": "Nudge",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classMessageReads",
+          "target": "ClassMessageRead",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "consentAcceptances",
+          "target": "ConsentAcceptance",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "pushSubscriptions",
+          "target": "DevicePushSubscription",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "questSteps",
+          "target": "QuestStepCompletion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "questWeekCompletions",
+          "target": "QuestWeekCompletion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "Church",
+      "proposedCollection": "church",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "joinCode"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "accountDeletionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "joinCode",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "jurisdiction",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "disabledAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "deletedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "archivedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "auditPastorName",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "auditPastorEmail",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "families",
+          "target": "Family",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "roles",
+          "target": "ChurchRole",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "classes",
+          "target": "ClassGroup",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "reports",
+          "target": "SafeguardingReport",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "joinInvites",
+          "target": "JoinInvite",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "applications",
+          "target": "ChurchApplication",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "nudgeTemplates",
+          "target": "NudgeTemplate",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ChurchApplication",
+      "proposedCollection": "churchApplication",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "userId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchName",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "applicantName",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "phone",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "address",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "purpose",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "country",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "intendedUse",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "identityKind",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "identityReference",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "identityDocKey",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "acceptedTerms",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "confirmedTruthful",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "ChurchApplicationStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "decisionReason",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "decidedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "decidedByUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "seenAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "archivedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "decidedBy",
+          "target": "User",
+          "list": false,
+          "from": [
+            "decidedByUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ChurchRole",
+      "proposedCollection": "churchRole",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "churchId",
+          "userId",
+          "role"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "ChurchRoleType",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "grantedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassGroup",
+      "proposedCollection": "classGroup",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "familyId"
+        ],
+        [
+          "joinCode"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "accountDeletionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "ownerUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "ClassKind",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "joinCode",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "deletionAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": [
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "owner",
+          "target": "User",
+          "list": false,
+          "from": [
+            "ownerUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "assignments",
+          "target": "ClassAssignment",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "enrollments",
+          "target": "ClassEnrollment",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "quizActivations",
+          "target": "ClassQuizActivation",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "joinInvites",
+          "target": "JoinInvite",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "messages",
+          "target": "ClassMessage",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "nudges",
+          "target": "Nudge",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassAssignment",
+      "proposedCollection": "classAssignment",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "classId",
+          "teacherUserId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "teacherUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "ChurchRoleType",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "teacher",
+          "target": "User",
+          "list": false,
+          "from": [
+            "teacherUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassEnrollment",
+      "proposedCollection": "classEnrollment",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "classId",
+          "childId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "EnrollmentStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassMessage",
+      "proposedCollection": "classMessage",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "fromUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "audience",
+          "type": "ClassMessageAudience",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "body",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "from",
+          "target": "User",
+          "list": false,
+          "from": [
+            "fromUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "reads",
+          "target": "ClassMessageRead",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassMessageRead",
+      "proposedCollection": "classMessageRead",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "messageId",
+          "viewerKey"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "messageId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "viewerKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "readAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": [
+        {
+          "name": "message",
+          "target": "ClassMessage",
+          "list": false,
+          "from": [
+            "messageId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "ScoringRule",
+      "proposedCollection": "scoringRule",
+      "idFields": [
+        "activity"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "activity",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "points",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "QuestAward",
+      "proposedCollection": "questAward",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "weekNumber"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "weekNumber",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "weeksExpected",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "criteria",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "sortOrder",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "ScoreLedger",
+      "proposedCollection": "scoreLedger",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "childId",
+          "activityType",
+          "refKey",
+          "day"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "activityType",
+          "type": "ActivityType",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "refKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "points",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "day",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "ActivityBucket",
+      "proposedCollection": "activityBucket",
+      "idFields": [
+        "childId",
+        "bucket"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "bucket",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "points",
+          "type": "Int",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "Streak",
+      "proposedCollection": "streak",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "childId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "current",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "longest",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "lastDay",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": [
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "FamilyJarEntry",
+      "proposedCollection": "familyJarEntry",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "label",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "points",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "NudgeTemplate",
+      "proposedCollection": "nudgeTemplate",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "key"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "key",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "message",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "active",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "NudgeTemplateStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "submittedByUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "approvedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "approvedByUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "rejectedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "rejectedByUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "rejectionReason",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "revokedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "revokedByUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "nudges",
+          "target": "Nudge",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "Nudge",
+      "proposedCollection": "nudge",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "fromUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "toChildId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "nudgeTemplateId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "stickerKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "message",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "readAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": [
+        {
+          "name": "from",
+          "target": "User",
+          "list": false,
+          "from": [
+            "fromUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "to",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "toChildId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        },
+        {
+          "name": "nudgeTemplate",
+          "target": "NudgeTemplate",
+          "list": false,
+          "from": [
+            "nudgeTemplateId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        }
+      ]
+    },
+    {
+      "sourceModel": "SafeguardingReport",
+      "proposedCollection": "safeguardingReport",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "reporterUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "reporterLabel",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "category",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "followUpEmail",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "targetType",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "targetId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "targetName",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "ReportStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "investigationLocked",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "assignedToUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "retainedUntil",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "reporter",
+          "target": "User",
+          "list": false,
+          "from": [
+            "reporterUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "assignee",
+          "target": "User",
+          "list": false,
+          "from": [
+            "assignedToUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        },
+        {
+          "name": "events",
+          "target": "SafeguardingEvent",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "SafeguardingEvent",
+      "proposedCollection": "safeguardingEvent",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "reportId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "actorUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "action",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "note",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "fromStatus",
+          "type": "ReportStatus",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "toStatus",
+          "type": "ReportStatus",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "report",
+          "target": "SafeguardingReport",
+          "list": false,
+          "from": [
+            "reportId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "actor",
+          "target": "User",
+          "list": false,
+          "from": [
+            "actorUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "DeletionRequest",
+      "proposedCollection": "deletionRequest",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "requestedBy",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "reservedEmails",
+          "type": "String",
+          "list": true,
+          "required": true
+        },
+        {
+          "name": "requestedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "purgedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": [
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "TeenQuest",
+      "proposedCollection": "teenQuest",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "weekNumber"
+        ],
+        [
+          "puzzleId"
+        ],
+        [
+          "matchingId"
+        ],
+        [
+          "puzzleId"
+        ],
+        [
+          "matchingId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "weekNumber",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "scripture",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "content",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "declarationText",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "videos",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "objectiveQuiz",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "gameType",
+          "type": "QuestGameType",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "puzzleId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "matchingId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "puzzle",
+          "target": "Puzzle",
+          "list": false,
+          "from": [
+            "puzzleId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        },
+        {
+          "name": "matching",
+          "target": "Matching",
+          "list": false,
+          "from": [
+            "matchingId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        },
+        {
+          "name": "activations",
+          "target": "ClassQuizActivation",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "stepCompletions",
+          "target": "QuestStepCompletion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "weekCompletions",
+          "target": "QuestWeekCompletion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "QuestStepCompletion",
+      "proposedCollection": "questStepCompletion",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "childId",
+          "questId",
+          "step"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "questId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "step",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "completedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "quest",
+          "target": "TeenQuest",
+          "list": false,
+          "from": [
+            "questId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "QuestWeekCompletion",
+      "proposedCollection": "questWeekCompletion",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "childId",
+          "questId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "questId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "weekNumber",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "completedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "quest",
+          "target": "TeenQuest",
+          "list": false,
+          "from": [
+            "questId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "ClassQuizActivation",
+      "proposedCollection": "classQuizActivation",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "classId",
+          "questId",
+          "quizType"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "questId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "quizType",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "isActive",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "activatedByUserId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "activatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "quest",
+          "target": "TeenQuest",
+          "list": false,
+          "from": [
+            "questId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "activatedByUserId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ConsentPack",
+      "proposedCollection": "consentPack",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "jurisdiction",
+          "title"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "jurisdiction",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "body",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "minAge",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "requiresParentalConsent",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "acceptances",
+          "target": "ConsentAcceptance",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "ConsentAcceptance",
+      "proposedCollection": "consentAcceptance",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "packId",
+          "childId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "packId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "acceptedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "pack",
+          "target": "ConsentPack",
+          "list": false,
+          "from": [
+            "packId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "NotificationOutbox",
+      "proposedCollection": "notificationOutbox",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "idempotencyKey"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "channel",
+          "type": "NotificationChannel",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "subject",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "body",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "NotificationStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "error",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "data",
+          "type": "Json",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "attempts",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "nextAttemptAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "sentAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "idempotencyKey",
+          "type": "String",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "EmailVerificationToken",
+      "proposedCollection": "emailVerificationToken",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "tokenHash"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "tokenHash",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "expiresAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "usedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "PasswordResetToken",
+      "proposedCollection": "passwordResetToken",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "tokenHash"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "tokenHash",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "expiresAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "usedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "DevicePushSubscription",
+      "proposedCollection": "devicePushSubscription",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "fcmToken"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "userId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "childId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "externalId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "fcmToken",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "platform",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "deviceName",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "manufacturer",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "model",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "user",
+          "target": "User",
+          "list": false,
+          "from": [
+            "userId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "child",
+          "target": "Child",
+          "list": false,
+          "from": [
+            "childId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "JoinInvite",
+      "proposedCollection": "joinInvite",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "token"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "JoinInviteKind",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "token",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "familyId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "classId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "invitedById",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "expiresAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "acceptedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "family",
+          "target": "Family",
+          "list": false,
+          "from": [
+            "familyId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "church",
+          "target": "Church",
+          "list": false,
+          "from": [
+            "churchId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "classGroup",
+          "target": "ClassGroup",
+          "list": false,
+          "from": [
+            "classId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "invitedBy",
+          "target": "User",
+          "list": false,
+          "from": [
+            "invitedById"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "PuzzleDraft",
+      "proposedCollection": "puzzleDraft",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "authorId",
+          "puzzleKey"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "puzzleKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "doc",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "authorId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "author",
+          "target": "User",
+          "list": false,
+          "from": [
+            "authorId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "Puzzle",
+      "proposedCollection": "puzzle",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "puzzleKey"
+        ],
+        [
+          "liveVersionId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "puzzleKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "liveVersionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "liveVersion",
+          "target": "PuzzleVersion",
+          "list": false,
+          "from": [
+            "liveVersionId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        },
+        {
+          "name": "versions",
+          "target": "PuzzleVersion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "quests",
+          "target": "TeenQuest",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "PuzzleVersion",
+      "proposedCollection": "puzzleVersion",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "puzzleId",
+          "version"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "puzzleId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "puzzleKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "PuzzlePublishStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "doc",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "parentVersionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "authoredBy",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "stagedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "liveAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "solvedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "solvedBy",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "puzzle",
+          "target": "Puzzle",
+          "list": false,
+          "from": [
+            "puzzleId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "liveFor",
+          "target": "Puzzle",
+          "list": false,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "parent",
+          "target": "PuzzleVersion",
+          "list": false,
+          "from": [
+            "parentVersionId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Restrict"
+        },
+        {
+          "name": "children",
+          "target": "PuzzleVersion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "MatchingDraft",
+      "proposedCollection": "matchingDraft",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "authorId",
+          "matchingKey"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "matchingKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "doc",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "authorId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "author",
+          "target": "User",
+          "list": false,
+          "from": [
+            "authorId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        }
+      ]
+    },
+    {
+      "sourceModel": "Matching",
+      "proposedCollection": "matching",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "matchingKey"
+        ],
+        [
+          "liveVersionId"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "matchingKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "liveVersionId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "liveVersion",
+          "target": "MatchingVersion",
+          "list": false,
+          "from": [
+            "liveVersionId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "SetNull"
+        },
+        {
+          "name": "versions",
+          "target": "MatchingVersion",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        },
+        {
+          "name": "quests",
+          "target": "TeenQuest",
+          "list": true,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "MatchingVersion",
+      "proposedCollection": "matchingVersion",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "matchingId",
+          "version"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "matchingId",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "matchingKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "PuzzlePublishStatus",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "doc",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "authoredBy",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "stagedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "liveAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": [
+        {
+          "name": "matching",
+          "target": "Matching",
+          "list": false,
+          "from": [
+            "matchingId"
+          ],
+          "to": [
+            "id"
+          ],
+          "onDelete": "Cascade"
+        },
+        {
+          "name": "liveFor",
+          "target": "Matching",
+          "list": false,
+          "from": [],
+          "to": [],
+          "onDelete": null
+        }
+      ]
+    },
+    {
+      "sourceModel": "PlatformContent",
+      "proposedCollection": "platformContent",
+      "idFields": [
+        "platform"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "platform",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "payload",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "SitePage",
+      "proposedCollection": "sitePage",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "slug"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "slug",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "html",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "published",
+          "type": "Boolean",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "updatedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "AccountDeletion",
+      "proposedCollection": "accountDeletion",
+      "idFields": [
+        "id"
+      ],
+      "uniqueFields": [
+        [
+          "lockKey"
+        ]
+      ],
+      "fields": [
+        {
+          "name": "archivedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "scope",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "accountCount",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "familyCount",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "groupCount",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "nextAttemptAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "lockKey",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "rootUserId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "churchId",
+          "type": "String",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "stage",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "requestedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "purgedAt",
+          "type": "DateTime",
+          "list": false,
+          "required": false
+        },
+        {
+          "name": "userIds",
+          "type": "String",
+          "list": true,
+          "required": true
+        },
+        {
+          "name": "familyIds",
+          "type": "String",
+          "list": true,
+          "required": true
+        },
+        {
+          "name": "childIds",
+          "type": "String",
+          "list": true,
+          "required": true
+        },
+        {
+          "name": "classIds",
+          "type": "String",
+          "list": true,
+          "required": true
+        },
+        {
+          "name": "snapshot",
+          "type": "Json",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "error",
+          "type": "String",
+          "list": false,
+          "required": false
+        }
+      ],
+      "relations": []
+    },
+    {
+      "sourceModel": "DeletionPasswordAttempt",
+      "proposedCollection": "deletionPasswordAttempt",
+      "idFields": [
+        "key"
+      ],
+      "uniqueFields": [],
+      "fields": [
+        {
+          "name": "key",
+          "type": "String",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "failures",
+          "type": "Int",
+          "list": false,
+          "required": true
+        },
+        {
+          "name": "windowStarted",
+          "type": "DateTime",
+          "list": false,
+          "required": true
+        }
+      ],
+      "relations": []
+    }
+  ]
+}

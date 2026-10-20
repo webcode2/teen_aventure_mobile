@@ -1,3 +1,5 @@
+import { AccountDeletionQueue } from './account-deletion-queue';
+import { AccountDeletionPage } from './pages-account-deletion';
 import {
   Navigate,
   Outlet,
@@ -72,6 +74,7 @@ function DashboardTabPage() {
     staff: <PeoplePage section="staff" />,
     churches: <ChurchesPage />,
     archive: <ArchivedChurchesPage />,
+    'users-archive': <AccountDeletionQueue archiveScope="ACCOUNT" />,
     groups: <GroupsPage />,
     quests: <QuestsPage />,
     puzzles: <PuzzlesStudioPage />,
@@ -129,6 +132,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PublicLandingPage />} />
+      <Route path="/delete-account" element={<AccountDeletionPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />

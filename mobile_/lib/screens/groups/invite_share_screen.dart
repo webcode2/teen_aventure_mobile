@@ -102,27 +102,27 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
 
   Future<void> _shareQr(String payload, {required GlobalKey qrKey}) async {
     if (kIsWeb) {
-      await Share.share(payload);
+      await SharePlus.instance.share(ShareParams(text: payload));
       return;
     }
     final boundary = qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) {
-      await Share.share(payload);
+      await SharePlus.instance.share(ShareParams(text: payload));
       return;
     }
     final image = await boundary.toImage(pixelRatio: 3);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     if (bytes == null) {
-      await Share.share(payload);
+      await SharePlus.instance.share(ShareParams(text: payload));
       return;
     }
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/tba-invite.png');
     await file.writeAsBytes(bytes.buffer.asUint8List());
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'image/png')],
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(file.path, mimeType: 'image/png')],
       text: payload,
-    );
+    ));
   }
 
   String? get _durablePayload {

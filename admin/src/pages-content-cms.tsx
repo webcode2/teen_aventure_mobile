@@ -1,3 +1,4 @@
+import { MinistryGateway } from './ministry-gateway';
 import { AppResourceAlerts } from './app-resource-alerts';
 import { createPortal } from 'react-dom';
 import { AboutPage } from './pages-about';
@@ -154,7 +155,7 @@ const DEFAULT_MOBILE_CONTENT = {
 
 const DEFAULT_WEB_CONTENT: LandingCmsContent = DEFAULT_LANDING_CONTENT;
 const SECTION_LABELS: Record<string, string> = {
-  legalLinks: 'Legal & resource links', faq: 'Frequently asked questions', aboutPage: 'About page text', contactPage: 'Contact page text', header: 'Header & announcement strip', home: 'Home activity labels', navigation: 'App navigation', hero: 'Hero & calls to action', announcement: 'Home announcement', welcome: 'Welcome & onboarding',
+  ministryPage: 'Ministry sign-in page', legalLinks: 'Legal & resource links', faq: 'Frequently asked questions', aboutPage: 'About page text', contactPage: 'Contact page text', header: 'Header & announcement strip', home: 'Home activity labels', navigation: 'App navigation', hero: 'Hero & calls to action', announcement: 'Home announcement', welcome: 'Welcome & onboarding',
   pillars: 'Pillars', messages: 'Success & support', system: 'App configuration', quest: 'Quest journey',
   passSection: 'Getting started', about: 'Mission & vision', footer: 'Footer',
   mission: 'Discipleship & benefits', onboarding: 'Onboarding steps', safeguarding: 'Safeguarding', layout: 'Section visibility',
@@ -210,7 +211,7 @@ function WebLandingPreview({ content, focusSection, device }: {
         style={{ width: viewportWidth, height: `${100 / scale}%`, transform: `translateX(-50%) scale(${scale})`, transformOrigin: 'top center' }} />
       {previewDocument && createPortal(
         <div className="pointer-events-none select-none">
-          {focusSection === 'aboutPage' ? <AboutPage content={content.aboutPage} /> : focusSection === 'contactPage' ? <ContactPage content={content.contactPage} /> : (
+          {focusSection === 'ministryPage' ? <PublicLayout activeTab="portal" content={content} stacked={device === 'mobile'}><MinistryGateway preview /></PublicLayout> : focusSection === 'aboutPage' ? <AboutPage content={content.aboutPage} /> : focusSection === 'contactPage' ? <ContactPage content={content.contactPage} /> : (
             <PublicLayout activeTab="home" content={content} stacked={device === 'mobile'}>
               <LandingPageSections content={content} interactive={false} stacked={device === 'mobile'} />
             </PublicLayout>
@@ -557,7 +558,7 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
   const fields = cmsFields(content);
   const errors = validateCms(content);
   const matches = (text: string) => text.toLowerCase().includes(query.trim().toLowerCase());
-  const sectionOrder = ['legalLinks', 'header', 'hero', 'pillars', 'mission', 'about', 'passSection', 'onboarding', 'safeguarding', 'footer', 'aboutPage', 'contactPage', 'faq', 'layout', 'announcement', 'welcome', 'home', 'quest', 'navigation', 'messages', 'system'];
+  const sectionOrder = ['legalLinks', 'header', 'hero', 'pillars', 'mission', 'about', 'passSection', 'onboarding', 'safeguarding', 'footer', 'aboutPage', 'contactPage', 'ministryPage', 'faq', 'layout', 'announcement', 'welcome', 'home', 'quest', 'navigation', 'messages', 'system'];
   const sections = Object.keys(defaults).sort((a, b) => sectionOrder.indexOf(a) - sectionOrder.indexOf(b)).filter(key => !query || matches(SECTION_LABELS[key] ?? key) || fields.some(field => field.path[0] === key && matches(`${field.label} ${field.value}`)));
   const displayed = query ? sections : [section];
 

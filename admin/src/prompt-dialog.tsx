@@ -19,6 +19,7 @@ type PromptRequest = {
   message?: string;
   label: string;
   defaultValue: string;
+  inputType?: 'text' | 'password';
   confirmLabel: string;
   cancelLabel: string;
   resolve: (value: string | null) => void;
@@ -81,6 +82,7 @@ export function askPrompt(
     title?: string;
     message?: string;
     defaultValue?: string;
+    inputType?: 'text' | 'password';
     confirmLabel?: string;
     cancelLabel?: string;
   } = {},
@@ -92,6 +94,7 @@ export function askPrompt(
       message: options.message,
       label,
       defaultValue: options.defaultValue ?? '',
+      inputType: options.inputType,
       confirmLabel: options.confirmLabel ?? 'OK',
       cancelLabel: options.cancelLabel ?? 'Cancel',
       resolve,
@@ -186,6 +189,8 @@ function PromptFields({ request }: { request: PromptRequest }) {
       <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-navy">
         {request.label}
         <input
+          type={request.inputType ?? 'text'}
+          autoComplete={request.inputType === 'password' ? 'current-password' : 'off'}
           autoFocus
           className="rounded-xl border border-border bg-white px-3 py-2 text-sm font-normal normal-case text-navy outline-none focus:border-navy"
           value={value}

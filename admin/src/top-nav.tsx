@@ -23,6 +23,7 @@ const TAB_TITLES: Record<Tab, string> = {
   legal: 'Site pages',
   cheers: 'Student nudges',
   archive: 'Church archive',
+  'users-archive': 'Users archive',
 };
 
 function initials(name?: string, email?: string) {
@@ -86,9 +87,23 @@ export function TopNav({
         <button
           type="button"
           className="relative p-2 rounded-xl text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer border border-border/50"
-          aria-label={`Notifications${alertCount ? `, ${alertCount} alerts` : ''}`}
-          title="Notifications"
-          onClick={() => navigate('/app/dashboard/notifications')}
+          aria-label={
+            alertCount > 0
+              ? `Pending church nudges, ${alertCount} awaiting review`
+              : 'Pending church nudges'
+          }
+          title={
+            alertCount > 0
+              ? `${alertCount} church nudge${alertCount === 1 ? '' : 's'} awaiting review`
+              : 'No pending church nudges'
+          }
+          onClick={() =>
+            navigate(
+              alertCount > 0
+                ? '/app/dashboard/cheers?tab=church-pending'
+                : '/app/dashboard/cheers',
+            )
+          }
         >
           <BellIcon />
           {alertCount > 0 ? (

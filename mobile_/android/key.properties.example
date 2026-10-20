@@ -1,4 +1,18 @@
+# Keep secrets outside the repo, under a folder named for this app:
+#   ~/secret_env/teen_aventure/
+#
+# Link into this Android project (gitignored):
+#   ln -sfn ~/secret_env/teen_aventure/key.properties android/key.properties
+#
+# Never commit key.properties or the keystore.
+
 storePassword=CHANGE_ME
 keyPassword=CHANGE_ME
 keyAlias=upload
-storeFile=../upload-keystore.jks
+storeFile=/home/bash/secret_env/teen_aventure/upload-keystore.p12
+
+# Optional: explicitly choose PKCS12 or JKS; otherwise the preflight detects it.
+# storeType=PKCS12
+# Environment overrides (preferred in CI; never pass passwords on command lines):
+# ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+# ANDROID_KEY_PASSWORD, ANDROID_KEYSTORE_TYPE

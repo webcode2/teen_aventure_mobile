@@ -1,0 +1,823 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "churchRole",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "guardian",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sitePage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "published",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "nudgeTemplate",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "nudgeTemplate",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classGroup",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "kind",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "devicePushSubscription",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "externalId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "consentPack",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jurisdiction",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "title",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "activityBucket",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bucket",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classEnrollment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classEnrollment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reporterUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ministryVisible",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingEvent",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reportId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scoreLedger",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scoreLedger",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "nudge",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "toChildId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classMessage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "puzzleDraft",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "matchingDraft",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "puzzle",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "hasLive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "matching",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "hasLive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "puzzleVersion",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "puzzleId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "version",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "matchingVersion",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "matchingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "version",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classQuizActivation",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classEnrollment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "childId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "classAssignment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "teacherUserId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "user",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "accountDeletionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "platformRole",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "familyJarEntry",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "activePeriodMember",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "period",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "start",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "churchApplication",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "seenAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "nudgeTemplate",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "user",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "platformRole",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notificationOutbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kind",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reporterUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "investigationLocked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reporterUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retainedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "assignedToUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "investigationLocked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "assignedToUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retainedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "targetId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "investigationLocked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "targetId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retainedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "investigationLocked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retainedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "retentionDeletionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "investigationLocked",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "retentionDeletionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "retainedUntil",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "_identityCleanup",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jobId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "child",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ageBand",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "accountDeletionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "birthYear",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notificationOutbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nextAttemptAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "_unique",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "_leases",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "_loginAttempts",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "notificationOutbox",
+      "fieldPath": "body",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "user",
+      "fieldPath": "passwordHash",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "child",
+      "fieldPath": "pinHash",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "devicePushSubscription",
+      "fieldPath": "fcmToken",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "consentPack",
+      "fieldPath": "body",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "fieldPath": "description",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "safeguardingReport",
+      "fieldPath": "followUpEmail",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "safeguardingEvent",
+      "fieldPath": "note",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "puzzleDraft",
+      "fieldPath": "doc",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "matchingDraft",
+      "fieldPath": "doc",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "puzzleVersion",
+      "fieldPath": "doc",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "matchingVersion",
+      "fieldPath": "doc",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "chunks",
+      "fieldPath": "data",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "teenQuest",
+      "fieldPath": "content",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "teenQuest",
+      "fieldPath": "videos",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "teenQuest",
+      "fieldPath": "objectiveQuiz",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "teenQuest",
+      "fieldPath": "declarationText",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "notificationFanout",
+      "fieldPath": "message",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "notificationFanout",
+      "fieldPath": "recipients",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "notificationFanout",
+      "fieldPath": "receipt",
+      "indexes": []
+    }
+  ]
+}

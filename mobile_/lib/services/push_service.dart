@@ -12,6 +12,7 @@ class PushService {
 
   final ApiClient _apiClient;
   bool _started = false;
+  Future<void>? _starting;
   bool _hasSession = false;
   /// Set when the user removes this phone from Devices so we do not re-register until next login.
   bool _registrationPaused = false;
@@ -43,8 +44,12 @@ class PushService {
     return defaultTargetPlatform.name;
   }
 
-  Future<void> start() async {
-    if (_started) return;
+  Future<void> start() {
+    if (_started) return Future.value();
+    return _starting ??= _initializePush().whenComplete(() => _starting = null);
+  }
+
+  Future<void> _initializePush() async {
     final options = _options;
     final ready = options != null;
     await impl.startPush(

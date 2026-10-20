@@ -25,8 +25,9 @@ it('honours section visibility without deleting its text', () => {
   expect((container.querySelector('#discipleship') as HTMLElement).hidden).toBe(true);
 });
 it('uses CMS header and footer copy in the real public shell', () => {
-  render(<MemoryRouter><PublicLayout content={{ header: { banner: 'Our announcement', missionLink: 'Our purpose', signInLabel: 'Open ministry' }, footer: { tagline: 'Our footer', supportEmail: 'team@example.org', copyright: 'Our copyright' } }}>Body</PublicLayout></MemoryRouter>);
-  expect(screen.getByText('Our announcement')).toBeTruthy();
+  render(<MemoryRouter><PublicLayout content={{ header: { signInLabel: 'Open ministry' }, footer: { tagline: 'Our footer', supportEmail: 'team@example.org', copyright: 'Our copyright' } }}>Body</PublicLayout></MemoryRouter>);
+  expect(screen.getByText('Open ministry')).toBeTruthy();
+  expect(screen.queryByText('Faith-Rooted Christian Discipleship for Teenagers & Families • 100% Ad-Free')).toBeNull();
   expect(screen.getByText('Our footer')).toBeTruthy();
   expect(screen.getByRole('link', { name: 'team@example.org' }).getAttribute('href')).toBe('mailto:team@example.org');
 });

@@ -1,30 +1,20 @@
-# Play Console — Data safety answers (v1 store build)
+# Play Console Data safety — draft inventory
 
-Declare this honestly. Change it if you add login, analytics, or crash SDKs.
+The old “no accounts / on-device only” answers are obsolete. **Do not paste this draft into Play Console without reviewing the production build, backend, SDKs and actual operating practices.** Local-only storage is not itself off-device collection.
 
-## Does the app collect or share user data?
+| Data surface identified in source | Purpose to verify | Declaration work required |
+| --- | --- | --- |
+| Account name, email, credentials and profile fields such as birth year, phone, biography/avatar where enabled | Authentication, account/profile management | Identify required/optional fields, protection, retention and deletion |
+| Family/child relationships and group/ministry membership | Family supervision and group functionality | Explain visibility and permissions; assess sensitive religious-affiliation implications |
+| Lesson/quiz progress, scores and activity | Learning, progress and standings | Map to app activity and other applicable Console categories |
+| FCM registration token and device manufacturer/model/name | Notification registration and delivery | Map identifiers/device data and service-provider processing |
+| Reports and submitted support/content information | Support and moderation | Inspect payloads and retention; classify user-submitted content |
+| Embedded YouTube player and other network SDK behavior | Lesson video playback and app services | Inventory each provider's actual collection/sharing and audience compatibility |
 
-**Collect (on device only):** app activity such as quiz scores and streaks stored in local preferences.  
-**Share:** No, in v1 with no account and no analytics SDK.
+No AD_ID, location, microphone or broad storage permission was observed in the inspected APK. This does not establish that SDKs collect no identifiers or other data. Camera access supports scanning; inspect the production scanning flow before claiming that images never leave the device.
 
-## Data types
+Confirm all production recipients, processors and purposes, whether each transfer is collection/sharing under Google's definitions, encryption in transit, optionality, retention, and applicable exceptions. SDK behavior and operational logging must be included.
 
-| Type | Collected? | Shared? | Required? | Purpose |
-|------|------------|---------|-----------|---------|
-| App activity (quiz/progress) | Yes, on device | No | Yes for scoring | App functionality |
-| Personal info (name, email) | No | No | — | — |
-| Location | No | No | — | — |
-| Photos / files | No | No | — | — |
-| Audio | No | No | — | — |
+Account deletion and recovery are now implemented through the public `/delete-account` page and the app webview, with password verification, the 30/90-day lifecycle, admin archive/immediate-purge decisions and retention checks. See `docs/ops/account-deletion.md`. Before claiming production availability, deploy the page/API, configure the scheduled lifecycle function, and verify the public URL and device flow.
 
-## Third parties
-
-YouTube’s player may process playback data under Google’s policies. In Data safety, disclose that video playback uses YouTube / Google if the form asks about third-party SDKs.
-
-## Security
-
-Data in transit to a production API must use HTTPS only (release builds disable cleartext).
-
-## Account deletion
-
-Not applicable in v1: the store build does not create accounts. If you later add login, you must add an in-app delete-account path and update this form.
+See [the current audit](audit-2026-10-18.md) and [Google's User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311).

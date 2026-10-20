@@ -54,7 +54,7 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
   },
   {
     label: 'Archive',
-    items: [['archive', 'Church archive']],
+    items: [['archive', 'Church archive'], ['users-archive', 'Users archive']],
   },
 ];
 
@@ -133,17 +133,20 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
       queuedNotifications?: number;
       pendingDeletions?: number;
       pendingChurchApplications?: number;
+      pendingChurchNudges?: number;
     }>('/api/admin/stats')
       .then((stats) => {
         const reports = stats.openReports ?? 0;
         const deletions = stats.pendingDeletions ?? 0;
         const churches = stats.pendingChurchApplications ?? 0;
-        // Notifications is an outbound composer — do not badge the bell or nav on outbox queue.
-        setAlertCount(0);
+        const pendingNudges = stats.pendingChurchNudges ?? 0;
+        // Bell tracks church nudge templates awaiting Care review (not the outbound composer).
+        setAlertCount(pendingNudges);
         setNavBadges({
           reports,
           deletions,
           churches,
+          cheers: pendingNudges,
         });
       })
       .catch(() => {
@@ -223,7 +226,15 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
               {group.items.map(([id, label]) => {
                 const active = tab === id;
                 const badge = navBadges[id] ?? 0;
-                const title = badge > 0 ? `${label} (${badge})` : label;
+                const displayLabel =
+                  id === 'cheers' && badge > 0 ? 'Nudges · Pending' : label;
+                const title = badge > 0 ? `${displayLabel} (${badge})` : displayLabel;
+                const destination =
+                  id === 'dashboard'
+                    ? '/app/dashboard'
+                    : id === 'cheers' && badge > 0
+                      ? '/app/dashboard/cheers?tab=church-pending'
+                      : `/app/dashboard/${id}`;
                 return (
                   <button
                     key={id}
@@ -240,7 +251,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
                     title={title}
                     onClick={() => {
                       closeMobileNav();
-                      navigate(id === 'dashboard' ? '/app/dashboard' : `/app/dashboard/${id}`);
+                      navigate(destination);
                     }}
                   >
                     <span className="relative shrink-0">
@@ -251,7 +262,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
                         </span>
                       ) : null}
                     </span>
-                    {!isCollapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+                    {!isCollapsed ? <span className="min-w-0 flex-1 truncate">{displayLabel}</span> : null}
                     {!isCollapsed && badge > 0 ? (
                       <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-orange px-1 text-[9px] font-bold text-white tabular-nums">
                         {badge > 9 ? '9+' : badge}

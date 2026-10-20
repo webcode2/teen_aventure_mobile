@@ -17,6 +17,7 @@ export const TABS = [
   "deletions",
   "scoring",
   "archive",
+  "users-archive",
 ] as const;
 
 export type Tab = (typeof TABS)[number];

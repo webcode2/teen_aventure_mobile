@@ -133,6 +133,7 @@ const NAV_ICONS: Record<Tab, () => ReactNode> = {
   reports: ShieldIcon,
   deletions: TrashIcon,
   archive: TrashIcon,
+  'users-archive': UsersIcon,
 };
 
 export function NavIcon({ tab }: { tab: Tab }) {

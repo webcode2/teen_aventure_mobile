@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Mobile/dashboard use the authenticated backend API, not direct database access.
+    // Server Admin SDK access is controlled separately by runtime IAM.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

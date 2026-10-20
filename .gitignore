@@ -95,3 +95,6 @@ __pycache__/
 .cursor/projects/
 .vercel
 .db-backups/
+
+# Allowlisted deployment bundles
+.deploy/

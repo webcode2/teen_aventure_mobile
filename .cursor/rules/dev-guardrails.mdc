@@ -13,3 +13,4 @@ alwaysApply: true
 - One puzzle type: scripture crossword. Weekly quizzes are Objective Quiz. Never re-add Word Scramble. See `.agents/rules/REMOVED_FEATURES.md`.
 - Admin typecheck and tests must run outside the sandbox with the local binaries, not npx: `admin/node_modules/.bin/tsc` and `admin/node_modules/.bin/vitest`. Flutter analyze also runs outside the sandbox.
 - Do not delete existing ministry accounts while testing. Create a temporary account and remove only that account afterward.
+- Do not delete the Prisma/PostgreSQL API. Keep `backend/prisma/`, `backend/src/routes/`, `backend/src/index.ts`, and the `prisma` / `pg` dependencies. The Firestore server may sit beside it. Do not remove the SQL runtime, schema, or routes unless the user explicitly asks.

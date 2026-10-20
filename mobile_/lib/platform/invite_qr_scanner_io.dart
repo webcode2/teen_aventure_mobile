@@ -136,7 +136,7 @@ class _QrScannerFrame extends StatelessWidget {
               child: MobileScanner(
                 controller: controller,
                 onDetect: onDetect,
-                errorBuilder: (context, error, child) {
+                errorBuilder: (context, error) {
                   final denied =
                       error.errorCode == MobileScannerErrorCode.permissionDenied;
                   final detail = error.errorDetails?.message?.trim();

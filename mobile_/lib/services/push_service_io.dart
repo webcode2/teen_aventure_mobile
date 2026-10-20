@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'push_hooks.dart';
+import 'push_event_deduplicator.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
@@ -12,6 +13,19 @@ typedef PushTokenHandler = Future<void> Function(String token);
 
 PushTokenHandler? _onToken;
 StreamSubscription<String>? _tokenRefreshSub;
+StreamSubscription<RemoteMessage>? _receivedSub;
+StreamSubscription<RemoteMessage>? _openedSub;
+final _events = PushEventDeduplicator();
+
+Future<void> _emit(RemoteMessage message, {required bool opened}) async {
+  final id = message.data['eventId']?.toString() ?? message.messageId;
+  if (!await _events.accept(id, opened: opened)) return;
+  if (opened) {
+    PushHooks.emitOpened(_notice(message));
+  } else {
+    PushHooks.emitReceived(_notice(message));
+  }
+}
 
 Future<void> startPush({
   required bool configured,
@@ -34,10 +48,12 @@ Future<void> startPush({
     debugPrint('PushService: permission=${settings.authorizationStatus}');
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
   }
-  FirebaseMessaging.onMessage.listen((m) => PushHooks.emitReceived(_notice(m)));
-  FirebaseMessaging.onMessageOpenedApp.listen((m) => PushHooks.emitOpened(_notice(m)));
+  await _receivedSub?.cancel();
+  await _openedSub?.cancel();
+  _receivedSub = FirebaseMessaging.onMessage.listen((m) => unawaited(_emit(m, opened: false)));
+  _openedSub = FirebaseMessaging.onMessageOpenedApp.listen((m) => unawaited(_emit(m, opened: true)));
   final launch = await FirebaseMessaging.instance.getInitialMessage();
-  if (launch != null) PushHooks.emitOpened(_notice(launch));
+  if (launch != null) await _emit(launch, opened: true);
 
   await _tokenRefreshSub?.cancel();
   _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) {
@@ -65,6 +81,10 @@ PushNotice _notice(RemoteMessage message) => PushNotice.fromParts(
 Future<void> identifyPushUser(String? externalId) async {}
 
 Future<void> logoutPush() async {
+  await _receivedSub?.cancel();
+  await _openedSub?.cancel();
+  _receivedSub = null;
+  _openedSub = null;
   await _tokenRefreshSub?.cancel();
   _tokenRefreshSub = null;
   _onToken = null;

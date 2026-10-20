@@ -1,3 +1,4 @@
+import 'individual_account_deletion_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
@@ -7,7 +8,6 @@ import '../../quest_milestones.dart';
 import '../../services/api_client.dart';
 import '../../services/engagement_service.dart';
 import '../../theme.dart';
-import 'account_deletion_screen.dart';
 import 'devices_screen.dart';
 import 'profile_edit_screen.dart';
 import '../auth/child_pin_screen.dart';
@@ -269,15 +269,15 @@ class _AccountScreenState extends State<AccountScreen> {
               },
             ),
           ],
-          if (session.isParent) ...[
+          if (!session.isUnderAgeExplorer) ...[
             const SizedBox(height: 12),
             _SettingsTile(
               icon: Icons.delete_forever_outlined,
-              title: 'Delete family account',
+              title: 'Account deletion & recovery',
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AccountDeletionScreen()),
+                  MaterialPageRoute(builder: (_) => const IndividualAccountDeletionScreen()),
                 );
               },
             ),

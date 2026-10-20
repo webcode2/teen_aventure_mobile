@@ -143,7 +143,7 @@ Do not re-add Word Scramble / `scrambleQuiz` (permanently removed). See `.agents
 - [ ] Nudges / encouragements inbox
 - [ ] Group deletion notices
 - [ ] FCM register / Devices screen
-- [ ] Admin outbox: Push / Email / SMS + history
+- [ ] Admin outbox: Push / Email + history
 
 ### Safeguarding
 

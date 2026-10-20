@@ -70,11 +70,11 @@ class FamilyService {
     }
   }
 
-  Future<void> requestDeletion({required String reason}) async {
+  Future<void> requestDeletion({required String reason, required String password}) async {
     try {
       await _apiClient.dio.post(
         '/api/families/request-deletion',
-        data: {'reason': reason},
+        data: {'reason': reason, 'password': password},
       );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

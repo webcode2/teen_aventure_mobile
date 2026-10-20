@@ -1,0 +1,1652 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-20T09:05:36.695Z",
+  "productionWired": false,
+  "liveDatabaseTouched": false,
+  "counts": {
+    "inventoriedRoutes": 218,
+    "nativeImplemented": 218,
+    "queued": 0,
+    "unresolved": 0
+  },
+  "caveat": "Route presence is implementation progress, not feature parity or deployment readiness. Aliases /api and /api/v1 counted once. Inline index.ts routes, workers and services are tracked separately in MIGRATION.md. Review unresolved registrations manually.",
+  "groups": [
+    {
+      "source": "backend/src/routes/auth.routes.ts",
+      "total": 16,
+      "implemented": 16,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/account-deletion.routes.ts",
+      "total": 3,
+      "implemented": 3,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/family.routes.ts",
+      "total": 15,
+      "implemented": 15,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/church.routes.ts",
+      "total": 15,
+      "implemented": 15,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/church-application.routes.ts",
+      "total": 12,
+      "implemented": 12,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/class.routes.ts",
+      "total": 12,
+      "implemented": 12,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/engagement.routes.ts",
+      "total": 17,
+      "implemented": 17,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "total": 6,
+      "implemented": 6,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/reports.routes.ts",
+      "total": 1,
+      "implemented": 1,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/media.routes.ts",
+      "total": 2,
+      "implemented": 2,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/admin.routes.ts",
+      "total": 69,
+      "implemented": 69,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "total": 12,
+      "implemented": 12,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/consent.routes.ts",
+      "total": 3,
+      "implemented": 3,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/invite.routes.ts",
+      "total": 7,
+      "implemented": 7,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "total": 5,
+      "implemented": 5,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "total": 10,
+      "implemented": 10,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "total": 5,
+      "implemented": 5,
+      "queued": 0
+    },
+    {
+      "source": "backend/src/routes/matching.routes.ts",
+      "total": 8,
+      "implemented": 8,
+      "queued": 0
+    }
+  ],
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/accounts/request-deletion",
+      "source": "backend/src/routes/account-deletion.routes.ts",
+      "line": 9,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/deletion-status",
+      "source": "backend/src/routes/account-deletion.routes.ts",
+      "line": 16,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/restore-deletion",
+      "source": "backend/src/routes/account-deletion.routes.ts",
+      "line": 22,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/stats",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 48,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/activity-trend",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 49,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 57,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/people",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 65,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/people/users/:userId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 169,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/:userId/push-subscriptions/:subscriptionId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 209,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/users/:userId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 231,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/:userId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 242,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 257,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/people/children/:childId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 291,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/people/families/:familyId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 319,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/groups",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 339,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/groups/:classId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 386,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/groups/:classId/enrollments/:enrollmentId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 464,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/groups/:classId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 486,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/churches",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 530,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/churches/:churchId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 555,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/churches/:churchId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 691,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches/:churchId/disable",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 716,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches/:churchId/enable",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 720,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches/:churchId/delete",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 724,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches/:churchId/archive",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 731,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 738,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/church-applications",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 808,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/church-applications/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 810,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/church-applications/:id/approve",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 814,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/church-applications/:id/reject",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 821,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/church-applications/:id/archive",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 829,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/church-applications/:id/seen",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 833,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/church-applications/:id/identity-doc-url",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 838,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/church-applications/:id/identity-doc",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 857,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/churches/:churchId/regenerate-join-code",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 885,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 896,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/reports/:reportId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 908,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/reports/:reportId",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 927,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/scoring-rules",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 954,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/scoring-rules",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 956,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/quest-awards",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 961,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/quest-awards",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 963,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/account-deletions",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 991,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/account-deletions/archive",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 992,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/account-deletions/:id/restore",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 996,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/account-deletions/:id/archive",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1000,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/account-deletions/:id/purge",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1004,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/deletions",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1013,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/deletions",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1055,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/deletions/:deletionId/restore",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1064,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/consent-packs",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1104,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/consent-packs",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1108,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/notifications",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1124,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/notifications",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1131,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/content/:platform",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1227,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/content/:platform",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1231,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/:platform/images",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1236,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/app-resource-health",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1248,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/site-pages/:id/usage",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1249,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/site-pages",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1256,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/site-pages/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1260,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/site-pages",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1266,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/site-pages/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1292,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/site-pages/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1321,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/nudge-templates",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1341,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/churches/:churchId/nudge-templates",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1343,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/nudge-templates",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1348,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/nudge-templates/:id/approve",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1359,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/nudge-templates/:id/reject",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1384,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/nudge-templates/:id/revoke",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1417,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/nudge-templates/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1434,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/nudge-templates/:id",
+      "source": "backend/src/routes/admin.routes.ts",
+      "line": 1441,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 141,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 166,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 203,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 240,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/child-pin",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 265,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/children/:childId/pin",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 292,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/teen-login",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 307,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/teen-register",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 346,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/avatars",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 359,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me/stats",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 361,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/me",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 368,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/upgrade-to-adult",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 478,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 501,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/push-subscription",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 629,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/devices",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 696,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/auth/devices/:deviceId",
+      "source": "backend/src/routes/auth.routes.ts",
+      "line": 734,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/account",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 28,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/resend-verification",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 34,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/verify-email",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 39,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/session",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 51,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/church-applications/mine",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 63,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/church-applications/mine",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 70,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/enter",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 78,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/church-applications/identity-doc/storage",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 91,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/identity-doc/presign",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 102,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/identity-doc/complete",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 119,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications/identity-doc",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 133,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/church-applications",
+      "source": "backend/src/routes/church-application.routes.ts",
+      "line": 163,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/churches",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 57,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/churches/:churchId",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 66,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/churches/:churchId/regenerate-join-code",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 89,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/churches/:churchId/teachers",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 100,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/churches/:churchId/roles",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 176,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/churches/:churchId/people/:userId/roles",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 198,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/churches/:churchId/roles/:userId/:role",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 230,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/churches/:churchId/people/:userId",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 241,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/churches/:churchId/people/:userId",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 291,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/churches/:churchId/people",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 321,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/churches/:churchId/families",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 364,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/churches/:churchId/classes",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 404,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/churches/:churchId/nudge-templates",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 414,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/churches/:churchId/nudge-templates",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 423,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/churches/:churchId/nudge-templates/:id",
+      "source": "backend/src/routes/church.routes.ts",
+      "line": 439,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 34,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/church/:churchId",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 71,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/classes/:classId",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 92,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/:classId/teachers",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 160,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/classes/:classId/teachers/:teacherUserId",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 191,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/:classId/enroll",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 215,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/join",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 234,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/classes/:classId/enrollments",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 254,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/classes/enrollment/:enrollmentId",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 289,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/classes/:classId/activity",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 304,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/classes/:classId/messages",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 358,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/classes/:classId/messages",
+      "source": "backend/src/routes/class.routes.ts",
+      "line": 369,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/consent/packs",
+      "source": "backend/src/routes/consent.routes.ts",
+      "line": 6,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/consent/accept",
+      "source": "backend/src/routes/consent.routes.ts",
+      "line": 24,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/consent/status/:childId",
+      "source": "backend/src/routes/consent.routes.ts",
+      "line": 55,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/score/:childId",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 24,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/achievements",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 35,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/complete",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 47,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/family",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 110,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/family/jar",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 158,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/family/jar",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 178,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/group-jar",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 183,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/leaderboard/:classId",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 197,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/class-messages",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 205,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/class-messages/read",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 213,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/nudge-templates",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 308,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/nudge",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 318,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/nudge-group",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 390,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/engagement/nudges",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 462,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/engagement/nudges/read",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 579,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/engagement/nudges",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 590,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/engagement/nudges/:id",
+      "source": "backend/src/routes/engagement.routes.ts",
+      "line": 599,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 46,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/families/my",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 78,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/families/my",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 109,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/families/:familyId",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 133,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/children",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 170,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/families/children/:childId",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 210,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/guardians",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 244,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/join-church",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 259,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/leave-church",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 264,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/request-deletion",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 275,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/cancel-deletion",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 285,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/families/jurisdiction",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 303,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/families/children/:childId/independent-login",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 312,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/children/:childId/transition-to-adult",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 389,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/families/children/:childId/switch",
+      "source": "backend/src/routes/family.routes.ts",
+      "line": 424,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/memberships",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 34,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/memberships/:kind/:id",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 40,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/memberships/leave",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 52,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/memberships/delete",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 75,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/invites",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 132,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/invites/:token",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 212,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/invites/accept",
+      "source": "backend/src/routes/invite.routes.ts",
+      "line": 248,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matching-drafts",
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "line": 20,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/matching-drafts/delete-many",
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "line": 36,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matching-drafts/:id",
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "line": 46,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/matching-drafts",
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "line": 57,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/matching-drafts/:id",
+      "source": "backend/src/routes/matching-draft.routes.ts",
+      "line": 158,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matchings/live",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 52,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matchings/id/:matchingId/live",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 64,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matchings",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 75,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/matchings/versions/:id",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 117,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/matchings/publish",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 130,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/matchings/versions/:id/promote",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 173,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/matchings/versions/:id",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 193,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/matchings/versions/:id/claim-reward",
+      "source": "backend/src/routes/matching.routes.ts",
+      "line": 206,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/media/upload",
+      "source": "backend/src/routes/media.routes.ts",
+      "line": 8,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/media/read-url",
+      "source": "backend/src/routes/media.routes.ts",
+      "line": 21,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzle-drafts",
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "line": 21,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzle-drafts/delete-many",
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "line": 38,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzle-drafts/:id",
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "line": 68,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/puzzle-drafts",
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "line": 82,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/puzzle-drafts/:id",
+      "source": "backend/src/routes/puzzle-draft.routes.ts",
+      "line": 187,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzles/live",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 72,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzles/id/:puzzleId/live",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 85,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzles",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 101,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/puzzles/versions/:id",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 146,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzles/publish",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 165,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzles/stage",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 210,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzles/versions/:id/promote",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 262,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/puzzles/versions/:id",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 282,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzles/versions/:id/solve",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 295,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/puzzles/versions/:id/claim-reward",
+      "source": "backend/src/routes/puzzle.routes.ts",
+      "line": 326,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/reports",
+      "source": "backend/src/routes/reports.routes.ts",
+      "line": 90,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/safeguarding/reports",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 16,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/safeguarding/reports/my",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 32,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/safeguarding/church/:churchId/reports",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 41,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PATCH",
+      "path": "/safeguarding/reports/:reportId",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 59,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/safeguarding/reports/:reportId",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 100,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/safeguarding/reports/:reportId/events",
+      "source": "backend/src/routes/safeguarding.routes.ts",
+      "line": 118,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/weeks",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 124,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/current",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 165,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/teen-quest/weeks/:weekNumber/steps",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 178,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/weeks/:weekNumber",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 222,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/weeks/:weekNumber/progress",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 235,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/teen-quest/class/:classId/activate",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 248,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/class/:classId/active",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 287,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/teen-quest/submit-objs",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 296,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "GET",
+      "path": "/teen-quest/class/:classId/leaderboard",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 347,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "POST",
+      "path": "/teen-quest/admin/weeks",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 358,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "PUT",
+      "path": "/teen-quest/admin/weeks/:id",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 435,
+      "state": "native_implemented_parity_pending"
+    },
+    {
+      "method": "DELETE",
+      "path": "/teen-quest/admin/weeks/:id",
+      "source": "backend/src/routes/teen-quest.routes.ts",
+      "line": 508,
+      "state": "native_implemented_parity_pending"
+    }
+  ],
+  "unresolved": []
+}

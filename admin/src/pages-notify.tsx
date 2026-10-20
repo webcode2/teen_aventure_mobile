@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { api } from './api';
 import { Alert, Button, Badge, Empty, Field, PageHeader, Spinner } from './ui';
@@ -16,7 +16,7 @@ type Notice = {
   audience?: string | null;
 };
 
-type Channel = 'PUSH' | 'EMAIL' | 'SMS';
+type Channel = 'PUSH' | 'EMAIL';
 type PreviewPlatform = 'android' | 'ios' | 'web';
 /** '' = one specific id; otherwise an account-type group. */
 type Audience =
@@ -33,7 +33,6 @@ type Audience =
 const CHANNELS: { id: Channel; label: string; hint: string }[] = [
   { id: 'PUSH', label: 'Push', hint: 'FCM device' },
   { id: 'EMAIL', label: 'Email', hint: 'Inbox' },
-  { id: 'SMS', label: 'SMS', hint: 'Text' },
 ];
 
 /** Mobile app login is only parents, explorers, and teachers — push audiences match that. */
@@ -44,15 +43,15 @@ const AUDIENCES: {
   /** Shown for device push (people who can use the mobile app). */
   appPush: boolean;
 }[] = [
-  { id: '', label: 'Specific person', hint: 'One id, email, or phone', appPush: true },
+  { id: '', label: 'Specific person', hint: 'One id or email', appPush: true },
   { id: 'all', label: 'All', hint: 'Every parent, explorer, and teacher on the app', appPush: true },
   { id: 'parents', label: 'Parents', hint: 'Adult family accounts on the app', appPush: true },
   { id: 'explorers', label: 'Explorers', hint: 'Teens with app login', appPush: true },
   { id: 'teachers', label: 'Teachers', hint: 'Teachers who use the app', appPush: true },
-  { id: 'pastors', label: 'Pastors', hint: 'Email or SMS only — not on the app', appPush: false },
-  { id: 'ministry_leads', label: "Children's ministry leads", hint: 'Email or SMS only — not on the app', appPush: false },
-  { id: 'chaperones', label: 'Chaperones', hint: 'Email or SMS only — not on the app', appPush: false },
-  { id: 'church_staff', label: 'All church staff', hint: 'Email or SMS only — includes non-app roles', appPush: false },
+  { id: 'pastors', label: 'Pastors', hint: 'Email only — not on the app', appPush: false },
+  { id: 'ministry_leads', label: "Children's ministry leads", hint: 'Email only — not on the app', appPush: false },
+  { id: 'chaperones', label: 'Chaperones', hint: 'Email only — not on the app', appPush: false },
+  { id: 'church_staff', label: 'All church staff', hint: 'Email only — includes non-app roles', appPush: false },
 ];
 
 function audiencesForChannel(channel: Channel) {
@@ -310,12 +309,13 @@ const thClass =
 const tdClass = 'px-3 py-3 align-middle text-navy first:pl-0 last:pr-0';
 const rowClass = 'border-b border-border/50 transition-colors hover:bg-surface-2/30';
 
-const FILTERS = ['ALL', 'EMAIL', 'SMS', 'PUSH', 'PENDING', 'SENT', 'FAILED'] as const;
+const FILTERS = ['ALL', 'EMAIL', 'PUSH', 'PENDING', 'SENT', 'FAILED'] as const;
 
 export function NotificationsPage() {
   const [sendError, setSendError] = useState('');
   const [sendNote, setSendNote] = useState('');
   const [sending, setSending] = useState(false);
+  const pendingSend = useRef<{ fingerprint: string; key: string } | null>(null);
   const [channel, setChannel] = useState<Channel>('PUSH');
   const [audience, setAudience] = useState<Audience>('');
   const [to, setTo] = useState('');
@@ -341,9 +341,12 @@ export function NotificationsPage() {
     setSendNote('');
     setSending(true);
     try {
+      const fingerprint = JSON.stringify({ channel, subject, body, audience, to, imageUrl, actionLabel, actionUrl });
+      if (pendingSend.current?.fingerprint !== fingerprint) pendingSend.current = { fingerprint, key: crypto.randomUUID() };
       const row = await api<Notice>('/api/admin/notifications', {
         method: 'POST',
         body: JSON.stringify({
+          requestKey: pendingSend.current.key,
           channel,
           subject: subject.trim(),
           body: body.trim(),
@@ -358,6 +361,7 @@ export function NotificationsPage() {
             : {}),
         }),
       });
+      pendingSend.current = null;
       const count = row.queued ?? 1;
       const group = audience ? ` to ${audienceLabel(audience).toLowerCase()}` : '';
       setSendNote(
@@ -383,14 +387,8 @@ export function NotificationsPage() {
     }
   }
 
-  const toPlaceholder =
-    channel === 'PUSH' ? 'user-uuid or child-uuid' : channel === 'EMAIL' ? 'name@example.com' : '+15551234567';
-  const toHint =
-    channel === 'PUSH'
-      ? 'From People — the id on the device session'
-      : channel === 'EMAIL'
-        ? 'Recipient email'
-        : 'E.164 phone number';
+  const toPlaceholder = channel === 'PUSH' ? 'user-uuid or child-uuid' : 'name@example.com';
+  const toHint = channel === 'PUSH' ? 'From People — the id on the device session' : 'Recipient email';
   const audienceHint = AUDIENCES.find((a) => a.id === audience)?.hint ?? '';
   const canSend =
     Boolean(subject.trim() && body.trim()) &&
@@ -427,7 +425,7 @@ export function NotificationsPage() {
               </p>
             ) : (
               <p className="m-0 text-[11px] text-muted sm:max-w-[16rem] sm:text-right">
-                Email and SMS can include pastors and other ministry roles.
+                Email can include pastors and other ministry roles.
               </p>
             )}
           </div>
@@ -458,12 +456,12 @@ export function NotificationsPage() {
                 ) : (
                   <p className="m-0 rounded-xl border border-teal/25 bg-teal-tint/60 px-3.5 py-2.5 text-xs text-navy">
                     Sends to every <strong>{audienceLabel(audience)}</strong> account that has a{' '}
-                    {channel === 'PUSH' ? 'device' : channel === 'EMAIL' ? 'email' : 'phone'} on file.
+                    {channel === 'PUSH' ? 'device' : 'email'} on file.
                   </p>
                 )}
               </div>
             </Field>
-            <Field label={channel === 'SMS' ? 'Title' : 'Subject'}>
+            <Field label="Subject">
               <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -599,7 +597,7 @@ export function NotificationHistoryPage() {
       <PageHeader
         kicker="Operations"
         title="Notification history"
-        subtitle="Queued by the app and the send form. Retries run when Resend, Twilio, or FCM keys are set."
+        subtitle="Queued by the app and the send form. Retries run when Resend or FCM keys are set."
         actions={
           <Link
             to="/app/dashboard/notifications"
@@ -651,7 +649,7 @@ export function NotificationHistoryPage() {
         ) : visible.length === 0 && !error ? (
           <Empty
             title="No notifications queued"
-            body="System emails, SMS, and device pushes appear here."
+            body="System emails and device pushes appear here."
           />
         ) : visible.length === 0 ? null : (
           <div className="rounded-card border border-border bg-surface p-4 shadow-xs">

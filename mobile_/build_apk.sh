@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# Build a Flutter release APK and copy it to the project root for testing/sharing.
+# Build a Flutter test APK and copy it to the project root for testing/sharing.
 #
 # Firebase client dart-defines are loaded from android/app/google-services.json.
 # Optional overrides / API_BASE_URL may be set in .env (KEY=value lines).
 #
 # Usage:
-#   ./build_apk.sh              # release APK -> ./teen_aventure-<version>-release.apk
-#   ./build_apk.sh --debug      # debug APK
+#   ./build_apk.sh              # debug test APK -> ./teen_aventure-<version>-debug.apk
+#   ./build_apk.sh --release    # upload-key signed release APK
 #   ./build_apk.sh --clean      # flutter clean before build
 #   ./build_apk.sh --split      # one APK per CPU architecture (smaller files)
 
+set +x
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-BUILD_MODE="release"
+BUILD_MODE="debug"
 SPLIT_PER_ABI=false
 RUN_CLEAN=false
 GOOGLE_SERVICES="$ROOT_DIR/android/app/google-services.json"
@@ -27,10 +28,11 @@ Build APK and copy to project root.
 
 Loads FIREBASE_* dart-defines from android/app/google-services.json.
 Optional .env overrides: FIREBASE_API_KEY, FIREBASE_APP_ID,
-FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID, API_BASE_URL.
+FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID, API_BASE_URL, WEB_BASE_URL.
 
 Options:
-  --debug       Build a debug APK instead of release
+  --debug       Build a debug test APK (default; no upload password needed)
+  --release     Build a release APK using saved signing settings
   --split       Build split APKs per CPU architecture (arm64-v8a, armeabi-v7a, x86_64)
   --clean       Run "flutter clean" before building
   -h, --help    Show this help message
@@ -105,6 +107,10 @@ PY
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --release)
+      BUILD_MODE="release"
+      shift
+      ;;
     --debug)
       BUILD_MODE="debug"
       shift
@@ -145,9 +151,31 @@ echo "==> Mode:    $BUILD_MODE"
 load_dotenv "$ENV_FILE"
 load_firebase_from_google_services
 
-if [[ "$BUILD_MODE" == "release" && ! -f "$ROOT_DIR/android/key.properties" ]]; then
-  echo "Warning: android/key.properties not found. Release APK will use debug signing."
-  echo "         Add a keystore before Play Store submission."
+# Gradle reads Java-properties signing values directly; never source key.properties.
+# Validate before dependency resolution/compilation, using environment overrides if set.
+if [[ "$BUILD_MODE" == "release" ]]; then
+  trap 'unset ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD' EXIT
+  echo "==> Validating saved release signing settings"
+  if ! (cd android && ./gradlew :app:validateSigningRelease --no-daemon --console=plain); then
+    if [[ ! -t 0 ]]; then
+      echo "Error: correct android/key.properties or ANDROID_KEYSTORE_* signing overrides, then retry." >&2
+      exit 1
+    fi
+    echo "Saved signing settings failed. Enter the correct passwords to retry."
+    read -r -s -p 'Existing upload keystore password: ' ANDROID_KEYSTORE_PASSWORD
+    printf '\n'
+    if [[ -z "$ANDROID_KEYSTORE_PASSWORD" ]]; then
+      echo "Error: keystore password cannot be empty." >&2
+      exit 1
+    fi
+    read -r -s -p 'Private key password (Enter to use the same password): ' ANDROID_KEY_PASSWORD
+    printf '\n'
+    ANDROID_KEY_PASSWORD="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
+    export ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD
+    (cd android && ./gradlew :app:validateSigningRelease --no-daemon --console=plain)
+  fi
+else
+  echo "==> Test APK uses Android debug signing; upload-key passwords are not required."
 fi
 
 echo "==> flutter pub get"
@@ -173,6 +201,11 @@ BUILD_ARGS+=(
 if [[ -n "${API_BASE_URL:-}" ]]; then
   BUILD_ARGS+=(--dart-define="API_BASE_URL=${API_BASE_URL}")
   echo "==> API_BASE_URL dart-define set"
+fi
+
+if [[ -n "${WEB_BASE_URL:-}" ]]; then
+  BUILD_ARGS+=(--dart-define="WEB_BASE_URL=${WEB_BASE_URL}")
+  echo "==> WEB_BASE_URL dart-define set"
 fi
 
 echo "==> flutter build apk --$BUILD_MODE (+ Firebase dart-defines)"
