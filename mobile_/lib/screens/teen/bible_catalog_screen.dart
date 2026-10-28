@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
+import '../../providers/cms_text.dart';
 import '../../services/content_service.dart';
 import '../../theme.dart';
 import 'widgets/curriculum_week_tile.dart';
@@ -96,7 +97,7 @@ class _BibleCatalogScreenState extends State<BibleCatalogScreen> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text(_error!));
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [

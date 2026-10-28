@@ -186,7 +186,16 @@ List<String> _rolesForTest(
 
 class AuthSession extends ChangeNotifier {
 
-  AuthSession(this._auth, this._family);
+  AuthSession(this._auth, this._family) {
+    _auth?.apiClient.onSessionExpired = _onSessionExpired;
+  }
+
+  /// The server refused our token (expired, or revoked by a password change):
+  /// sign out fully so the app shows login instead of a broken signed-in shell.
+  Future<void> _onSessionExpired() async {
+    if (!authenticated) return;
+    await logout();
+  }
 
 
 
@@ -747,6 +756,13 @@ class AuthSession extends ChangeNotifier {
 
       _applyRolesToShell();
 
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        // Dead session: sign out instead of reopening a signed-in shell.
+        if (authenticated) await logout();
+        return;
+      }
+      shell = userType == 'child' ? AppShell.teen : AppShell.parent;
     } catch (_) {
 
       shell = userType == 'child' ? AppShell.teen : AppShell.parent;

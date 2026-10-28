@@ -181,3 +181,49 @@
   border-style: dashed;
   color: var(--muted, #6b7c8a);
 }
+
+/* A focused authoring surface, shared with the existing ministry palette. */
+.puzzle-studio { --studio-line: #dce5e7; --studio-ink: #193647; --studio-muted: #536b77; color: var(--studio-ink); }
+.studio-header { padding: 20px 0 24px; border-bottom: 1px solid var(--studio-line); }
+.studio-eyebrow { display: block; margin-bottom: 8px; color: var(--studio-muted); font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+.studio-toolbar-button, .studio-text-button { min-height: 40px; padding: 8px 12px; border-radius: 8px; background: transparent; color: var(--studio-ink); cursor: pointer; font-size: 12px; font-weight: 600; }
+.studio-toolbar-button:hover, .studio-text-button:hover { background: #edf5f4; color: #126b69; }
+.studio-toolbar-button:disabled { opacity: .4; cursor: default; }
+.studio-workspace { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.studio-sidebar { padding: 22px; border: 1px solid var(--studio-line); border-radius: 16px; background: #fff; box-shadow: 0 4px 18px #19364705; min-width: 0; }
+.studio-panel-heading, .studio-grid-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.puzzle-studio h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.025em; }
+.studio-count { display: inline-block; border-radius: 6px; background: #edf3f3; padding: 4px 8px; color: var(--studio-muted); font-size: 11px; font-weight: 600; vertical-align: middle; }
+.studio-add { padding: 10px 12px; min-height: 42px; background: #126b69; color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.studio-add:hover { background: #0d5554; }
+.studio-add:disabled { opacity: .45; cursor: default; }
+.studio-paste-toggle { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px dashed #9dbfbe; border-radius: 9px; background: #f2f9f7; color: #126b69; font-size: 13px; font-weight: 600; cursor: pointer; }
+.studio-empty { padding: 26px 0 12px; text-align: center; }
+.studio-empty-symbol { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background: #f4efe5; color: #917343; font-family: Georgia, serif; font-size: 23px; }
+.studio-empty h3 { margin: 16px 0 8px; font-size: 15px; font-weight: 600; }
+.studio-empty p, .studio-import p { font-size: 12px; line-height: 1.7; color: var(--studio-muted); overflow-wrap: anywhere; }
+.studio-import label { font-size: 13px; font-weight: 600; }
+.studio-import textarea { width: 100%; resize: vertical; padding: 12px; border: 1px solid var(--studio-line); border-radius: 8px; background: #fbfdfd; font-size: 12px; line-height: 1.7; color: var(--studio-ink); }
+.studio-import-actions { display: flex; gap: 8px; }
+.studio-import .studio-import-error { color: #ad382b; }
+.studio-word-details { padding-top: 18px; border-top: 1px solid var(--studio-line); }
+.studio-word-details input, .studio-word-details textarea { min-height: 44px; font-size: 14px; }
+.studio-word-bar { max-height: 230px; overflow-y: auto; padding: 3px; }
+.studio-word-chip { border-radius: 8px; min-height: 40px; background: #fafcfc; overflow-wrap: anywhere; max-width: 100%; flex-wrap: wrap; }
+.studio-word-chip.is-active { color: #126b69; }
+.studio-grid-panel { min-width: 0; padding-top: 6px; }
+.studio-grid-help { margin: 10px 0 20px; font-size: 13px; line-height: 1.6; color: var(--studio-muted); }
+.studio-grid-surface { padding: 24px; border: 1px solid var(--studio-line); border-radius: 16px; background: #f0f4f3; }
+.studio-grid-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 2px; font-size: 11px; color: var(--studio-muted); }
+.studio-grid-footer i { display: inline-block; width: 10px; height: 10px; background: #e1f1ed; border: 1px solid #126b69; border-radius: 2px; margin-right: 6px; }
+.puzzle-studio .studio-canvas--play { border-color: #c8d6d4; border-radius: 8px; box-shadow: 0 8px 24px #1936470a; }
+.puzzle-studio .studio-cell { background: #e7eeeb; border-color: #cedbd6; }
+.puzzle-studio .studio-cell.has-letter { background: #fff; }
+.puzzle-studio .studio-cell.is-selected-word { background: #e1f1ed; border-color: #43938a; box-shadow: inset 0 0 0 1px #43938a55; }
+.puzzle-studio .studio-cell.is-ghost { background: #d4eee8; color: #126b69; border: 1px dashed #126b69; }
+.puzzle-studio .studio-cell.is-conflict { background: #fff1f0; border-color: #c23b22; }
+.puzzle-studio .studio-cell.is-cursor, .puzzle-studio .studio-cell.is-preview { background: #fff0cb; }
+.puzzle-studio .studio-cell.is-placeable:hover, .puzzle-studio .studio-cell.is-writable:hover { background: #d4eee8; border-color: #43938a; }
+.puzzle-studio button:focus-visible, .puzzle-studio textarea:focus-visible { outline: 2px solid #126b69; outline-offset: 3px; }
+@media (max-width: 1050px) { .studio-workspace { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 20px; } .studio-grid-surface { padding: 14px; } }
+@media (max-width: 760px) { .studio-workspace { grid-template-columns: minmax(0, 1fr); } .studio-header { padding-top: 8px; } .studio-header > div:first-child { flex-basis: 100%; } .studio-sidebar { padding: 18px; } .studio-empty { padding: 12px 0; } }

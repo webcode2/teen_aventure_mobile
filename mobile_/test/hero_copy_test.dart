@@ -4,6 +4,21 @@ import 'package:teen_aventure/providers/hero_copy.dart';
 import 'package:teen_aventure/services/api_client.dart';
 
 void main() {
+  test('welcome toggle survives cached JSON and can be enabled again', () {
+    expect(WelcomeCopy.fallback.enabled, isTrue);
+    final off = WelcomeCopy.resolve({'welcome': {'enabled': false, 'title': 'Keep me'}}, WelcomeCopy.fallback);
+    expect(off.enabled, isFalse);
+    expect(off.title, 'Keep me');
+    expect(WelcomeCopy.fromJson(off.toJson()).enabled, isFalse);
+    expect(WelcomeCopy.resolve({'welcome': {'enabled': true}}, off).enabled, isTrue);
+    expect(WelcomeCopy.fromJson({'title': 'Older cached copy'}).enabled, isTrue);
+  });
+  test('loads cached mascot URLs from before the spelling correction', () {
+    final copy = HeroCopy.fromJson({'zackUrl': '/existing.png', 'zackFile': '/tmp/existing.png'});
+    expect(copy.zachUrl, '/existing.png');
+    expect(copy.zachFile, '/tmp/existing.png');
+    expect(copy.toJson().containsKey('zackUrl'), isFalse);
+  });
   test('CMS navigation, home and quest copy survive an offline restart', () async {
     SharedPreferences.setMockInitialValues({
       'cms_app_text': '{"home":{"todayTitle":"This week"},"navigation":{"home":"Start"},"legalLinks":{"privacyUrl":"/p/current-privacy"}}',
@@ -20,7 +35,7 @@ void main() {
   });
   test('keeps the cached hero until a database payload arrives', () async {
     SharedPreferences.setMockInitialValues({
-      HeroCopyCache.key: '{"greeting":"Hey, cached!","tagline":"Last line","abiUrl":"/api/v1/content/files/abi-1.png","zackUrl":"","abiFile":"/tmp/abi.png"}',
+      HeroCopyCache.key: '{"greeting":"Hey, cached!","tagline":"Last line","abiUrl":"/api/v1/content/files/abi-1.png","zachUrl":"","abiFile":"/tmp/abi.png"}',
     });
     final prefs = await SharedPreferences.getInstance();
     final cached = HeroCopyCache.read(prefs);
@@ -40,13 +55,13 @@ void main() {
         'greeting': 'Hey, Explorer!',
         'tagline': 'New line',
         'abiUrl': '/api/v1/content/files/abi-2.png',
-        'zackUrl': '/api/v1/content/files/zack-2.png',
+        'zachUrl': '/api/v1/content/files/zach-2.png',
       },
     }, cached);
     expect(fresh.greeting, 'Hey, Explorer!');
     expect(fresh.tagline, 'New line');
     expect(fresh.abiUrl, '/api/v1/content/files/abi-2.png');
-    expect(fresh.zackUrl, '/api/v1/content/files/zack-2.png');
+    expect(fresh.zachUrl, '/api/v1/content/files/zach-2.png');
     expect(fresh.abiFile, '/tmp/abi.png');
 
     await HeroCopyCache.write(prefs, fresh);
@@ -60,12 +75,12 @@ void main() {
       abiUrl: '/old.png',
     );
     final next = HeroCopy.resolve({
-      'hero': {'greeting': '  ', 'tagline': '', 'abiUrl': '', 'zackUrl': ''},
+      'hero': {'greeting': '  ', 'tagline': '', 'abiUrl': '', 'zachUrl': ''},
     }, current);
     expect(next.greeting, 'Hey, cached!');
     expect(next.tagline, 'Last line');
     expect(next.abiUrl, isEmpty);
-    expect(next.zackUrl, isEmpty);
+    expect(next.zachUrl, isEmpty);
   });
 
   test('a hidden announcement stays hidden and a blank line stays blank', () {

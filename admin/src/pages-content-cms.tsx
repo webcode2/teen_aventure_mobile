@@ -1,3 +1,5 @@
+import { CMS_NAV_GROUPS, cmsPageGroups } from './cms-sections';
+import { normalizeContactDocument } from './contact-emails';
 import { MinistryGateway } from './ministry-gateway';
 import { AppResourceAlerts } from './app-resource-alerts';
 import { createPortal } from 'react-dom';
@@ -103,7 +105,7 @@ const DEFAULT_MOBILE_CONTENT = {
     greeting: 'Hey, Explorer!',
     tagline: "Ready for today's adventure in God's Word?",
     abiUrl: '',
-    zackUrl: '',
+    zachUrl: '',
   },
   announcement: {
     enabled: true,
@@ -112,6 +114,7 @@ const DEFAULT_MOBILE_CONTENT = {
     actionLabel: 'Explore Week 1',
   },
   welcome: {
+    enabled: true,
     title: "Discover God's Story",
     subtitle: 'Interactive Bible lessons, puzzles, and community for teens.',
     quote: 'Your word is a lamp to my feet and a light to my path. — Psalm 119:105',
@@ -155,7 +158,7 @@ const DEFAULT_MOBILE_CONTENT = {
 
 const DEFAULT_WEB_CONTENT: LandingCmsContent = DEFAULT_LANDING_CONTENT;
 const SECTION_LABELS: Record<string, string> = {
-  ministryPage: 'Ministry sign-in page', legalLinks: 'Legal & resource links', faq: 'Frequently asked questions', aboutPage: 'About page text', contactPage: 'Contact page text', header: 'Header & announcement strip', home: 'Home activity labels', navigation: 'App navigation', hero: 'Hero & calls to action', announcement: 'Home announcement', welcome: 'Welcome & onboarding',
+  ministryPage: 'Ministry sign-in page', legalLinks: 'Legal & resource links', faq: 'Frequently asked questions', aboutPage: 'About page text', contactPage: 'Contact page & emails', header: 'Header & announcement strip', home: 'Home activity labels', navigation: 'App navigation', hero: 'Hero & calls to action', announcement: 'Home announcement', welcome: 'Welcome & onboarding',
   pillars: 'Pillars', messages: 'Success & support', system: 'App configuration', quest: 'Quest journey',
   passSection: 'Getting started', about: 'Mission & vision', footer: 'Footer',
   mission: 'Discipleship & benefits', onboarding: 'Onboarding steps', safeguarding: 'Safeguarding', layout: 'Section visibility',
@@ -261,7 +264,7 @@ function MobileWelcomeOnboardingPreview({
     (content.welcome?.subtitle || '').trim() || DEFAULT_MOBILE_CONTENT.welcome.subtitle;
   const quote = (content.welcome?.quote || '').trim() || DEFAULT_MOBILE_CONTENT.welcome.quote;
   const abiSrc = (content.hero?.abiUrl || '').trim() || '/abi.png';
-  const zackSrc = (content.hero?.zackUrl || '').trim() || '/zack.png';
+  const zachSrc = (content.hero?.zachUrl || '').trim() || '/zach.png';
 
   return (
     <PhoneChrome>
@@ -285,11 +288,11 @@ function MobileWelcomeOnboardingPreview({
             }}
           />
           <img
-            src={zackSrc}
+            src={zachSrc}
             alt=""
             className="-ml-4 h-[160px] w-auto max-w-[42%] object-contain object-bottom"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/zack.png';
+              (e.currentTarget as HTMLImageElement).src = '/zach.png';
             }}
           />
         </div>
@@ -338,7 +341,7 @@ function MobileExplorerHomePreview({
   const tagline =
     (content.hero?.tagline || '').trim() || "Ready for today's adventure in God's Word?";
   const abiSrc = (content.hero?.abiUrl || '').trim() || '/abi.png';
-  const zackSrc = (content.hero?.zackUrl || '').trim() || '/zack.png';
+  const zachSrc = (content.hero?.zachUrl || '').trim() || '/zach.png';
   const sampleVideos = [
     'The Book of Genesis – Part 4',
     'The Book of Genesis – Part 5',
@@ -398,11 +401,11 @@ function MobileExplorerHomePreview({
               }}
             />
             <img
-              src={zackSrc}
-              alt="Zack"
+              src={zachSrc}
+              alt="Zach"
               className="-ml-3 h-[140px] w-auto max-w-[55%] object-contain object-bottom"
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = '/zack.png';
+                (e.currentTarget as HTMLImageElement).src = '/zach.png';
               }}
             />
           </div>
@@ -456,7 +459,7 @@ function MobileExplorerHomePreview({
             <div
               className="absolute inset-0 opacity-40"
               style={{
-                backgroundImage: `url(${zackSrc})`,
+                backgroundImage: `url(${zachSrc})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'right center',
               }}
@@ -542,6 +545,7 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
   const [baseline, setBaseline] = useState(JSON.stringify(defaults));
   const [section, setSection] = useState('hero');
   const [query, setQuery] = useState('');
+  const [subsection, setSubsection] = useState('');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -566,12 +570,12 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
     let cancelled = false;
     api<any>(`/api/admin/content/${platform}`).then(remote => {
       if (cancelled) return;
-      const loaded = mergeCms(defaults, remote);
+      const loaded = mergeCms(defaults, normalizeContactDocument(remote));
       setRemoteReady(true);
       setBaseline(JSON.stringify(loaded));
       let draft: unknown;
       try { const raw = localStorage.getItem(draftKey); if (raw) draft = JSON.parse(raw); } catch { /* unavailable storage */ }
-      setContent(draft ? mergeCms(loaded, draft) : loaded);
+      setContent(draft ? mergeCms(loaded, normalizeContactDocument(draft)) : loaded);
       if (draft) setNotice('Restored your browser draft. Save changes to update the live content.');
     }).catch(() => {
       if (!cancelled) setError('Could not load live content. Reload before publishing to avoid overwriting newer changes.');
@@ -592,7 +596,7 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
 
   const edit = (next: any) => {
     setHistory(previous => [...previous.slice(-39), content]);
-    setFuture([]); setContent(next); setNotice(null);
+    setFuture([]); setContent(normalizeContactDocument(next)); setNotice(null);
   };
   const save = async () => {
     if (loading || !remoteReady || saving || errors.length) return;
@@ -628,7 +632,7 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
       if (file.size > 1024 * 1024) throw new Error('Content files must be smaller than 1 MB.');
       const data = JSON.parse(await file.text());
       if (data.platform !== platform || !data.content || typeof data.content !== 'object' || Array.isArray(data.content)) throw new Error('Choose a content export for this platform.');
-      const next = mergeCms(defaults, data.content);
+      const next = mergeCms(defaults, normalizeContactDocument(data.content));
       if (validateCms(next).length) throw new Error(validateCms(next).join(' '));
       edit(next); setNotice('Imported as a draft. Review before saving.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Invalid content file'); }
@@ -662,15 +666,21 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
     </div>
     <div className={`grid items-start gap-4 ${previewExpanded ? 'grid-cols-1' : 'lg:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[160px_minmax(280px,1fr)_minmax(440px,1.3fr)]'}`}>
       <nav hidden={previewExpanded} aria-label="Content sections" className={`${previewExpanded ? 'hidden' : 'flex'} gap-1 overflow-x-auto rounded-2xl border border-border bg-surface p-2 lg:sticky lg:top-20 lg:flex-col`}>
-        {sections.map(key => <button type="button" key={key} aria-current={!query && section === key ? 'page' : undefined} onClick={() => { setSection(key); setQuery(''); }} className={`min-h-11 shrink-0 rounded-xl px-3 py-2 text-left text-sm font-semibold ${section === key && !query ? 'bg-navy text-white' : 'text-navy hover:bg-cream'}`}>{SECTION_LABELS[key] ?? key}<span className="ml-2 text-xs opacity-60">{fields.filter(field => field.path[0] === key).length}</span></button>)}
+        {CMS_NAV_GROUPS.map(group => { const visible = sections.filter(key => group.keys.includes(key)); return visible.length ? <div key={group.label} className="min-w-40 shrink-0 lg:min-w-0"><p className="px-3 pb-1 pt-3 text-xs font-bold uppercase tracking-wide text-muted">{group.label}</p>{visible.map(key => <button type="button" key={key} aria-current={!query && section === key ? 'page' : undefined} onClick={() => { setSection(key); setSubsection(''); setQuery(''); }} className={`min-h-11 w-full shrink-0 rounded-xl px-3 py-2 text-left text-sm font-semibold ${section === key && !query ? 'bg-navy text-white' : 'text-navy hover:bg-cream'}`}>{SECTION_LABELS[key] ?? key}<span className="ml-2 text-xs opacity-60">{fields.filter(field => field.path[0] === key).length}</span></button>)}</div> : null; })}
       </nav>
       <div className={previewExpanded ? 'hidden' : 'min-w-0 space-y-4'}>
         {!sections.length && <p className="rounded-xl border border-border p-5 text-muted">No matching content. Try another search.</p>}
         {displayed.map(key => <CmsSectionCard key={key} title={SECTION_LABELS[key] ?? key} description={platform === 'mobile' && ['system', 'pillars'].includes(key) ? 'Stored app configuration. Some app screens use their own built-in defaults.' : 'Edit text, then review the preview before saving to the live platform.'} saveLabel="Save all changes" saving={saving} disabled={loading || !remoteReady || uploading || !!errors.length || !dirty} onSave={save}>
           {platform === 'mobile' && key === 'legalLinks' && <p className="mb-4 text-sm text-muted">Use a published page path such as /p/privacy-policy, or a full HTTPS URL. Links update in the app without a rebuild. External sites must allow embedded viewing; verify them separately.</p>}
+          {!query && cmsPageGroups(key, Object.keys(content[key] ?? {})).length > 0 && <div className="mb-5 border-b border-border pb-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Choose a section to edit</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label={`${SECTION_LABELS[key]} sections`}>
+              {cmsPageGroups(key, Object.keys(content[key] ?? {})).map((group, index) => <button type="button" key={group.label} aria-pressed={subsection ? subsection === group.label : index === 0} onClick={() => setSubsection(group.label)} className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold ${(subsection ? subsection === group.label : index === 0) ? 'border-navy bg-navy text-white' : 'border-border text-navy hover:bg-cream'}`}>{group.label} <span className="opacity-60">{group.keys.length}</span></button>)}
+            </div>
+          </div>}
           <fieldset disabled={loading || saving || uploading} className="flex min-w-0 flex-col gap-4 border-0 p-0">
-            {cmsFields(content[key], [key]).filter(field => !query || matches(`${field.label} ${field.value}`) || matches(SECTION_LABELS[key] ?? key)).map(field => <CmsField key={field.path.join('.')} label={field.label.split(' / ').slice(1).join(' / ')} hint={field.path.at(-1) === 'progress' ? 'Keep {current} and {total} to show the explorer’s level.' : undefined}>
-              {typeof field.value === 'boolean' ? <input type="checkbox" checked={field.value} onChange={event => edit(setCmsField(content, field.path, event.target.checked))} /> : typeof field.value === 'number' ? <input className="input" type="number" value={field.value} onChange={event => edit(setCmsField(content, field.path, Number(event.target.value)))} /> : <textarea className="input min-h-20 resize-y rounded-lg border border-border bg-cream/20 px-3 py-2 text-sm focus:outline-2 focus:outline-teal" rows={field.value.length > 150 ? 4 : 2} value={field.value} onChange={event => edit(setCmsField(content, field.path, event.target.value))} />}
+            {cmsFields(content[key], [key]).filter(field => { if (query) return matches(`${field.label} ${field.value}`) || matches(SECTION_LABELS[key] ?? key); const groups = cmsPageGroups(key, Object.keys(content[key] ?? {})); const active = groups.find(group => group.label === subsection) ?? groups[0]; return !active || active.keys.includes(String(field.path[1])); }).map(field => <CmsField key={field.path.join('.')} label={field.label.split(' / ').slice(1).join(' / ')} hint={field.path.at(-1) === 'progress' ? 'Keep {current} and {total} to show the explorer’s level.' : undefined}>
+              {typeof field.value === 'boolean' ? <input type="checkbox" checked={field.value} onChange={event => edit(setCmsField(content, field.path, event.target.checked))} /> : typeof field.value === 'number' ? <input className="input" type="number" value={field.value} onChange={event => edit(setCmsField(content, field.path, Number(event.target.value)))} /> : /email$/i.test(field.path.at(-1) ?? '') ? <input className="input" type="email" value={field.value} onChange={event => edit(setCmsField(content, field.path, event.target.value))} /> : <textarea className="input min-h-20 resize-y rounded-lg border border-border bg-cream/20 px-3 py-2 text-sm focus:outline-2 focus:outline-teal" rows={field.value.length > 150 ? 4 : 2} value={field.value} onChange={event => edit(setCmsField(content, field.path, event.target.value))} />}
             </CmsField>)}
             {cmsLists(content[key], [key]).map(list => <div key={list.path.join('.')} className="space-y-2 rounded-xl border border-border p-3">
               <p className="text-xs font-bold text-navy">{list.path.at(-1)} · {list.value.length} items</p>
@@ -682,9 +692,9 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
               </div>)}
               <Button variant="secondary" onClick={() => { const sample = list.value[0] ?? cmsLists((defaults as any)[key], [key]).find(item => item.path.join('.') === list.path.join('.'))?.value[0]; const item = typeof sample === 'string' ? 'New item' : Object.fromEntries(Object.keys(sample as object ?? {}).map((name, i) => [name, i ? '' : 'New item'])); edit(setCmsField(content, list.path, [...list.value, item])); }}>Add item</Button>
             </div>)}
-            {platform === 'mobile' && key === 'hero' && <div className="grid gap-3 sm:grid-cols-2">{['abi', 'zack'].map(name => <CmsField key={name} label={`Upload ${name === 'abi' ? 'Abi' : 'Zack'} image`}><input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) void upload(name, file); }} /></CmsField>)}</div>}
+            {platform === 'mobile' && key === 'hero' && <div className="grid gap-3 sm:grid-cols-2">{['abi', 'zach'].map(name => <CmsField key={name} label={`Upload ${name === 'abi' ? 'Abi' : 'Zach'} image`}><input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; if (file) void upload(name, file); }} /></CmsField>)}</div>}
           </fieldset>
-          {!query && <Button type="button" variant="secondary" disabled={loading || saving || uploading} onClick={resetSection}>Reset this section</Button>}
+          {!query && <Button type="button" variant="secondary" disabled={loading || saving || uploading} onClick={resetSection}>Reset entire {SECTION_LABELS[section] ?? section}</Button>}
         </CmsSectionCard>)}
       </div>
       <aside className={`min-w-0 space-y-3 ${previewExpanded ? '' : 'lg:col-span-2 xl:col-span-1 xl:sticky xl:top-20'}`}>
@@ -700,7 +710,9 @@ function CmsWorkspace({ platform }: { platform: PlatformType }) {
         {platform === 'web' ? (
           <WebLandingPreview content={content} focusSection={section} device={previewDevice} />
         ) : section === 'welcome' ? (
-          <MobileWelcomeOnboardingPreview content={content} />
+          content.welcome?.enabled === false
+            ? <div role="status" className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted">Welcome &amp; onboarding is off. Explorers go straight to the home screen.</div>
+            : <MobileWelcomeOnboardingPreview content={content} />
         ) : section === 'hero' || section === 'announcement' || section === 'system' ? (
           <MobileExplorerHomePreview content={content} focusSection={section} />
         ) : (

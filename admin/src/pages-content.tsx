@@ -1,3 +1,4 @@
+import './quest-editor.css';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import type { QuestGameType } from '@askhub/puzzle-contracts';
@@ -791,7 +792,6 @@ export function QuestEditorPage() {
 
   const totalPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0);
   const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0;
-  const isExistingWeek = weeks.some((w) => w.weekNumber === form.weekNumber);
 
   if (!ready) {
     return <Spinner label="Opening the quest editor…" />;
@@ -800,157 +800,60 @@ export function QuestEditorPage() {
   const steps = ['Lesson', 'Videos', 'Quiz', questGameStepLabel(gameType), 'Review'] as const;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-16">
-      <div className="sticky top-0 z-20 -mx-1 flex flex-col gap-3 bg-cream/90 px-1 py-3 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/app/dashboard/quests')}
-            className="cursor-pointer rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-navy hover:bg-cream"
-          >
-            ← Quest weeks
-          </button>
-          <div className="flex items-center gap-2">
-            {draftNote && draftAt ? (
-              <span className="text-[11px] text-muted">
-                {draftNote} · {new Date(draftAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-              </span>
-            ) : (
-              <span className="text-[11px] text-muted">Draft saves as you work</span>
-            )}
-            <button
-              type="button"
-              disabled={step === 0}
-              onClick={() => setStep((current) => Math.max(0, current - 1))}
-              className="cursor-pointer rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-navy disabled:opacity-40"
-            >
-              Back
-            </button>
-            {step < steps.length - 1 ? (
-              <Button size="sm" type="button" onClick={() => setStep((current) => Math.min(steps.length - 1, current + 1))}>
-                Next: {steps[step + 1]}
-              </Button>
-            ) : null}
-          </div>
+    <div className="quest-editor mx-auto flex max-w-6xl flex-col gap-6 pb-12">
+      <header className="quest-editor-header">
+        <div className="quest-editor-heading">
+          <button type="button" onClick={() => navigate('/app/dashboard/quests')} className="quest-editor-backlink">← Quest weeks</button>
+          <h1>{form.title.trim().toLowerCase().startsWith(`week ${form.weekNumber}`)
+            ? form.title.trim()
+            : `Week ${form.weekNumber}${form.title.trim() ? ` · ${form.title.trim()}` : ''}`}</h1>
         </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-teal">
-            {isExistingWeek ? 'Edit week' : 'New week'}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-navy">
-            {form.title.trim().toLowerCase().startsWith(`week ${form.weekNumber}`)
-              ? form.title.trim()
-              : `Week ${form.weekNumber}${form.title.trim() ? ` · ${form.title.trim()}` : ''}`}
-          </h1>
+        <div className="quest-editor-actions">
+          <span className="quest-editor-save" title="Drafts are saved on this device until you save the quest." role="status" aria-live="polite">
+            <span aria-hidden="true" className="quest-editor-save-dot" />
+            {draftNote && draftAt ? `${draftNote} · ${new Date(draftAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Draft saves as you work'}
+          </span>
+          {step > 0 && <button type="button" onClick={() => setStep(current => Math.max(0, current - 1))} className="quest-editor-previous">Back</button>}
+          {step < steps.length - 1 && <Button type="button" onClick={() => setStep(current => Math.min(steps.length - 1, current + 1))}>Next: {steps[step + 1]} <span aria-hidden="true">→</span></Button>}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {steps.map((label, index) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setStep(index)}
-              className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold ${
-                index === step ? 'border-navy bg-navy text-white' : 'border-border bg-surface text-navy hover:bg-cream'
-              }`}
-            >
-              {index + 1}. {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      </header>
+      <nav className="quest-editor-steps" aria-label="Quest editing steps">
+        {steps.map((label, index) => <button key={label} type="button" aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)}>
+          <span className="quest-editor-step-number" aria-hidden="true">{index + 1}</span>{label}
+        </button>)}
+      </nav>
 
       {/* Main Studio Workspace */}
       <form onSubmit={submit} className="flex flex-col gap-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Column: Authoring Sections */}
           <div className={step === 4 ? 'hidden' : 'lg:col-span-12 flex flex-col gap-6'}>
-            {/* Section 1: Lesson Overview & Word Declaration */}
-            <section
-              id="section-declaration"
-              className={step === 0 ? 'flex flex-col gap-5' : 'hidden'}
-            >
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Lesson</h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                <div className="sm:col-span-3 flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-navy uppercase tracking-wider text-[10px]">
-                    Week Number
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-xs text-navy font-bold focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                    type="number"
-                    min={1}
-                    value={form.weekNumber}
-                    onChange={(e) => setForm({ ...form, weekNumber: Number(e.target.value) })}
-                    required
-                    aria-label="Week number"
-                  />
+            <section id="section-declaration" className={step === 0 ? 'quest-lesson-layout' : 'hidden'} aria-label="Lesson editor">
+              <div className="quest-lesson-writing">
+                <div className="quest-lesson-section-heading">
+                  <h2>Lesson</h2>
+                  <span>{wordCount} {wordCount === 1 ? 'word' : 'words'} · {Math.max(1, Math.ceil(wordCount / 130))} min read</span>
                 </div>
-
-                <div className="sm:col-span-9 flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-navy uppercase tracking-wider text-[10px]">
-                    Quest Lesson Title
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-border bg-cream px-3.5 py-2.5 text-xs text-navy font-semibold placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                    value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="e.g. Be Strong and Courageous"
-                    required
-                  />
-                </div>
-
-                <div className="sm:col-span-12 flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-navy uppercase tracking-wider text-[10px] flex items-center justify-between">
-                    <span>Scripture Reading</span>
-                    <span className="text-[11px] font-normal text-muted normal-case">e.g. Joshua 1:9 or Judges 4–5</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-muted text-xs">📜</span>
-                    <input
-                      className="w-full rounded-xl border border-border bg-cream pl-9 pr-3.5 py-2.5 text-xs text-navy font-medium placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                      value={form.scripture}
-                      onChange={(e) => setForm({ ...form, scripture: e.target.value })}
-                      placeholder="Scripture passage"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Word Declaration Confession Input */}
-                <div className="sm:col-span-12 flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                    Word declaration
-                  </label>
-                  <textarea
-                    rows={2}
-                    className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30"
-                    value={form.declarationText}
-                    onChange={(e) => setForm({ ...form, declarationText: e.target.value })}
-                    placeholder="I declare: I am strong and courageous. The Lord my God is with me wherever I go."
-                    required
-                  />
-                </div>
-
-                <div className="sm:col-span-12 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-navy uppercase tracking-wider text-[10px]">
-                      Lesson Body & Scripture Reflection
-                    </label>
-                    <span className="text-[11px] text-muted">
-                      {wordCount} words · ~{Math.max(1, Math.ceil(wordCount / 130))} min read
-                    </span>
-                  </div>
-                  <textarea
-                    className="w-full rounded-xl border border-border bg-cream px-3.5 py-3 text-xs text-navy placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal font-sans leading-relaxed transition-all resize-y"
-                    rows={5}
-                    value={form.content}
-                    onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder="Weekly teaching and devotional content..."
-                    required
-                  />
-                </div>
+                <label htmlFor="quest-lesson-title">Lesson title</label>
+                <input id="quest-lesson-title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Be Strong and Courageous" required />
+                <label htmlFor="quest-lesson-body">Teaching &amp; reflection</label>
+                <textarea id="quest-lesson-body" className="quest-lesson-body" rows={15} value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} placeholder="Write the weekly teaching and scripture reflection…" required />
               </div>
+              <aside className="quest-lesson-details" aria-label="Week details">
+                <h2>Week details</h2>
+                <div className="quest-lesson-field">
+                  <label htmlFor="quest-week-number">Week number</label>
+                  <input id="quest-week-number" className="quest-week-number" type="number" min={1} value={form.weekNumber} onChange={e => setForm({ ...form, weekNumber: Number(e.target.value) })} required />
+                </div>
+                <div className="quest-lesson-field">
+                  <label htmlFor="quest-scripture">Scripture reading</label>
+                  <textarea id="quest-scripture" rows={3} value={form.scripture} onChange={e => setForm({ ...form, scripture: e.target.value })} placeholder="e.g. Genesis 1–8" required />
+                </div>
+                <div className="quest-lesson-field quest-declaration-field">
+                  <label htmlFor="quest-declaration">Word declaration</label>
+                  <textarea id="quest-declaration" rows={6} value={form.declarationText} onChange={e => setForm({ ...form, declarationText: e.target.value })} placeholder="I declare: I am strong and courageous…" required />
+                </div>
+              </aside>
             </section>
 
             {/* Section 2: Exactly 3 Weekly Video Lessons */}

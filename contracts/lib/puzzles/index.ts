@@ -10,3 +10,4 @@ export * from './snap.js';
 export * from './publish.js';
 export * from './matching-publish.js';
 export * from './quest-game.js';
+export { normalizeContentNames } from '../content-names.js';

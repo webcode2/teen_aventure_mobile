@@ -8,9 +8,10 @@ import '../../../theme.dart';
 
 /// Full-puzzle celebration with falling/cheer flower petals and finish time.
 class PuzzleWinDialog extends StatefulWidget {
-  const PuzzleWinDialog({super.key, required this.elapsed});
+  const PuzzleWinDialog({super.key, required this.elapsed, this.buttonLabel = 'Continue'});
 
   final Duration elapsed;
+  final String buttonLabel;
 
   @override
   State<PuzzleWinDialog> createState() => _PuzzleWinDialogState();
@@ -176,9 +177,9 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text(
-                          'Continue',
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                        child: Text(
+                          widget.buttonLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),

@@ -2,6 +2,7 @@ import { usePageCopy } from './use-page-copy';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { PublicLayout } from './public-shell';
+import { publicWrite } from './api';
 
 function MailIcon() {
   return (
@@ -235,22 +236,29 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [website, setWebsite] = useState('');
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard?.writeText(text);
+    navigator.clipboard?.writeText(text).catch(() => undefined);
     setCopiedEmail(text);
     setTimeout(() => setCopiedEmail(null), 2500);
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) return;
+    if (submitting || !name.trim() || !email.trim() || !message.trim()) return;
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    setSubmitError('');
+    try {
+      await publicWrite('/api/contact', { name, email, group, role, topic, message, website });
       setSubmitted(true);
-    }, 700);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'We could not send your message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const faqs = usePageCopy('faq').items;
@@ -287,7 +295,7 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                 <p className="text-sm text-text-2 leading-relaxed">{pageCopy['passCodesMultigroupSetupYouthCircleOnboarding']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['fellowshipaskhuborg']}</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['fellowshipEmail']}</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(pageCopy['fellowshipEmail'])}
@@ -308,7 +316,7 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                 <p className="text-sm text-text-2 leading-relaxed">{pageCopy['deviceSyncBarcodeScanAssistanceAppBugs']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['supportaskhuborg']}</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['supportEmail']}</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(pageCopy['supportEmail'])}
@@ -329,7 +337,7 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                 <p className="text-sm text-text-2 leading-relaxed">{pageCopy['parentalConsentCoppaInquiriesDataErasure']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['safetyaskhuborg']}</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['safetyEmail']}</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(pageCopy['safetyEmail'])}
@@ -350,13 +358,13 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                 <p className="text-sm text-text-2 leading-relaxed">{pageCopy['ministrySponsorshipCurriculumSuggestionsPartnerships']}</p>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
-                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['supportaskhuborg14']}</span>
+                <span className="text-xs sm:text-sm font-bold text-teal font-mono">{pageCopy['sponsorshipEmail']}</span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(pageCopy['supportEmail'])}
+                  onClick={() => copyToClipboard(pageCopy['sponsorshipEmail'])}
                   className="text-left text-xs text-muted hover:text-navy cursor-pointer transition-colors"
                 >
-                  {copiedEmail === pageCopy['supportEmail'] ? '✓ Copied!' : 'Click to copy email'}
+                  {copiedEmail === pageCopy['sponsorshipEmail'] ? '✓ Copied!' : 'Click to copy email'}
                 </button>
               </div>
             </div>
@@ -391,6 +399,17 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  {/* Honeypot: hidden from people and assistive tech; bots fill it in. */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    className="sr-only"
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="flex flex-col gap-1.5 text-sm font-bold text-navy">
                       <span>{pageCopy['yourName']}</span>
@@ -474,6 +493,9 @@ export function ContactPage({ content }: { content?: Record<string, string> } = 
                     />
                   </label>
 
+                  {submitError && (
+                    <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">{submitError}</p>
+                  )}
                   <div className="pt-2 flex items-center justify-between gap-4">
                     <span className="text-xs text-muted">{pageCopy['requiredFields']}</span>
                     <button

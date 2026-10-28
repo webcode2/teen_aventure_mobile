@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/auth_session.dart';
+import '../../providers/cms_text.dart';
 import '../../models/game_controller.dart';
 import '../../services/service_locator.dart';
 import '../../theme.dart';
@@ -71,7 +72,7 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
     final points = context.watch<GameController>().score;
 
     final body = RefreshIndicator(
-      onRefresh: _refresh,
+      onRefresh: () => Future.wait([_refresh(), refreshDashboardCopy(context)]),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),

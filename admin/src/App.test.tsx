@@ -615,13 +615,13 @@ describe('Teen Bible Adventures Admin', () => {
       expect(screen.queryByText('Restricted')).toBeNull();
   });
 
-  it('edits the explorer hero greeting, tagline, and Abi and Zack art', async () => {
+  it('edits the explorer hero greeting, tagline, and Abi and Zach art', async () => {
     setToken('test-token');
     renderApp('/app/dashboard/content-mobile');
     const greeting = await screen.findByDisplayValue('Hey, Explorer!');
     expect(screen.getByDisplayValue("Ready for today's adventure in God's Word?")).toBeTruthy();
     expect(screen.getAllByAltText('Abi').length).toBeGreaterThan(0);
-    expect(screen.getAllByAltText('Zack').length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText('Zach').length).toBeGreaterThan(0);
     await userEvent.clear(greeting);
     await userEvent.type(greeting, 'Hello, team!');
     expect(screen.getByText('Hello, team!')).toBeTruthy();

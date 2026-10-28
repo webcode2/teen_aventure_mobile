@@ -1,4 +1,5 @@
-export const SYSTEM_ADMIN_ROLES = ['APP_MANAGER', 'SUPER_ADMIN', 'SUPER_EDITOR', 'EDITOR'] as const;
+export const SYSTEM_ADMIN_ROLES = ['SUPER_ADMIN', 'SUPER_EDITOR', 'EDITOR'] as const;
+export const ASSIGNABLE_STAFF_ROLES = ['SUPER_EDITOR', 'EDITOR'] as const;
 export const USER_PLATFORM_ROLES = ['MAIN_ACCOUNT', 'CHILD'] as const;
 
 const DASHBOARD_ROLES = new Set<string>(SYSTEM_ADMIN_ROLES);
@@ -29,7 +30,6 @@ export const USER_ACCOUNT_TYPE_FILTERS: Array<{ id: UserAccountTypeKey | 'all'; 
 
 export const STAFF_ROLE_FILTERS: Array<{ id: (typeof SYSTEM_ADMIN_ROLES)[number] | 'all'; label: string }> = [
   { id: 'all', label: 'All roles' },
-  { id: 'APP_MANAGER', label: 'App Manager' },
   { id: 'SUPER_ADMIN', label: 'Super Admin' },
   { id: 'SUPER_EDITOR', label: 'Super Editor' },
   { id: 'EDITOR', label: 'Editor' },
@@ -78,8 +78,6 @@ export function isMobileAppUser(input: AccountInput): boolean {
 
 export function staffTypeLabel(input: AccountInput): string {
   switch (input.platformRole) {
-    case 'APP_MANAGER':
-      return 'App Manager';
     case 'SUPER_ADMIN':
       return 'Super Admin';
     case 'SUPER_EDITOR':

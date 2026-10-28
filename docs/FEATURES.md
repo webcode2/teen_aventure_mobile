@@ -80,7 +80,7 @@ Do not re-add Word Scramble / `scrambleQuiz` (permanently removed). See `.agents
 - [ ] Search directories (users, churches, groups, quests…)
 - [ ] Promote STAGED puzzle / match → LIVE
 - [ ] Delete draft / staged / LIVE when detachable
-- [ ] CMS image upload / clear (Abi / Zack)
+- [ ] CMS image upload / clear (Abi / Zach)
 - [ ] Consent packs by jurisdiction (accept / status)
 - [ ] Media upload + presigned read
 

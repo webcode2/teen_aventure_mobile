@@ -17,7 +17,7 @@ const mockedApi = vi.mocked(api);
 
 describe('Puzzle Studio WIP conflict dialog', () => {
   it('shows reload theirs / keep mine when autosave returns 409', async () => {
-    setToken('test-token', { role: 'APP_MANAGER', email: 'ed@askhub.local' });
+    setToken('test-token', { role: 'SUPER_ADMIN', email: 'ed@askhub.local' });
     mockedApi.mockImplementation(async (path: string, options?: RequestInit) => {
       if (path === '/api/puzzle-drafts' && (!options || options.method === undefined || options.method === 'GET')) {
         return [];

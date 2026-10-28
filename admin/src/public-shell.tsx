@@ -314,14 +314,6 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/app/dashboard')}
-            className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <span>Admin Dashboard</span>
-            <span className="text-xs">🛡️</span>
-          </button>
-          <button
-            type="button"
             onClick={() => navigate('/p/privacy-policy')}
             className="text-left text-cream/70 hover:text-white transition-colors cursor-pointer"
           >
@@ -378,14 +370,6 @@ export function PublicFooter({ stacked = false }: { stacked?: boolean }) {
             className="hover:text-gold transition-colors cursor-pointer"
           >
             Ministry
-          </button>
-          <span>&bull;</span>
-          <button
-            type="button"
-            onClick={() => navigate('/app/dashboard')}
-            className="hover:text-gold transition-colors cursor-pointer"
-          >
-            Admin Dashboard
           </button>
           <span>&bull;</span>
           <button

@@ -7,6 +7,7 @@ import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
 import '../../services/api_client.dart';
 import '../../services/engagement_service.dart';
+import '../../providers/cms_text.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
 import 'invite_share_screen.dart';
@@ -501,7 +502,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
     final body = _loading
         ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
-            onRefresh: _load,
+            onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
@@ -717,7 +718,7 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
         children: [
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _load,
+              onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [

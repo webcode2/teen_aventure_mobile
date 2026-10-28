@@ -3,13 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 /// Official Teen Bible Adventures art from `mobile/assets`.
-/// Replace Abi/Zack files in-place from the client Drive; do not generate new mascots.
+/// Replace Abi/Zach files in-place from the client Drive; do not generate new mascots.
 /// https://drive.google.com/drive/folders/1cVB8Adi47rtke1emmEYB2Ho1rqKw3LXT
 class AdventureAssets {
   /// Canonical wordmark from `assets/logo1.svg`.
   static const logo = 'assets/logo1.svg';
   static const abi = 'assets/abi.png';
-  static const zack = 'assets/zack.png';
+  static const zach = 'assets/zach.png';
   static const questMap = 'assets/maps/quest_map.html';
 
   static bool isRaster(String asset) {

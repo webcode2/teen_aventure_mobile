@@ -4,17 +4,17 @@ import '../../../adventure_assets.dart';
 import '../../../providers/hero_copy.dart';
 
 class MascotScene extends StatelessWidget {
-  const MascotScene({super.key, this.height = 168, this.abi, this.zack});
+  const MascotScene({super.key, this.height = 168, this.abi, this.zach});
 
   final double height;
   final ImageProvider? abi;
-  final ImageProvider? zack;
+  final ImageProvider? zach;
 
   @override
   Widget build(BuildContext context) {
     final dashboard = _dashboardHero(context);
     final abiImage = abi ?? dashboard?.abiImage;
-    final zackImage = zack ?? dashboard?.zackImage;
+    final zachImage = zach ?? dashboard?.zachImage;
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -26,7 +26,7 @@ class MascotScene extends StatelessWidget {
           final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
               ? constraints.maxWidth
               : null;
-          return _MascotBody(height: h, maxWidth: w, abi: abiImage, zack: zackImage);
+          return _MascotBody(height: h, maxWidth: w, abi: abiImage, zach: zachImage);
         },
       ),
     );
@@ -42,31 +42,31 @@ HeroCopyController? _dashboardHero(BuildContext context) {
 }
 
 class _MascotBody extends StatelessWidget {
-  const _MascotBody({required this.height, this.maxWidth, this.abi, this.zack});
+  const _MascotBody({required this.height, this.maxWidth, this.abi, this.zach});
 
   final double height;
   final double? maxWidth;
   final ImageProvider? abi;
-  final ImageProvider? zack;
+  final ImageProvider? zach;
 
-  // Pixel aspect from assets/abi.png and assets/zack.png.
+  // Pixel aspect from assets/abi.png and assets/zach.png.
   static const _abiAspect = 1214 / 1295;
-  static const _zackAspect = 1222 / 1287;
+  static const _zachAspect = 1222 / 1287;
   // Transparent side margins in the source files. Pull them in so the pair sits together.
   static const _abiRightInset = 110 / 1214;
-  static const _zackLeftInset = 101 / 1222;
+  static const _zachLeftInset = 101 / 1222;
 
-  static const _zackBoost = 10.0;
+  static const _zachBoost = 10.0;
 
   @override
   Widget build(BuildContext context) {
     const bottomPad = 2.0;
     final artHeight = (height - bottomPad).clamp(4.0, height);
-    final abiArt = (artHeight - _zackBoost).clamp(4.0, artHeight);
-    final zackArt = artHeight;
+    final abiArt = (artHeight - _zachBoost).clamp(4.0, artHeight);
+    final zachArt = artHeight;
     final abiNatural = abiArt * _abiAspect;
-    final zackNatural = zackArt * _zackAspect;
-    final naturalWidth = abiNatural + zackNatural - (abiNatural * _abiRightInset + zackNatural * _zackLeftInset);
+    final zachNatural = zachArt * _zachAspect;
+    final naturalWidth = abiNatural + zachNatural - (abiNatural * _abiRightInset + zachNatural * _zachLeftInset);
 
     var scale = 1.0;
     if (maxWidth != null && naturalWidth > maxWidth!) {
@@ -74,11 +74,11 @@ class _MascotBody extends StatelessWidget {
     }
 
     final abiHeight = abiArt * scale;
-    final zackHeight = zackArt * scale;
+    final zachHeight = zachArt * scale;
     final abiWidth = abiHeight * _abiAspect;
-    final zackWidth = zackHeight * _zackAspect;
-    final closeBy = abiWidth * _abiRightInset + zackWidth * _zackLeftInset;
-    final pairWidth = abiWidth + zackWidth - closeBy;
+    final zachWidth = zachHeight * _zachAspect;
+    final closeBy = abiWidth * _abiRightInset + zachWidth * _zachLeftInset;
+    final pairWidth = abiWidth + zachWidth - closeBy;
 
     return Stack(
       alignment: Alignment.bottomCenter,
@@ -94,7 +94,7 @@ class _MascotBody extends StatelessWidget {
             children: [
               SizedBox(
                 width: pairWidth,
-                height: zackHeight + bottomPad,
+                height: zachHeight + bottomPad,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -112,10 +112,10 @@ class _MascotBody extends StatelessWidget {
                       right: 0,
                       bottom: bottomPad,
                       child: _MascotColumn(
-                        image: zack ?? const AssetImage(AdventureAssets.zack),
-                        fallback: AdventureAssets.zack,
-                        imageHeight: zackHeight,
-                        imageWidth: zackWidth,
+                        image: zach ?? const AssetImage(AdventureAssets.zach),
+                        fallback: AdventureAssets.zach,
+                        imageHeight: zachHeight,
+                        imageWidth: zachWidth,
                       ),
                     ),
                   ],

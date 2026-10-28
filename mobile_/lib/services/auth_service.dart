@@ -11,7 +11,8 @@ class AuthService {
 
   ApiClient get apiClient => _apiClient;
 
-  static const String _userTokenKey = 'user_token';
+  static const String userTokenKey = 'user_token';
+  static const String _userTokenKey = userTokenKey;
   static const String _userTypeKey = 'user_type'; // 'parent', 'child'
   static const String _userIdKey = 'user_id';
   static const String _childIdKey = 'child_id';
@@ -224,8 +225,13 @@ class AuthService {
     await _apiClient.setAuthToken(token);
   }
 
-  /// Logout - clear stored tokens
+  /// Logout - end this device's server sessions, then clear stored tokens.
   Future<void> logout() async {
+    final parentToken = await _secureStorage.read(key: _parentRestoreTokenKey);
+    await Future.wait([
+      _endServerSession(_apiClient.getAuthToken()),
+      _endServerSession(parentToken),
+    ]);
     await _secureStorage.delete(key: _userTokenKey);
     await _secureStorage.delete(key: _userTypeKey);
     await _secureStorage.delete(key: _userIdKey);
@@ -234,6 +240,26 @@ class AuthService {
     await _secureStorage.delete(key: _parentRestoreTokenKey);
     await _apiClient.clearAuthToken();
   }
+
+  /// Revokes [token] on the server so a copied token stops working. Offline or
+  /// already-revoked sessions are fine to skip: local sign-out still completes.
+  Future<void> _endServerSession(String? token) async {
+    if (token == null || token.isEmpty) return;
+    try {
+      await _apiClient.dio.post(
+        '/api/auth/logout',
+        options: Options(
+          extra: {'authToken': token},
+          sendTimeout: _logoutTimeout,
+          receiveTimeout: _logoutTimeout,
+        ),
+      );
+    } on DioException {
+      // Nothing to undo; the token still expires on its own.
+    }
+  }
+
+  static const Duration _logoutTimeout = Duration(seconds: 5);
 
   Future<String?> getAuthToken() async {
     return await _secureStorage.read(key: _userTokenKey);
@@ -280,7 +306,14 @@ class AuthService {
       put('password', password);
       put('currentPassword', currentPassword);
       if (birthYear != null) data['birthYear'] = birthYear;
-      await _apiClient.dio.put('/api/auth/me', data: data);
+      final response = await _apiClient.dio.put('/api/auth/me', data: data);
+      // Email/password changes revoke older tokens; the server returns a fresh one.
+      final body = response.data;
+      final fresh = body is Map ? body['token'] : null;
+      if (fresh is String && fresh.isNotEmpty) {
+        await _secureStorage.write(key: _userTokenKey, value: fresh);
+        await _apiClient.setAuthToken(fresh);
+      }
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

@@ -43,8 +43,8 @@ function AuthPanel() {
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState<string>(DEMO_ADMINS[0].email);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState<string>(import.meta.env.DEV ? DEMO_ADMINS[0].email : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? DEMO_PASSWORD : '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -95,7 +95,7 @@ export function LoginPage() {
             />
           </Field>
           {error ? <Alert kind="error">{error}</Alert> : null}
-          <div className="flex flex-wrap gap-1.5">
+          {import.meta.env.DEV ? <div className="flex flex-wrap gap-1.5">
             {DEMO_ADMINS.map((admin) => (
               <button
                 key={admin.email}
@@ -109,7 +109,7 @@ export function LoginPage() {
                 {admin.label}
               </button>
             ))}
-          </div>
+          </div> : null}
           <Button type="submit" size="lg" className="w-full mt-1" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
           </Button>

@@ -1,3 +1,5 @@
+import { normalizeContentNames } from '@askhub/puzzle-contracts';
+import { normalizeContactEmails } from './contact-emails';
 import { useEffect, useState } from 'react';
 import { publicApi } from './api';
 import { PUBLIC_PAGE_COPY } from './public-page-copy';
@@ -11,5 +13,6 @@ export function usePageCopy<K extends keyof typeof PUBLIC_PAGE_COPY>(section: K,
     publicApi<Record<string, unknown>>('/api/content/web').then(data => { if (!cancelled) setRemote(data?.[section]); }).catch(() => {});
     return () => { cancelled = true; };
   }, [section, supplied]);
-  return mergeCms(PUBLIC_PAGE_COPY[section], supplied ?? remote);
+  const value = normalizeContentNames(supplied ?? remote);
+  return mergeCms(PUBLIC_PAGE_COPY[section], section === 'contactPage' ? normalizeContactEmails(value) : value);
 }

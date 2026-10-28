@@ -1,3 +1,4 @@
+import { normalizeContentNames } from '@askhub/puzzle-contracts';
 import { LANDING_EXTRA } from './landing-extra';
 import { mergeCms, safeCmsUrl } from './cms-fields';
 import { useEffect, useState } from 'react';
@@ -6,6 +7,7 @@ import { publicApi } from './api';
 import { ChurchJoinBarcodeCard } from './barcode';
 import { PublicLayout, GooglePlayButton, AppStoreButton } from './public-shell';
 import { WorldMapBackground } from './pages-contact';
+import { safeHref } from './safe-html';
 
 function ShieldCheckIcon() {
   return (
@@ -50,7 +52,7 @@ export type LandingCmsContent = Partial<Omit<typeof LANDING_EXTRA, 'header' | 'm
     primaryCtaHref?: string;
     secondaryCtaHref?: string;
     abiUrl?: string;
-    zackUrl?: string;
+    zachUrl?: string;
   };
   pillars?: {
     eyebrow?: string;
@@ -99,7 +101,7 @@ export const DEFAULT_LANDING_CONTENT: typeof LANDING_EXTRA & Required<{
     primaryCtaHref: '#quests',
     secondaryCtaHref: '/about',
     abiUrl: '/abi.png',
-    zackUrl: '/zack.png',
+    zachUrl: '/zach.png',
     primaryCta: 'Explore Weekly Quests',
     secondaryCta: 'Our Christian Mission',
   },
@@ -152,6 +154,7 @@ function pickBadge(value: string | undefined, fallback: string, fromCms: boolean
 }
 
 export function mergeLandingContent(extra?: LandingCmsContent | null): typeof DEFAULT_LANDING_CONTENT {
+  extra = normalizeContentNames(extra);
   const fromCms = extra != null;
   return {
     ...mergeCms(LANDING_EXTRA, extra),
@@ -159,7 +162,7 @@ export function mergeLandingContent(extra?: LandingCmsContent | null): typeof DE
       primaryCtaHref: safeCmsUrl(extra?.hero?.primaryCtaHref, '#quests'),
       secondaryCtaHref: safeCmsUrl(extra?.hero?.secondaryCtaHref, '/about'),
       abiUrl: safeCmsUrl(extra?.hero?.abiUrl, '/abi.png'),
-      zackUrl: safeCmsUrl(extra?.hero?.zackUrl, '/zack.png'),
+      zachUrl: safeCmsUrl(extra?.hero?.zachUrl, '/zach.png'),
       badge: pickBadge(extra?.hero?.badge, DEFAULT_LANDING_CONTENT.hero.badge, fromCms),
       title: pick(extra?.hero?.title, DEFAULT_LANDING_CONTENT.hero.title),
       subtitle: pick(extra?.hero?.subtitle, DEFAULT_LANDING_CONTENT.hero.subtitle),
@@ -325,12 +328,12 @@ export function LandingPageSections({
             {!stacked ? (
               <div className="hidden lg:flex flex-col items-center justify-end gap-3 pb-4 self-end">
                 <img
-                  src={copy.hero.zackUrl}
-                  alt="Zack — Teen Bible Adventures character"
+                  src={copy.hero.zachUrl}
+                  alt="Zach — Teen Bible Adventures character"
                   className="w-52 h-auto object-contain drop-shadow-xl"
                 />
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-sm font-extrabold text-navy">Zack</span>
+                  <span className="text-sm font-extrabold text-navy">Zach</span>
                   <span className="text-[11px] font-medium text-muted bg-orange/15 border border-orange/30 px-2.5 py-0.5 rounded-full">
                     Quest Explorer
                   </span>
@@ -360,10 +363,10 @@ export function LandingPageSections({
               >
                 <figure className="m-0 flex flex-col rounded-2xl border border-orange/25 bg-surface shadow-xs overflow-hidden">
                   <div className="bg-gradient-to-b from-orange/5 to-orange/20 pt-4 px-3 flex items-end justify-center">
-                    <img src={copy.hero.zackUrl} alt="Zack" className="w-full max-w-[160px] h-auto object-contain block" />
+                    <img src={copy.hero.zachUrl} alt="Zach" className="w-full max-w-[160px] h-auto object-contain block" />
                   </div>
                   <figcaption className="flex flex-col items-center gap-1 py-2.5 px-2">
-                    <span className="text-sm font-extrabold text-navy">Zack</span>
+                    <span className="text-sm font-extrabold text-navy">Zach</span>
                     <span className="text-[10px] font-semibold text-orange bg-orange/10 border border-orange/30 px-2 py-0.5 rounded-full whitespace-nowrap">
                       Quest Explorer
                     </span>
@@ -388,7 +391,7 @@ export function LandingPageSections({
                 }`}
               >
                 {interactive ? (
-                  <a href={copy.hero.primaryCtaHref} className={`${primaryCtaClass} cursor-pointer hover:-translate-y-0.5 hover:shadow-lg`}>
+                  <a href={safeHref(copy.hero.primaryCtaHref)} className={`${primaryCtaClass} cursor-pointer hover:-translate-y-0.5 hover:shadow-lg`}>
                     <span>{copy.hero.primaryCta}</span>
                     <span>→</span>
                   </a>
@@ -401,7 +404,7 @@ export function LandingPageSections({
                 {interactive ? (
                   <button
                     type="button"
-                    onClick={() => { if (copy.hero.secondaryCtaHref.startsWith('/')) navigate(copy.hero.secondaryCtaHref); else window.location.assign(copy.hero.secondaryCtaHref); }}
+                    onClick={() => { const href = safeHref(copy.hero.secondaryCtaHref, '/'); if (href.startsWith('/')) navigate(href); else window.location.assign(href); }}
                     className={`${secondaryCtaClass} cursor-pointer hover:-translate-y-0.5`}
                   >
                     {copy.hero.secondaryCta}

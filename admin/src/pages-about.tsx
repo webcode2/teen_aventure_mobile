@@ -75,23 +75,23 @@ export function AboutPage({ content }: { content?: Record<string, string> } = {}
         </div>
       </section>
 
-      {/* Meet Abi & Zack — The Quest Guides */}
+      {/* Meet Abi & Zach — The Quest Guides */}
       <section className="py-20 px-4 sm:px-8 bg-surface border-b border-border/60">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-bold text-teal uppercase tracking-widest">{pageCopy['meetYourCompanions']}</span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">{pageCopy['guidedByAbiZack']}</h2>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-navy mt-2 tracking-tight">{pageCopy['guidedByAbiZach']}</h2>
             <p className="text-xs sm:text-sm text-muted mt-3 leading-relaxed">{pageCopy['everyWeekInTeenBibleAdventuresTeens']}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-            {/* Zack Card */}
+            {/* Zach Card */}
             <div className="p-8 rounded-2xl bg-cream border border-border/80 flex flex-col sm:flex-row items-center gap-6 shadow-xs hover:shadow-md transition-shadow">
               <div className="relative shrink-0">
                 <div className="w-36 h-36 rounded-2xl bg-teal-tint border border-teal/20 flex items-center justify-center overflow-hidden">
                   <img
-                    src="/zack.png"
-                    alt="Zack"
+                    src="/zach.png"
+                    alt="Zach"
                     className="w-32 h-auto object-contain drop-shadow-md"
                   />
                 </div>
@@ -99,10 +99,10 @@ export function AboutPage({ content }: { content?: Record<string, string> } = {}
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                  <h3 className="text-xl font-black text-navy">{pageCopy['zack']}</h3>
+                  <h3 className="text-xl font-black text-navy">{pageCopy['zach']}</h3>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-gold/20 text-navy font-bold">{pageCopy['actionDiscovery']}</span>
                 </div>
-                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">{pageCopy['energeticInquisitiveAndTechsavvyZackLovesTaking']}</p>
+                <p className="text-sm sm:text-base text-text-2 leading-relaxed mt-2">{pageCopy['energeticInquisitiveAndTechsavvyZachLovesTaking']}</p>
                 <div className="mt-4 flex flex-wrap items-center gap-2 justify-center sm:justify-start text-xs font-semibold text-teal">
                   <span className="px-3 py-1 rounded-lg bg-teal-tint">{pageCopy['boldfaith']}</span>
                   <span className="px-3 py-1 rounded-lg bg-teal-tint">{pageCopy['puzzles']}</span>

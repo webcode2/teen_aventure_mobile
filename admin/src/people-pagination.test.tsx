@@ -32,3 +32,20 @@ it('searches globally on the API and switches entity tabs without fetching entir
   await userEvent.click(screen.getByRole('tab', { name: /^Children/ }));
   await waitFor(() => expect(vi.mocked(api).mock.calls.some(call => call[0].includes('kind=children'))).toBe(true));
 });
+it('marks new accounts using archived email addresses for admin review', async () => {
+  vi.mocked(api).mockResolvedValue({ users: [{ ...user('New-registration'), registeredWithArchivedEmail: true }], children: [], families: [], pagination: { page: 1, pageSize: 40, total: 1, kind: 'users' } });
+  render(<MemoryRouter><PeoplePage /></MemoryRouter>);
+  expect(await screen.findByText('Archived email · review')).toBeTruthy();
+  expect(screen.getByText('New-registration')).toBeTruthy();
+});
+it('offers only the two staff roles when inviting someone', async () => {
+  vi.mocked(api).mockResolvedValue({ users: [], children: [], families: [], pagination: { page: 1, pageSize: 40, total: 0, kind: 'staff' } });
+  render(<MemoryRouter><PeoplePage section="staff" /></MemoryRouter>);
+  await userEvent.click(await screen.findByRole('button', { name: 'Invite staff' }));
+  const dialog = screen.getByRole('dialog');
+  const options = Array.from(dialog.querySelectorAll('select option')).map(option => option.textContent);
+  expect(options).toEqual(['Super Editor', 'Editor']);
+  expect(options).not.toContain('App Manager');
+  expect(options).not.toContain('Super Admin');
+  expect(dialog.querySelector('input[type="password"]')).toBeNull();
+});

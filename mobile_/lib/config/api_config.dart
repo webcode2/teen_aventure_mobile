@@ -7,13 +7,13 @@ enum ApiEnvironment { local, live, tunnel }
 /// Going live: set [environment] to [ApiEnvironment.live] and rebuild.
 /// A build-time `--dart-define=API_BASE_URL=https://...` still overrides everything.
 class ApiConfig {
-  static const ApiEnvironment environment = ApiEnvironment.tunnel;
+  static const ApiEnvironment environment = ApiEnvironment.live;
 
   /// Cloudflare Tunnel domain (app.elastrocloud.com).
   static const String tunnelBaseUrl = 'https://app.elastrocloud.com';
 
-  /// Production API (Traefik route in deploy/docker-compose.yml).
-  static const String liveBaseUrl = 'https://api.teen.elastrocloud.com';
+  /// Cloudflare public origin: public CMS reads use R2; other API calls proxy to Google.
+  static const String liveBaseUrl = 'https://tba.elastrocloud.com';
 
   /// Backend on your computer, reachable from a phone on the same Wi-Fi.
   /// Update when your computer's LAN IP changes (`hostname -I`). Release builds block
@@ -22,6 +22,10 @@ class ApiConfig {
 
   /// Same machine as Chrome. Loopback stays available if the LAN address is down.
   static const String localWebBaseUrl = 'http://127.0.0.1:8080';
+
+  static const String webBaseUrl = String.fromEnvironment(
+    'WEB_BASE_URL', defaultValue: 'https://tba.elastrocloud.com',
+  );
 
   static const String _override = String.fromEnvironment('API_BASE_URL');
 

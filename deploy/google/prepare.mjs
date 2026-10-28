@@ -3,7 +3,8 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const output = path.join(root, '.deploy/google-functions');
+const output = path.resolve(root,process.argv[2] || '.deploy/google-functions');
+if (!output.startsWith(path.join(root,'.deploy')+path.sep)) throw new Error('Output must be a new directory under .deploy/.');
 const run = (cwd, args) => {
   const result = spawnSync('npm', args, { cwd: path.join(root, cwd), stdio: 'inherit' });
   if (result.status !== 0) throw new Error(`Build failed in ${cwd}`);
@@ -33,8 +34,9 @@ const contract = JSON.parse(await readFile(path.join(root, 'contracts/package.js
 const { devDependencies: _dev, scripts: _scripts, bin: _bin, ...runtimeContract } = contract;
 await writeFile(path.join(output, 'contracts/package.json'), JSON.stringify(runtimeContract, null, 2));
 const source = JSON.parse(await readFile(path.join(root, 'backend/package.json'), 'utf8'));
+const { 'firebase-functions': _unusedFunctionsSdk,...runtimeDependencies } = source.dependencies;
 const dependencies = {
-  ...source.dependencies,
+  ...runtimeDependencies,
   prisma: source.devDependencies.prisma,
   '@askhub/puzzle-contracts': 'file:./contracts',
   '@google-cloud/functions-framework': '^4.0.0',

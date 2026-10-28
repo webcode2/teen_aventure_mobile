@@ -1,6 +1,7 @@
+import { uploadApplicantIdentityDocument } from './identity-document-upload';
 import { MinistryIntro, MinistryCopy } from './ministry-gateway';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   applicantApi,
   api,
@@ -200,9 +201,11 @@ export function ChurchApplyPage() {
     setBusy(true);
     setError('');
     try {
+      // The inbox owner sets the password at verification (blocks sign-up squatting).
       const res = await publicWrite<{ token: string }>('/api/church-applications/verify-email', {
         email,
         token: code,
+        password,
       });
       setApplicantToken(res.token);
       await loadMine();
@@ -248,51 +251,7 @@ export function ChurchApplyPage() {
     setError('');
     showIdentityPreview(file);
     try {
-      const storage = await applicantApi<{
-        storage: 'local' | 'r2' | null;
-        directUpload: boolean;
-        ready: boolean;
-        message?: string;
-      }>('/api/church-applications/identity-doc/storage');
-
-      if (!storage.ready) {
-        throw new Error(storage.message || 'Identity document storage is not ready.');
-      }
-
-      // R2: our server signs the PUT, the browser uploads to R2, then we send the public URL back.
-      if (storage.directUpload) {
-        const signed = await applicantApi<{
-          key: string;
-          uploadUrl: string;
-          publicUrl: string;
-          headers: Record<string, string>;
-        }>('/api/church-applications/identity-doc/presign', {
-          method: 'POST',
-          body: JSON.stringify({ filename: file.name || 'identity.bin', contentType: file.type }),
-        });
-        const put = await fetch(signed.uploadUrl, {
-          method: 'PUT',
-          headers: signed.headers,
-          body: file,
-        });
-        if (!put.ok) {
-          throw new Error('Could not upload the document to private storage.');
-        }
-        const registered = await applicantApi<{ key: string; url: string }>(
-          '/api/church-applications/identity-doc/complete',
-          { method: 'POST', body: JSON.stringify({ url: signed.publicUrl }) },
-        );
-        setIdentityDocKey(registered.key);
-        setIdentityDocName(file.name);
-        return;
-      }
-
-      const body = new FormData();
-      body.append('file', file);
-      const res = await applicantApi<{ key: string; storage: string }>('/api/church-applications/identity-doc', {
-        method: 'POST',
-        body,
-      });
+      const res = await uploadApplicantIdentityDocument(file);
       setIdentityDocKey(res.key);
       setIdentityDocName(file.name);
     } catch (e: unknown) {
@@ -687,7 +646,22 @@ export function ChurchApplyPage() {
                     aria-label="5-letter verification code"
                   />
                 </label>
-                <Button size="lg" className="w-full" type="submit" disabled={busy || code.length !== 5}>
+                {password.length < 8 ? (
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
+                    <span>Choose your password</span>
+                    <input
+                      type="password"
+                      className={gateInputClass}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                    />
+                  </label>
+                ) : null}
+                <Button size="lg" className="w-full" type="submit" disabled={busy || code.length !== 5 || password.length < 8}>
                   {busy ? 'Checking…' : 'Verify email'}
                 </Button>
                 <button
@@ -799,31 +773,16 @@ export function MinistryGuidePage() {
   );
 }
 
+/** Old emailed verification links. Verification now uses the 5-letter code plus a password. */
 export function ChurchApplyVerifyPage() {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const token = params.get('token');
-    if (!token) {
-      setError('This verification link is missing a token.');
-      return;
-    }
-    publicWrite<{ token: string }>('/api/church-applications/verify-email', { token })
-      .then((res) => {
-        setApplicantToken(res.token);
-        navigate('/ministry', { replace: true });
-      })
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : 'Could not verify this email');
-      });
-  }, [params, navigate]);
-
   return (
     <PublicLayout activeTab="ministry">
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10">
-        {error ? <Alert kind="error">{error}</Alert> : <p className="text-sm text-navy">Verifying your email…</p>}
+        <Alert kind="error">
+          Verification links are no longer used. Open the ministry sign-up page and enter the 5-letter code from your latest email.
+        </Alert>
+        <Button className="self-start" onClick={() => navigate('/ministry', { replace: true })}>Go to ministry sign-up</Button>
       </main>
     </PublicLayout>
   );

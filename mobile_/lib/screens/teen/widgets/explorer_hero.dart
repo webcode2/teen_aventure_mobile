@@ -9,13 +9,13 @@ class ExplorerHero extends StatelessWidget {
     this.greeting = HeroCopy.defaultGreeting,
     this.tagline = HeroCopy.defaultTagline,
     this.abi,
-    this.zack,
+    this.zach,
   });
 
   final String greeting;
   final String tagline;
   final ImageProvider? abi;
-  final ImageProvider? zack;
+  final ImageProvider? zach;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class ExplorerHero extends StatelessWidget {
                 Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,
-                    child: MascotScene(height: 168, abi: abi, zack: zack),
+                    child: MascotScene(height: 168, abi: abi, zach: zach),
                   ),
                 ),
               ],

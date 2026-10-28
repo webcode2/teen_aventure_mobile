@@ -17,7 +17,15 @@ class ApiClient {
   final SharedPreferences _prefs;
   final AppReadCache _readCache;
 
-  ApiClient._(this._prefs, this._readCache) {
+  /// Session token, held in memory only. The durable copy lives in secure storage
+  /// (AuthService); it is never written to SharedPreferences.
+  String? _token;
+
+  /// Called once when the server rejects the current session (401), e.g. the
+  /// token expired or was revoked by a password change on another device.
+  Future<void> Function()? onSessionExpired;
+
+  ApiClient._(this._prefs, this._readCache, this._token) {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: _connectTimeout,
@@ -31,10 +39,15 @@ class ApiClient {
     _setupInterceptors();
   }
 
-  static Future<ApiClient> create() async {
+  /// [initialToken] is the session restored from secure storage at startup.
+  static Future<ApiClient> create({String? initialToken}) async {
     final prefs = await SharedPreferences.getInstance();
-    return ApiClient._(prefs, AppReadCache(PreferencesReadCacheStore(prefs)));
+    // Older builds kept a plaintext copy of the token here.
+    await prefs.remove(_legacyTokenKey);
+    return ApiClient._(prefs, AppReadCache(PreferencesReadCacheStore(prefs)), initialToken);
   }
+
+  static const String _legacyTokenKey = 'auth_token';
 
   Dio get dio => _dio;
 
@@ -45,7 +58,9 @@ class ApiClient {
         if (options.path.startsWith('/api/') && !options.path.startsWith('/api/v1/')) {
           options.path = options.path.replaceFirst('/api/', '/api/v1/');
         }
-        final token = _prefs.getString('auth_token');
+        // `authToken` in extra sends a different stored session (e.g. the parent
+        // restore token at logout) without making it current.
+        final token = options.extra['authToken'] as String? ?? _token;
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -64,13 +79,16 @@ class ApiClient {
         // Child PIN checks use the parent JWT and return 401 for wrong/missing PIN;
         // clearing auth here would soft-logout the parent and break the no-PIN switch fallback.
         if (error.response?.statusCode == 401 &&
-            !_isExpectedAuthChallenge(error.requestOptions.path)) {
-          _readCache.invalidateScope(_personalScope());
-          await _prefs.remove('auth_token');
-          await _prefs.remove('user_id');
-          await _prefs.remove('user_role');
-          await _prefs.remove('family_id');
-          await _prefs.remove('child_id');
+            !_isExpectedAuthChallenge(error.requestOptions.path) &&
+            _sentCurrentToken(error.requestOptions)) {
+          // Clear first so concurrent 401s from the same dead session fire once.
+          await clearAuthToken();
+          final expired = onSessionExpired;
+          if (expired != null) {
+            try {
+              await expired();
+            } catch (_) {}
+          }
         }
         handler.next(error);
       },
@@ -167,11 +185,13 @@ class ApiClient {
     final p = path.toLowerCase();
     return p.contains('/auth/child-pin') ||
         p.contains('/auth/login') ||
-        p.contains('/auth/teen-login');
+        p.contains('/auth/teen-login') ||
+        // An already-revoked session at logout is fine; the sign-out is underway.
+        p.contains('/auth/logout');
   }
 
   String _personalScope() {
-    final token = _prefs.getString('auth_token') ?? '';
+    final token = _token ?? '';
     if (token.isEmpty) return 'p::';
     return 'p:${_readCache.storageId(token)}';
   }
@@ -203,15 +223,18 @@ class ApiClient {
     return Response(requestOptions: options, data: body, statusCode: 200);
   }
 
-  /// Set auth token (called after login)
+  /// Set auth token (called after login and on restore from secure storage)
   Future<void> setAuthToken(String token) async {
-    await _prefs.setString('auth_token', token);
+    // A rotated token gets a new personal cache scope; drop the old scope's entries.
+    if (_token != null && _token != token) _readCache.invalidateScope(_personalScope());
+    _token = token;
   }
 
   /// Clear auth token (called on logout)
   Future<void> clearAuthToken() async {
     _readCache.invalidateScope(_personalScope());
-    await _prefs.remove('auth_token');
+    _token = null;
+    await _prefs.remove(_legacyTokenKey);
     await _prefs.remove('user_id');
     await _prefs.remove('user_role');
     await _prefs.remove('family_id');
@@ -220,14 +243,21 @@ class ApiClient {
 
   /// Get stored auth token
   String? getAuthToken() {
-    return _prefs.getString('auth_token');
+    return _token;
+  }
+
+  /// A 401 for a token we have since replaced (re-login) must not log the new session out.
+  bool _sentCurrentToken(RequestOptions options) {
+    final current = _token;
+    if (current == null || current.isEmpty) return false;
+    return options.headers['Authorization'] == 'Bearer $current';
   }
 
   /// Demo offline accounts were removed from the production app.
   bool get isDemoSession => false;
 
   /// Check if user is authenticated
-  bool get isAuthenticated => _prefs.getString('auth_token') != null;
+  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
 
   /// Update base URL (useful for testing/staging)
   void updateBaseUrl(String url) {

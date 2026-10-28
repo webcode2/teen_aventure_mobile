@@ -4,12 +4,15 @@ import { BrowserRouter } from 'react-router';
 import './index.css';
 import App from './App';
 import { LegacyHashRedirect } from './guards';
+import { ErrorBoundary } from './error-boundary';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <LegacyHashRedirect />
-      <App />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <LegacyHashRedirect />
+        <App />
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 );

@@ -1,0 +1,65 @@
+.quest-editor { width: 100%; min-width: 0; }
+.quest-editor-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 10px 0 4px; }
+.quest-editor-heading { min-width: 0; }
+.quest-editor-backlink { display: inline-flex; align-items: center; min-height: 40px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.quest-editor-backlink:hover { color: var(--navy); }
+.quest-editor-heading h1 { margin: 5px 0 0; color: var(--navy); font-size: clamp(21px, 2vw, 27px); font-weight: 650; letter-spacing: -.035em; line-height: 1.3; overflow-wrap: anywhere; text-wrap: balance; }
+.quest-editor-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; flex-shrink: 0; }
+.quest-editor-actions > button { min-height: 42px; border-radius: 8px; }
+.quest-editor-save { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.quest-editor-save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--forest); }
+.quest-editor-previous { padding: 0 12px; font-size: 13px; color: var(--navy); cursor: pointer; }
+.quest-editor-steps { display: flex; gap: 22px; overflow-x: auto; border-bottom: 1px solid #dfe5e7; }
+.quest-editor-steps button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-height: 48px; padding: 0 2px; border-bottom: 2px solid transparent; color: var(--muted); font-size: 13px; font-weight: 550; cursor: pointer; transition: color 150ms, border-color 150ms; }
+.quest-editor-steps button:hover { color: var(--navy); }
+.quest-editor-steps button[aria-current="step"] { color: var(--navy); border-bottom-color: var(--teal); }
+.quest-editor-step-number { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; background: #edf1f2; font-size: 11px; font-variant-numeric: tabular-nums; }
+.quest-editor-steps button[aria-current="step"] .quest-editor-step-number { background: var(--navy); color: white; }
+.quest-lesson-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 28px; }
+.quest-lesson-writing { display: flex; flex-direction: column; min-width: 0; padding: 26px; border: 1px solid #dfe5e7; border-radius: 12px; background: white; }
+.quest-lesson-section-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-bottom: 25px; }
+.quest-lesson-layout h2 { margin: 0; font-size: 15px; font-weight: 650; color: var(--navy); letter-spacing: -.015em; }
+.quest-lesson-section-heading span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.quest-lesson-layout label { display: block; margin-bottom: 8px; color: var(--text-2); font-size: 12px; font-weight: 600; }
+.quest-lesson-layout input, .quest-lesson-layout textarea { width: 100%; min-height: 44px; padding: 11px 13px; border: 1px solid #d8e0e3; border-radius: 8px; background: white; color: var(--navy); font: inherit; font-size: 14px; line-height: 1.6; transition: border-color 150ms, box-shadow 150ms; }
+.quest-lesson-layout textarea { resize: vertical; }
+.quest-lesson-layout input:focus, .quest-lesson-layout textarea:focus { outline: 2px solid var(--teal); outline-offset: 2px; border-color: var(--teal); }
+.quest-lesson-layout input::placeholder, .quest-lesson-layout textarea::placeholder { color: var(--muted); }
+.quest-lesson-writing > input { margin-bottom: 25px; font-weight: 550; }
+.quest-lesson-layout .quest-lesson-body { min-height: 365px; font-size: 15px; line-height: 1.85; padding: 15px; }
+.quest-lesson-details { display: flex; flex-direction: column; gap: 24px; padding: 24px 0 12px; }
+.quest-lesson-details h2 { padding-bottom: 15px; border-bottom: 1px solid #dfe5e7; }
+.quest-lesson-details .quest-week-number { max-width: 100px; }
+.quest-lesson-details textarea { font-size: 13px; }
+.quest-declaration-field { border-top: 1px solid #dfe5e7; padding-top: 22px; }
+.quest-editor button:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+@media (max-width: 900px) {
+  .quest-editor-header { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .quest-editor-actions { justify-content: flex-start; }
+  .quest-lesson-layout { grid-template-columns: minmax(0, 1fr) 240px; gap: 22px; }
+  .quest-lesson-writing { padding: 20px; }
+}
+@media (max-width: 640px) {
+  .quest-lesson-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .quest-editor-steps { gap: 16px; }
+  .quest-editor-actions { width: 100%; }
+  .quest-editor-save { flex-basis: 100%; }
+  .quest-lesson-layout .quest-lesson-body { min-height: 300px; }
+  .quest-lesson-details { padding: 20px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quest-editor *, .quest-editor *::before, .quest-editor *::after { transition: none !important; }
+}
+/* The dashboard sidebar changes available space independently of viewport width. */
+.quest-editor { container-type: inline-size; }
+@container (max-width: 720px) {
+  .quest-editor-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .quest-lesson-layout { grid-template-columns: minmax(0, 1fr); }
+  .quest-lesson-details { padding: 12px 4px; }
+}
+@container (max-width: 720px) {
+  .quest-editor-steps { gap: 12px; }
+  .quest-editor-steps button { gap: 6px; font-size: 12px; }
+  .quest-editor-step-number { width: 18px; height: 18px; }
+  .quest-lesson-writing { padding: 20px; }
+}

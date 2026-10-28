@@ -19,6 +19,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('welcome dialog is offered once', () {
+    expect(WelcomeOnboardingDialog.shouldOffer(enabled: false, alreadyOffered: false, hasContent: true, seen: null), isFalse);
     expect(
       WelcomeOnboardingDialog.shouldOffer(
         alreadyOffered: false,

@@ -1,0 +1,12 @@
+{
+  "name": "teen-adventures-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test worker.test.mjs",
+    "deploy": "wrangler deploy --config wrangler.generated.json"
+  },
+  "devDependencies": {
+    "wrangler": "^4.151.3"
+  }
+}

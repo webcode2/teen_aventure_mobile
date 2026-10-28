@@ -66,6 +66,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
   void _offerWelcomeIfNeeded(HeroCopyController hero) {
     final prefs = ServiceLocator.instance.prefs;
     if (!WelcomeOnboardingDialog.shouldOffer(
+      enabled: hero.welcome.enabled,
       alreadyOffered: _welcomeOffered,
       hasContent: hero.welcome.hasContent,
       seen: prefs.getBool(WelcomeOnboardingDialog.prefsKey),
@@ -75,6 +76,10 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
     _welcomeOffered = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      if (!hero.welcome.enabled) {
+        _welcomeOffered = false;
+        return;
+      }
       if (prefs.getBool(WelcomeOnboardingDialog.prefsKey) == true) return;
       await showDialog<void>(
         context: context,
@@ -194,7 +199,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                   greeting: hero.greeting,
                   tagline: hero.tagline,
                   abi: hero.abiImage,
-                  zack: hero.zackImage,
+                  zach: hero.zachImage,
                 ),
               ),
               HomeAnnouncementBanner(

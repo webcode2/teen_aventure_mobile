@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { getUser, setToken } from './api';
+import { getUser, logout } from './api';
 import type { Tab } from './route';
 import { MenuIcon } from './nav-icons';
 import { Button } from './ui';
@@ -58,6 +59,8 @@ export function TopNav({
   onToggleSidebar?: () => void;
 }) {
   const navigate = useNavigate();
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const user = getUser();
   const name = user?.name || 'App Manager';
   const role = user?.role?.replace(/_/g, ' ') || 'Manager';
@@ -136,13 +139,18 @@ export function TopNav({
             variant="secondary"
             size="sm"
             className="px-2.5 py-1"
-            onClick={() => {
-              setToken(null);
-              navigate('/app/login');
+            disabled={logoutBusy}
+            onClick={async () => {
+              setLogoutBusy(true);
+              setLogoutError('');
+              try { await logout(); navigate('/app/login'); }
+              catch (error) { setLogoutError(error instanceof Error ? error.message : 'Could not sign out'); }
+              finally { setLogoutBusy(false); }
             }}
           >
-            Sign out
+            {logoutBusy ? 'Signing out…' : 'Sign out'}
           </Button>
+          {logoutError ? <span role="alert" className="text-xs text-error">{logoutError}</span> : null}
         </div>
       </div>
     </header>

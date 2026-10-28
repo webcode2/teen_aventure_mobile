@@ -13,11 +13,12 @@ class WelcomeOnboardingDialog extends StatelessWidget {
 
   /// First home open only. [seen] is the stored prefs flag.
   static bool shouldOffer({
+    bool enabled = true,
     required bool alreadyOffered,
     required bool hasContent,
     required bool? seen,
   }) {
-    if (alreadyOffered || !hasContent) return false;
+    if (!enabled || alreadyOffered || !hasContent) return false;
     return seen != true;
   }
 

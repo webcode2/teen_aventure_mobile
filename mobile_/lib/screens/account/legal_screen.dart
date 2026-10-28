@@ -1,3 +1,4 @@
+import '../../config/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../platform/resource_webview.dart';
@@ -14,7 +15,7 @@ class LegalScreen extends StatefulWidget {
 }
 
 class _LegalScreenState extends State<LegalScreen> {
-  static const _website = String.fromEnvironment('WEB_BASE_URL', defaultValue: 'https://teen.elastrocloud.com');
+  static const _website = ApiConfig.webBaseUrl;
   static const _resources = {
     LegalDoc.privacy: ('privacyUrl', 'Privacy Policy', '/p/privacy-policy'),
     LegalDoc.terms: ('termsUrl', 'Terms & Conditions', '/p/terms-of-service'),

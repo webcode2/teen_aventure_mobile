@@ -1,0 +1,8 @@
+{
+  "name": "teen-adventures-web",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "assets": { "directory": "../../admin/dist", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "r2_buckets": [{ "binding": "PUBLIC_CONTENT_BUCKET", "bucket_name": "REPLACE_PUBLIC_BUCKET" }],
+  "vars": { "API_ORIGIN": "https://teen-api-171803564695.europe-southwest1.run.app" }
+}

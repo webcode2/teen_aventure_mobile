@@ -61,6 +61,7 @@ class ContentService {
     required int weekNumber,
     required String step,
     String? childId,
+    List<Object>? answers,
   }) async {
     try {
       final response = await _apiClient.dio.post(
@@ -68,6 +69,7 @@ class ContentService {
         data: {
           'step': step,
           if (childId != null && childId.isNotEmpty) 'childId': childId,
+          if (answers != null) 'answers': answers,
         },
       );
       final map = Map<String, dynamic>.from(response.data as Map);

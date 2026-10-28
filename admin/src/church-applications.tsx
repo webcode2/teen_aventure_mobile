@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { api, API_BASE, getToken } from './api';
+import { api, API_BASE } from './api';
 import { askConfirm } from './prompt-dialog';
 import { Alert, Button, Badge, Empty, Field, Spinner } from './ui';
 
@@ -282,9 +282,10 @@ export function ChurchApplicationReviewPage() {
         return;
       }
       const res = await fetch(`${API_BASE}${meta.url}`, {
+        credentials: 'include',
         headers: {
           Accept: '*/*',
-          ...(getToken() ? { authorization: `Bearer ${getToken()}` } : {}),
+          'X-Dashboard-Request': '1',
         },
       });
       if (!res.ok) throw new Error('Could not open identity document');

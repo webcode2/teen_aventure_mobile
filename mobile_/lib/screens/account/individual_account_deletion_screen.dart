@@ -1,3 +1,4 @@
+import '../../config/api_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
@@ -10,7 +11,7 @@ class IndividualAccountDeletionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthSession>();
-    const website = String.fromEnvironment('WEB_BASE_URL', defaultValue: 'https://teen.elastrocloud.com');
+    const website = ApiConfig.webBaseUrl;
     final url = Uri.parse(website).resolve('/delete-account');
     final allowed = url.scheme == 'https' || (url.scheme == 'http' && ['localhost', '127.0.0.1'].contains(url.host));
     return Scaffold(

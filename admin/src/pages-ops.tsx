@@ -473,8 +473,8 @@ export function ChurchDetailPage() {
   async function removeMinistry() {
     if (!churchId) return;
     const ok = await askConfirm(
-      'Start ministry deletion: 0–30 days recoverable, 30–90 days backend-only, then purge. All ministry groups and exclusive staff accounts are included; shared personal accounts remain.',
-      { title: 'Delete ministry', confirmLabel: 'Delete', tone: 'danger' },
+      'Permanently delete this ministry, all its groups, and exclusive staff accounts now? Shared personal accounts remain. This cannot be undone and will not move the ministry to archive.',
+      { title: 'Permanently delete ministry', confirmLabel: 'Delete permanently', tone: 'danger' },
     );
     if (!ok) return;
     const password = await askPrompt('Confirm your password', { inputType: 'password' });
@@ -483,7 +483,7 @@ export function ChurchDetailPage() {
     setError('');
     try {
       await api(`/api/admin/churches/${churchId}/delete`, { method: 'POST', body: JSON.stringify({ password }) });
-      await load();
+      navigate('/app/dashboard/churches');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not delete ministry');
     } finally {

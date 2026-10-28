@@ -39,7 +39,9 @@ class ServiceLocator {
     );
     _connectivity = Connectivity();
 
-    _apiClient = await ApiClient.create();
+    // Restore the session token from secure storage into memory before any request.
+    final String? savedToken = await _secureStorage!.read(key: AuthService.userTokenKey);
+    _apiClient = await ApiClient.create(initialToken: savedToken);
     _authService = AuthService(_apiClient!, _secureStorage!);
     _contentService = ContentService(_apiClient!);
     _engagementService = EngagementService(_apiClient!);

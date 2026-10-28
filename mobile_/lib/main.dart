@@ -1,3 +1,4 @@
+import 'screens/shared/widgets/maintenance_notice.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -37,7 +38,8 @@ void main() async {
   }
   runApp(const AskHubTeenApp());
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(ServiceLocator.instance.pushService.start().catchError((Object _) {
+    unawaited(
+        ServiceLocator.instance.pushService.start().catchError((Object _) {
       if (kDebugMode) debugPrint('Optional notification setup is unavailable.');
     }));
   });
@@ -52,10 +54,14 @@ class AskHubTeenApp extends StatelessWidget {
       providers: [
         Provider<ApiClient>.value(value: ServiceLocator.instance.apiClient),
         Provider<AuthService>.value(value: ServiceLocator.instance.authService),
-        Provider<ContentService>.value(value: ServiceLocator.instance.contentService),
-        Provider<EngagementService>.value(value: ServiceLocator.instance.engagementService),
-        Provider<FamilyService>.value(value: ServiceLocator.instance.familyService),
-        Provider<VideoDownloadService>.value(value: ServiceLocator.instance.videoDownloadService),
+        Provider<ContentService>.value(
+            value: ServiceLocator.instance.contentService),
+        Provider<EngagementService>.value(
+            value: ServiceLocator.instance.engagementService),
+        Provider<FamilyService>.value(
+            value: ServiceLocator.instance.familyService),
+        Provider<VideoDownloadService>.value(
+            value: ServiceLocator.instance.videoDownloadService),
         ChangeNotifierProvider(
           create: (context) => AuthSession(
             context.read<AuthService>(),
@@ -106,6 +112,7 @@ class AskHubTeenApp extends StatelessWidget {
         ),
         builder: (context, child) {
           final media = MediaQuery.of(context);
+          final cms = context.watch<HeroCopyController>();
           final bumped = AppTextScaler(
             TextScaler.linear(media.textScaler.scale(1.0) * kAppTextScale),
           );
@@ -113,7 +120,19 @@ class AskHubTeenApp extends StatelessWidget {
             data: media.copyWith(textScaler: bumped),
             child: AnnotatedRegion<SystemUiOverlayStyle>(
               value: TeenAppTheme.lightStatusBar,
-              child: child ?? const SizedBox.shrink(),
+              child: Column(children: [
+                MaintenanceNotice(
+                    enabled: cms.maintenanceMode,
+                    message: cms.maintenanceMessage),
+                Expanded(
+                    child: cms.maintenanceMode
+                        ? Builder(
+                            builder: (innerContext) => MediaQuery.removePadding(
+                                context: innerContext,
+                                removeTop: true,
+                                child: child ?? const SizedBox.shrink()))
+                        : child ?? const SizedBox.shrink()),
+              ]),
             ),
           );
         },

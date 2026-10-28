@@ -149,6 +149,20 @@ echo "==> Version: $VERSION"
 echo "==> Mode:    $BUILD_MODE"
 
 load_dotenv "$ENV_FILE"
+API_BASE_URL="${API_BASE_URL:-https://tba.elastrocloud.com}"
+WEB_BASE_URL="${WEB_BASE_URL:-https://tba.elastrocloud.com}"
+export API_BASE_URL WEB_BASE_URL
+python3 - "$BUILD_MODE" <<'PYURL'
+import os, sys
+from urllib.parse import urlsplit
+for key in ['API_BASE_URL', 'WEB_BASE_URL']:
+    url=urlsplit(os.environ[key])
+    if (url.scheme not in ['http','https'] or not url.hostname or url.username or url.password
+        or url.path not in ['', '/'] or url.query or url.fragment):
+        raise SystemExit(key+' must be an HTTP(S) origin without credentials, path, query or fragment.')
+    if sys.argv[1]=='release' and url.scheme!='https':
+        raise SystemExit(key+' must use HTTPS for release builds.')
+PYURL
 load_firebase_from_google_services
 
 # Gradle reads Java-properties signing values directly; never source key.properties.
@@ -221,6 +235,14 @@ copy_apk() {
   fi
 
   cp "$source" "$dest"
+  python3 - "$dest" "$BUILD_MODE" "$VERSION" <<'PYMETA'
+import datetime, hashlib, json, os, pathlib, sys
+apk=pathlib.Path(sys.argv[1])
+report={'builtAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'mode':sys.argv[2], 'version':sys.argv[3], 'apiBaseUrl':os.environ['API_BASE_URL'],
+        'webBaseUrl':os.environ['WEB_BASE_URL'], 'sha256':hashlib.file_digest(apk.open('rb'),'sha256').hexdigest()}
+apk.with_suffix('.build.json').write_text(json.dumps(report,indent=2)+'\n')
+PYMETA
   echo "==> Copied to: $dest"
   echo "    Size: $(du -h "$dest" | awk '{print $1}')"
 }

@@ -261,45 +261,15 @@ function PushNotificationPreview({
   );
 }
 
-function MessagePreview({
-  channel,
-  to,
-  subject,
-  body,
-}: {
-  channel: Channel;
-  to: string;
-  subject: string;
-  body: string;
-}) {
-  const title = subject.trim() || 'Subject';
-  const message = body.trim() || 'Message body';
-  const recipient = to.trim() || (channel === 'EMAIL' ? 'name@example.com' : '+1…');
-
-  if (channel === 'EMAIL') {
-    return (
-      <div className="w-full max-w-[320px] overflow-hidden rounded-xl border border-border bg-cream text-navy shadow-xs">
-        <div className="border-b border-border bg-surface px-3.5 py-2.5">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-muted">Inbox</p>
-          <p className="m-0 mt-1 truncate text-sm font-bold">{title}</p>
-          <p className="m-0 mt-0.5 truncate text-[11px] text-muted">To {recipient}</p>
-        </div>
-        <p className="m-0 px-3.5 py-3 text-xs leading-relaxed text-text-2 line-clamp-6 whitespace-pre-wrap">
-          {message}
-        </p>
-      </div>
-    );
-  }
-
+function MessagePreview({ to, subject, body }: { channel: Channel; to: string; subject: string; body: string }) {
   return (
-    <div className="w-full max-w-[280px]">
-      <p className="m-0 mb-2 text-center text-[10px] font-semibold uppercase tracking-wide text-cream/50">
-        {recipient}
-      </p>
-      <div className="rounded-[18px_18px_4px_18px] bg-teal px-3.5 py-2.5 text-cream shadow-md">
-        <p className="m-0 text-[11px] font-bold leading-snug">{title}</p>
-        <p className="m-0 mt-1 text-xs leading-snug text-cream/90 line-clamp-5 whitespace-pre-wrap">{message}</p>
+    <div className="w-full max-w-[320px] overflow-hidden rounded-xl border border-border bg-cream text-navy shadow-xs">
+      <div className="border-b border-border bg-surface px-3.5 py-2.5">
+        <p className="m-0 text-[10px] font-bold uppercase tracking-wide text-muted">Inbox</p>
+        <p className="m-0 mt-1 truncate text-sm font-bold">{subject.trim() || 'Subject'}</p>
+        <p className="m-0 mt-0.5 truncate text-[11px] text-muted">To {to.trim() || 'name@example.com'}</p>
       </div>
+      <p className="m-0 px-3.5 py-3 text-xs leading-relaxed text-text-2 line-clamp-6 whitespace-pre-wrap">{body.trim() || 'Message body'}</p>
     </div>
   );
 }

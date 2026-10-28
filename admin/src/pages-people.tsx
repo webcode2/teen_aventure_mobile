@@ -15,11 +15,18 @@ import {
   STATUS_FILTERS,
   staffTypeLabel,
   SYSTEM_ADMIN_ROLES,
+  ASSIGNABLE_STAFF_ROLES,
   USER_ACCOUNT_TYPE_FILTERS,
   USER_PLATFORM_ROLES,
   type ChildAccountTypeKey,
   type UserAccountTypeKey,
 } from './account-types';
+
+const STAFF_PRIVILEGES: Record<string, string> = {
+  EDITOR: 'Dashboard overview and game drafts.',
+  SUPER_EDITOR: 'Editor access plus quest editing, game publishing, and website and app copy.',
+  SUPER_ADMIN: 'Full dashboard operations, content settings, staff invitations and access management.',
+};
 
 export type PeopleDirectorySection = 'users' | 'pastors' | 'staff';
 
@@ -29,6 +36,8 @@ type PeopleUser = {
   name: string;
   platformRole: string;
   isActive: boolean;
+  registeredWithArchivedEmail?: boolean;
+  mustChangePassword?: boolean;
   appLogin?: boolean;
   createdAt: string;
   churchRoles: Array<{ role: string; church: { name: string } }>;
@@ -65,6 +74,8 @@ type UserDetail = {
   name: string;
   platformRole: string;
   isActive: boolean;
+  registeredWithArchivedEmail?: boolean;
+  mustChangePassword?: boolean;
   createdAt: string;
   updatedAt: string;
   pushSubscriptions: PushSubscription[];
@@ -161,7 +172,7 @@ function CreateAccountDialog({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [birthYear, setBirthYear] = useState('');
-  const [platformRole, setPlatformRole] = useState(accountKind === 'staff' ? 'APP_MANAGER' : 'MAIN_ACCOUNT');
+  const [platformRole, setPlatformRole] = useState(accountKind === 'staff' ? 'EDITOR' : 'MAIN_ACCOUNT');
   const isTeen = accountKind === 'user' && platformRole === 'CHILD';
   const thisYear = new Date().getFullYear();
   const [error, setError] = useState('');
@@ -178,7 +189,7 @@ function CreateAccountDialog({
           email,
           accountKind,
           platformRole,
-          password,
+          ...(accountKind === 'user' ? { password } : {}),
           ...(accountKind === 'user' ? { birthYear: Number(birthYear) } : {}),
         }),
       });
@@ -195,8 +206,8 @@ function CreateAccountDialog({
     <Dialog
       open
       onClose={onClose}
-      title={accountKind === 'staff' ? 'Add staff account' : 'Add user account'}
-      subtitle={accountKind === 'staff' ? 'System administrator for this dashboard' : 'App account for parents or standalone teens'}
+      title={accountKind === 'staff' ? 'Invite staff' : 'Add user account'}
+      subtitle={accountKind === 'staff' ? 'We’ll email a one-use link so they can choose their own password. Invitations expire in 48 hours.' : 'App account for parents or standalone teens'}
     >
       {error ? <Alert kind="error">{error}</Alert> : null}
       <div className="flex flex-col gap-3 mt-2">
@@ -224,7 +235,7 @@ function CreateAccountDialog({
               onChange={(e) => setPlatformRole(e.target.value)}
               className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
             >
-              {SYSTEM_ADMIN_ROLES.map((role) => (
+              {ASSIGNABLE_STAFF_ROLES.map((role) => (
                 <option key={role} value={role}>{staffTypeLabel({ platformRole: role })}</option>
               ))}
             </select>
@@ -256,7 +267,7 @@ function CreateAccountDialog({
             />
           </Field>
         ) : null}
-        <Field label="Password" hint="At least 8 characters; teens use this with email on Teen sign in">
+        {accountKind === 'user' && <Field label="Password" hint="At least 8 characters; teens use this with email on Teen sign in">
           <input
             type="password"
             value={password}
@@ -265,7 +276,8 @@ function CreateAccountDialog({
             required
             className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
           />
-        </Field>
+        </Field>}
+        {accountKind === 'staff' && <p className="text-sm text-muted">{STAFF_PRIVILEGES[platformRole]}</p>}
       </div>
       <div className="mt-4 pt-3 border-t border-border flex justify-end">
         <Button className="w-full hover:shadow" type="button"
@@ -273,7 +285,7 @@ function CreateAccountDialog({
           disabled={saving}
           onClick={() => void submit()}
         >
-          {saving ? 'Creating…' : 'Create account'}
+          {saving ? 'Saving…' : accountKind === 'staff' ? 'Send invitation' : 'Create account'}
         </Button>
       </div>
     </Dialog>
@@ -295,6 +307,7 @@ function UserAccountPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [accessNotice, setAccessNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -369,11 +382,11 @@ function UserAccountPanel({
     const next = !user.isActive;
     const ok = await askConfirm(
       next
-        ? `Enable ${user.name}? They will be able to sign in again.`
-        : `Disable ${user.name}? They will not be able to sign in until enabled again.`,
+        ? `Grant access to ${user.name}? They will be able to sign in with their assigned role.`
+        : `Revoke access from ${user.name}? All dashboard privileges will be blocked until access is granted again.`,
       {
-        title: next ? 'Enable account' : 'Disable account',
-        confirmLabel: next ? 'Enable' : 'Disable',
+        title: next ? 'Grant account access' : 'Revoke account access',
+        confirmLabel: next ? 'Grant access' : 'Revoke access',
         tone: next ? 'default' : 'danger',
       },
     );
@@ -394,15 +407,24 @@ function UserAccountPanel({
     }
   }
 
+  async function resendInvitation() {
+    setSaving(true); setSaveError(''); setAccessNotice('');
+    try {
+      await api(`/api/admin/users/${userId}/invitation`, { method: 'POST' });
+      setAccessNotice('Invitation email queued. The new link expires in 48 hours; earlier links no longer work.');
+    } catch (error) { setSaveError(error instanceof Error ? error.message : 'Could not resend invitation'); }
+    finally { setSaving(false); }
+  }
+
   async function remove() {
     if (!user) return;
-    const ok = await askConfirm(`Request deletion of ${user.name} (${user.email})? Recovery is available for 30 days; data is backend-only until purge after 90 days.`, {
-      title: 'Delete account',
-      confirmLabel: 'Delete',
+    const ok = await askConfirm(`Permanently delete ${user.name} (${user.email}) and linked account resources now? This cannot be undone and will not move the account to archive.`, {
+      title: 'Permanently delete account',
+      confirmLabel: 'Delete permanently',
       tone: 'danger',
     });
     if (!ok) return;
-    const deletionPassword = await askPrompt('Confirm your password', { inputType: 'password', title: 'Verify deletion request' });
+    const deletionPassword = await askPrompt('Confirm your password', { inputType: 'password', title: 'Verify permanent deletion' });
     if (!deletionPassword) return;
     setSaveError('');
     setDeleting(true);
@@ -502,7 +524,7 @@ function UserAccountPanel({
               disabled={saving || deleting || toggling}
               onClick={() => void toggleActive()}
             >
-              {toggling ? 'Updating…' : user.isActive ? 'Disable' : 'Enable'}
+              {toggling ? 'Updating…' : accountKind === 'staff' ? user.isActive ? 'Revoke access' : 'Grant access' : user.isActive ? 'Disable' : 'Enable'}
             </button>
             <button
               type="button"
@@ -517,6 +539,15 @@ function UserAccountPanel({
       }
     >
       {saveError ? <Alert kind="error">{saveError}</Alert> : null}
+      {accessNotice && <Alert kind="ok">{accessNotice}</Alert>}
+      {accountKind === 'staff' && <section className="mb-4 rounded-xl border border-border p-4">
+        <h3 className="text-sm font-semibold text-navy">Staff privileges</h3>
+        <p className="mt-1 text-sm text-muted">{STAFF_PRIVILEGES[user.platformRole]}</p>
+        <p className="mt-2 text-xs text-muted">Use Edit to change the role. Revoking access blocks all dashboard operations on the next request.</p>
+        {user.mustChangePassword && <div className="mt-3 flex flex-wrap items-center gap-2"><Badge kind="warn">Invitation pending</Badge><Button type="button" variant="secondary" disabled={!user.isActive || saving || deleting || toggling} onClick={() => void resendInvitation()}>Resend invitation</Button></div>}
+      </section>}
+
+      {user.registeredWithArchivedEmail && <div role="note" className="rounded-xl border border-orange/30 bg-cream p-3 text-sm text-navy">This account registered with an email previously used by an archived account. Review the archive separately; this is a new account with no inherited history.</div>}
       {!user.isActive ? <Alert kind="error">This account is disabled and cannot sign in.</Alert> : null}
 
       {!isEditing ? (
@@ -662,13 +693,13 @@ function UserAccountPanel({
               />
             </Field>
             {accountKind === 'staff' ? (
-              <Field label="System role" hint="Dashboard access for Teen Bible Adventures Manager">
+              <Field label="Staff role & privileges" hint={STAFF_PRIVILEGES[platformRole]}>
                 <select
                   value={platformRole}
                   onChange={(e) => setPlatformRole(e.target.value)}
                   className="w-full rounded-xl border border-border bg-cream px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
                 >
-                  {SYSTEM_ADMIN_ROLES.map((role) => (
+                  {(user.platformRole === 'SUPER_ADMIN' ? ['SUPER_ADMIN'] : ASSIGNABLE_STAFF_ROLES).map((role) => (
                     <option key={role} value={role}>{staffTypeLabel({ platformRole: role })}</option>
                   ))}
                 </select>
@@ -1158,7 +1189,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
 
         {(kind === 'users' || kind === 'staff') && (
           <Button type="button" className="shrink-0" onClick={() => setCreating(kind === 'staff' ? 'staff' : 'user')}>
-            {kind === 'staff' ? 'Add staff' : 'Add user'}
+            {kind === 'staff' ? 'Invite staff' : 'Add user'}
           </Button>
         )}
       </div>
@@ -1198,7 +1229,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
                     <td className={`${tdClass} font-semibold`}>
                       <div className="flex min-w-[10rem] items-center gap-2.5">
                         <PersonAvatar name={u.name} muted={!u.isActive} />
-                        <span className="truncate">{u.name}</span>
+                        <span className="truncate">{u.name}{u.registeredWithArchivedEmail && <span className="block text-xs font-semibold text-orange">Archived email · review</span>}</span>
                       </div>
                     </td>
                     <td className={`${tdClass} max-w-[14rem] truncate text-muted`}>{u.email}</td>
@@ -1248,7 +1279,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
                     <td className={`${tdClass} font-semibold`}>
                       <div className="flex min-w-[10rem] items-center gap-2.5">
                         <PersonAvatar name={u.name} muted={!u.isActive} />
-                        <span className="truncate">{u.name}</span>
+                        <span className="truncate">{u.name}{u.registeredWithArchivedEmail && <span className="block text-xs font-semibold text-orange">Archived email · review</span>}</span>
                       </div>
                     </td>
                     <td className={`${tdClass} max-w-[14rem] truncate text-muted`}>{u.email}</td>
@@ -1293,12 +1324,12 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
                     <td className={`${tdClass} font-semibold`}>
                       <div className="flex min-w-[10rem] items-center gap-2.5">
                         <PersonAvatar name={u.name} muted={!u.isActive} />
-                        <span className="truncate">{u.name}</span>
+                        <span className="truncate">{u.name}{u.registeredWithArchivedEmail && <span className="block text-xs font-semibold text-orange">Archived email · review</span>}</span>
                       </div>
                     </td>
                     <td className={`${tdClass} max-w-[14rem] truncate text-muted`}>{u.email}</td>
                     <td className={tdClass}>
-                      <Badge kind="warn">{staffTypeLabel(u)}</Badge>
+                      <Badge kind="warn">{staffTypeLabel(u)}</Badge>{u.mustChangePassword && <span className="block text-xs text-muted">Invitation pending</span>}
                     </td>
                     <td className={tdClass}>
                       <Badge kind={u.isActive ? 'ok' : 'bad'}>{u.isActive ? 'Active' : 'Disabled'}</Badge>

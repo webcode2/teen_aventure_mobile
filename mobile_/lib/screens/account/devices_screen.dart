@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../providers/cms_text.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/service_locator.dart';
@@ -58,7 +59,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
         content: Text(
           device.isCurrent
               ? 'This phone will stop receiving notifications until you sign in again.'
-              : 'That device will stop receiving notifications for this account.',
+              : 'That device will be signed out and stop receiving notifications for this account.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
@@ -130,7 +131,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
         foregroundColor: AppColors.cream,
       ),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
         color: AppColors.teal,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
 import '../../services/api_client.dart';
 import '../../quest_milestones.dart';
+import '../../providers/cms_text.dart';
 import '../../services/engagement_service.dart';
 import '../../theme.dart';
 import '../adult/child_achievement_record_screen.dart';
@@ -140,7 +141,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       body = _LoadError(message: _error ?? 'Could not load achievements.', onRetry: _load);
     } else {
       body = RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),

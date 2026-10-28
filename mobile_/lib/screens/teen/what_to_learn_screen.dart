@@ -5,6 +5,7 @@ import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
 import '../../models/video_lesson.dart';
 import '../../models/week_video_progress.dart';
+import '../../providers/cms_text.dart';
 import '../../services/content_service.dart';
 import '../../theme.dart';
 import 'widgets/curriculum_week_tile.dart';
@@ -84,7 +85,7 @@ class _WhatToLearnScreenState extends State<WhatToLearnScreen> {
     if (_error != null) return Center(child: Text(_error!));
     final hasWeeks = _tracks.any((track) => track.weeks.isNotEmpty);
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [

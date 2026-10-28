@@ -4,5 +4,8 @@
   "runtimeDatabase": "postgresql",
   "orm": "prisma",
   "project": "tbadventure-f712a",
-  "region": "europe-southwest1"
+  "region": "europe-southwest1",
+  "schedulerRegion": "europe-west1",
+  "frontendOrigin": "https://tba.elastrocloud.com",
+  "dashboardOrigin": "https://admin.tba.elastrocloud.com"
 }

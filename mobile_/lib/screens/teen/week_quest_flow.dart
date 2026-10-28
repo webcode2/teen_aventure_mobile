@@ -71,8 +71,8 @@ class WeekQuestFlow {
       questionsOverride: questions,
       alreadyCompleted: alreadyDone,
       onSubmitLive: _tracked(context) && !alreadyDone
-          ? (_) async {
-              final points = await provider?.completeStep('QUIZ') ?? 0;
+          ? (answers) async {
+              final points = await provider?.completeStep('QUIZ', answers: answers) ?? 0;
               if (points > 0 && context.mounted) {
                 try {
                   context.read<GameController>().applyActivityPoints(points);

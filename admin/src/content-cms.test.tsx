@@ -7,7 +7,8 @@ import { ContentCmsPage } from './pages-content-cms';
 import { DEFAULT_LANDING_CONTENT, mergeLandingContent } from './pages-landing';
 import { mergeCms, setCmsField, validateCms } from './cms-fields';
 
-vi.mock('./api', () => ({ api: vi.fn(), apiUpload: vi.fn() }));
+vi.mock('./api', () => ({ api: vi.fn(), apiUpload: vi.fn(), publicApi: vi.fn().mockResolvedValue({}) }));
+vi.mock('./app-resource-alerts', () => ({ AppResourceAlerts: () => null }));
 vi.mock('./prompt-dialog', () => ({ askConfirm: vi.fn().mockResolvedValue(true) }));
 vi.mock('./pages-landing', async () => {
   const actual = await vi.importActual<typeof import('./pages-landing')>('./pages-landing');
@@ -21,6 +22,25 @@ const open = () => render(<MemoryRouter><ContentCmsPage platform="web" /></Memor
 const select = (name: string) => userEvent.click(within(screen.getByRole('navigation', { name: 'Content sections' })).getByRole('button', { name: new RegExp(name) }));
 
 describe('content studio', () => {
+  it('splits Contact into sections and preserves hidden fields when saving emails', async () => {
+    vi.mocked(api).mockResolvedValueOnce({ contactPage: { wereHereToHelp: 'Contact heading' } }).mockResolvedValueOnce({});
+    open();
+    await screen.findByDisplayValue(DEFAULT_LANDING_CONTENT.hero.title);
+    await select('Contact page');
+    expect(screen.getByDisplayValue('Contact heading')).toBeTruthy();
+    expect(screen.queryByDisplayValue('fellowship@askhub.org')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /^Contact emails/ }));
+    const email = screen.getByDisplayValue('fellowship@askhub.org');
+    await userEvent.clear(email); await userEvent.type(email, 'team@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await screen.findByText('Saved to the live platform.');
+    const saved = JSON.parse(vi.mocked(api).mock.calls.find(call => call[1]?.method === 'PUT')![1]!.body as string);
+    expect(saved.contactPage.fellowshipEmail).toBe('team@example.com');
+    expect(saved.contactPage.wereHereToHelp).toBe('Contact heading');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Search sections and text' }), 'Contact heading');
+    expect(screen.getAllByDisplayValue('Contact heading').some(element => element.tagName === 'TEXTAREA')).toBe(true);
+  });
+
   it('switches responsive preview sizes and expands without losing edits', async () => {
     vi.mocked(api).mockResolvedValue({ hero: { title: 'Preview draft' } });
     open();
@@ -110,4 +130,23 @@ describe('CMS document helpers', () => {
     expect(mergeCms({}, JSON.parse('{"__proto__":{"polluted":true}}'))).toEqual({});
     expect(({} as any).polluted).toBeUndefined();
   });
+});
+
+it('lets admins switch welcome onboarding off without losing its saved text', async () => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() });
+  vi.mocked(api).mockResolvedValueOnce({ welcome: { enabled: true, title: 'Keep this welcome title' } }).mockResolvedValueOnce({});
+  render(<MemoryRouter><ContentCmsPage platform="mobile" /></MemoryRouter>);
+  await screen.findByText('Up to date');
+  await select('Welcome & onboarding');
+  const enabled = screen.getByRole('checkbox');
+  expect((enabled as HTMLInputElement).checked).toBe(true);
+  await userEvent.click(enabled);
+  expect(screen.getByText('Welcome & onboarding is off. Explorers go straight to the home screen.')).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Saved to the live platform.');
+  const put = vi.mocked(api).mock.calls.find(call => call[1]?.method === 'PUT');
+  expect(JSON.parse(put![1]!.body as string).welcome).toMatchObject({ enabled: false, title: 'Keep this welcome title' });
+  await userEvent.click(screen.getByRole('checkbox'));
+  expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+  expect(screen.queryByText('Welcome & onboarding is off. Explorers go straight to the home screen.')).toBeNull();
 });

@@ -45,6 +45,7 @@ import { PrivacyPage, PublicSitePage, TermsPage } from './pages-legal-public';
 import { isDashboardTab } from './path-helpers';
 import type { Tab } from './route';
 import { Shell } from './shell';
+import { ErrorBoundary } from './error-boundary';
 
 function DashboardLayout() {
   const params = useParams();
@@ -56,7 +57,9 @@ function DashboardLayout() {
   return (
     <RequireStaff>
       <Shell tab={tab}>
-        <Outlet />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </Shell>
     </RequireStaff>
   );

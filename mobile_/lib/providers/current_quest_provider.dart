@@ -74,7 +74,7 @@ class CurrentQuestProvider extends ChangeNotifier {
     return _content!.getCurrentQuest(childId: _childId);
   }
 
-  Future<QuestStepResult> _complete(int weekNumber, String step) async {
+  Future<QuestStepResult> _complete(int weekNumber, String step, {List<Object>? answers}) async {
     final override = _completeOverride;
     if (override != null) {
       final next = await override(weekNumber, step);
@@ -90,6 +90,7 @@ class CurrentQuestProvider extends ChangeNotifier {
       weekNumber: weekNumber,
       step: step,
       childId: _childId,
+      answers: answers,
     );
   }
 
@@ -358,13 +359,14 @@ class CurrentQuestProvider extends ChangeNotifier {
   }
 
   /// Marks quiz/puzzle done on the server. Returns admin points for a fresh quiz award.
-  Future<int> completeStep(String step) async {
+  /// Quiz [answers] are graded by the server; without them the step counts but earns no points.
+  Future<int> completeStep(String step, {List<Object>? answers}) async {
     final c = _current;
     if (c == null) return 0;
     final weekNumber = c.weekNumber;
     final key = '$weekNumber:$step';
     try {
-      final result = await _complete(weekNumber, step);
+      final result = await _complete(weekNumber, step, answers: answers);
       final next = result.current;
       _pendingSteps.remove(key);
       await _writePending();

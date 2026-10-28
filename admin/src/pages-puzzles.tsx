@@ -368,11 +368,11 @@ export function PuzzlesStudioPage() {
     (step) => step.answer.replace(/[^A-Za-z]/g, '') && !step.ref.trim(),
   );
   const quietButton =
-    'cursor-pointer bg-transparent px-2 py-1 text-xs font-semibold text-navy hover:text-teal disabled:opacity-40';
+    'studio-toolbar-button';
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="puzzle-studio mx-auto flex max-w-6xl flex-col gap-6 pb-12">
+      <div className="studio-header flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           {returnTo ? (
             <button
@@ -383,12 +383,13 @@ export function PuzzlesStudioPage() {
               ← Back to quest
             </button>
           ) : null}
+          <span className="studio-eyebrow">PUZZLE STUDIO / SCRIPTURE CROSSWORD</span>
           <input
             aria-label="Puzzle title"
             value={state.present.title}
             onChange={(e) => dispatch({ type: 'setMeta', title: e.target.value })}
             placeholder="Untitled puzzle"
-            className="w-full bg-transparent text-2xl font-semibold tracking-tight text-navy outline-none placeholder:text-muted"
+            className="w-full bg-transparent text-2xl font-semibold tracking-tight text-navy rounded-lg focus:ring-2 focus:ring-teal/30 outline-none placeholder:text-muted"
           />
           <p className="m-0 text-[11px] text-muted" role="status">
             {saveStatus === 'error'
@@ -400,7 +401,7 @@ export function PuzzlesStudioPage() {
                   : 'Draft'}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="studio-toolbar flex flex-wrap items-center gap-1">
           <button type="button" className={quietButton} onClick={newDraft}>
             New
           </button>
@@ -472,19 +473,23 @@ export function PuzzlesStudioPage() {
 
       <IssuesPanel doc={state.present} onLocate={locateIssue} />
 
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <aside className="lg:col-span-4">
+      <div className="studio-workspace">
+        <aside className="studio-sidebar">
           <WordListEditor
             steps={state.present.data.steps}
             selectedId={state.selectedStepId}
             onSelect={(id) => dispatch({ type: 'select', id })}
             onChange={(id, patch) => dispatch({ type: 'updateStep', id, patch })}
             onAdd={addStep}
+            onImport={(words) => dispatch({ type: 'addSteps', steps: words.map((word, index) => ({ ...word, id: crypto.randomUUID(), direction: (state.present.data.steps.length + index) % 2 === 0 ? 'across' : 'down' })) })}
             onRemove={(id) => dispatch({ type: 'removeStep', id })}
           />
         </aside>
 
-        <main className="lg:col-span-8">
+        <main className="studio-grid-panel">
+          <div className="studio-grid-heading"><div><span className="studio-eyebrow">ARRANGE & CONNECT</span><h2>Your crossword</h2></div><span className="studio-count">{state.present.data.steps.filter((step) => step.row != null && step.col != null && /[A-Za-z]/.test(step.answer)).length} placed</span></div>
+          <p className="studio-grid-help">Select a word, then click a square to place it. Drag words to connect matching letters.</p>
+          <div className="studio-grid-surface">
           <PuzzleCanvas
             steps={state.present.data.steps}
             selectedId={state.selectedStepId}
@@ -501,6 +506,8 @@ export function PuzzlesStudioPage() {
             }
             onStartWordAt={startWordAt}
           />
+          </div>
+          <div className="studio-grid-footer"><span><i aria-hidden="true" /> Selected word</span><span>Click an empty square to type directly</span></div>
         </main>
       </div>
     </div>

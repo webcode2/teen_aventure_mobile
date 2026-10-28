@@ -28,6 +28,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   final List<GlobalKey> _rightKeys = [];
   Timer? _clock;
   bool _handledWin = false;
+  bool _leaving = false;
 
   @override
   void initState() {
@@ -56,9 +57,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
     }
     _ensureKeys();
     setState(() {});
-    if (_game.isComplete && !_handledWin) {
+    if (_game.isComplete && !_handledWin && !_leaving) {
       _handledWin = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _onWin());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_leaving) _onWin();
+      });
     }
   }
 
@@ -82,10 +85,34 @@ class _MatchingScreenState extends State<MatchingScreen> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => PuzzleWinDialog(elapsed: _game.elapsed),
+      builder: (_) => PuzzleWinDialog(elapsed: _game.elapsed, buttonLabel: 'Well done'),
     );
     if (!mounted) return;
-    await WeekQuestFlow.recordMatchingIfSolved(context, _game);
+    await _goHome();
+  }
+
+  Future<void> _goHome() async {
+    if (_leaving) return;
+    _leaving = true;
+    try {
+      await WeekQuestFlow.recordMatchingIfSolved(context, _game);
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Widget _backButton() {
+    return TextButton.icon(
+      onPressed: () => Navigator.maybePop(context),
+      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+      label: const Text('Back', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        minimumSize: const Size(48, 48),
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
+    );
   }
 
   @override
@@ -122,8 +149,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
         return Scaffold(
           body: Container(
             decoration: TeenAppTheme.headerGradient,
-            child: const SafeArea(
-              child: Center(child: CircularProgressIndicator(color: Colors.white)),
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _backButton(),
+                  const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.white))),
+                ],
+              ),
             ),
           ),
         );
@@ -132,17 +165,25 @@ class _MatchingScreenState extends State<MatchingScreen> {
           body: Container(
             decoration: TeenAppTheme.headerGradient,
             child: SafeArea(
-              child: PuzzleRejectCard(
-                message: _game.statusMessage ??
-                    'A technical issue was encountered while loading this match game.',
-                onRetry: () {
-                  _handledWin = false;
-                  final content = context.read<ContentService>();
-                  _game.loadLive(
-                    matchingId: widget.matchingId,
-                    contentService: content,
-                  );
-                },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _backButton(),
+                  Expanded(
+                    child: PuzzleRejectCard(
+                      message: _game.statusMessage ??
+                          'A technical issue was encountered while loading this match game.',
+                      onRetry: () {
+                        _handledWin = false;
+                        final content = context.read<ContentService>();
+                        _game.loadLive(
+                          matchingId: widget.matchingId,
+                          contentService: content,
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -164,12 +205,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    _backButton(),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ClipRRect(
@@ -347,21 +383,31 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           },
                         ),
                       ),
-                      if (!_game.isComplete)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Text(
-                            _game.selectedLeft != null
-                                ? 'Tap a word on the right — or drag a line across.'
-                                : 'Drag from a left word to its match on the right.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: _game.isComplete
+                            ? FilledButton(
+                                onPressed: _goHome,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.navy,
+                                  foregroundColor: AppColors.cream,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: const Text('Well done', style: TextStyle(fontWeight: FontWeight.w700)),
+                              )
+                            : Text(
+                                _game.selectedLeft != null
+                                    ? 'Tap a word on the right — or drag a line across.'
+                                    : 'Drag from a left word to its match on the right.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
                     ],
                   ),
                 ),

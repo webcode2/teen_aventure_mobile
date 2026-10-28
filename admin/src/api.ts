@@ -10,25 +10,17 @@ export type AdminUser = {
   role: string;
 };
 
-function readStoredToken(): string | null {
-  try {
-    return globalThis.localStorage?.getItem(TOKEN_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function readStoredUser(): AdminUser | null {
-  try {
-    const raw = globalThis.localStorage?.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) as AdminUser : null;
-  } catch {
-    return null;
-  }
-}
-
-let token: string | null = readStoredToken();
-let currentUser: AdminUser | null = readStoredUser();
+// Staff credentials live only in a server-set HttpOnly cookie. These are UI state.
+let token: string | null = null;
+let currentUser: AdminUser | null = null;
+let sessionExpiresAt: number | null = null;
+let sessionReady = false;
+let sessionGeneration = 0;
+let sessionLoad: Promise<void> | null = null;
+try {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+} catch { /* storage may be unavailable */ }
 
 const PASTOR_TOKEN_KEY = 'askhub_pastor_token';
 const PASTOR_USER_KEY = 'askhub_pastor_user';
@@ -44,52 +36,86 @@ export type PastorUser = {
   roles?: string[];
 };
 
-export function getPastorToken(): string | null {
-  try {
-    return globalThis.localStorage?.getItem(PASTOR_TOKEN_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
+// Portal credentials stay in memory and disappear when the page is closed/reloaded.
+let pastorToken: string | null = null;
+let pastorUser: PastorUser | null = null;
+try {
+  localStorage.removeItem(PASTOR_TOKEN_KEY);
+  localStorage.removeItem(PASTOR_USER_KEY);
+  localStorage.removeItem('askhub_church_applicant_token');
+} catch { /* storage may be unavailable */ }
 
-export function getPastorUser(): PastorUser | null {
-  try {
-    const raw = globalThis.localStorage?.getItem(PASTOR_USER_KEY);
-    return raw ? (JSON.parse(raw) as PastorUser) : null;
-  } catch {
-    return null;
-  }
-}
-
+export function getPastorToken(): string | null { return pastorToken; }
+export function getPastorUser(): PastorUser | null { return pastorUser; }
 export function setPastorSession(t: string | null, u?: PastorUser | null) {
-  try {
-    if (t) localStorage.setItem(PASTOR_TOKEN_KEY, t);
-    else localStorage.removeItem(PASTOR_TOKEN_KEY);
-    if (u) localStorage.setItem(PASTOR_USER_KEY, JSON.stringify(u));
-    else localStorage.removeItem(PASTOR_USER_KEY);
-  } catch {
-    /* ignore missing localStorage in tests */
-  }
+  pastorToken = t;
+  pastorUser = t ? u ?? null : null;
 }
 
 export function clearPastorSession() {
   setPastorSession(null, null);
 }
 
-export function getToken() { return token; }
+/** Server-provided expiry metadata; the cookie itself is never exposed to JavaScript. */
+export function staffTokenExpiresAt(): number | null { return sessionExpiresAt; }
+export function getToken() {
+  return sessionExpiresAt != null && sessionExpiresAt <= Date.now() ? null : token;
+}
+export function staffSessionReady() { return sessionReady; }
+export function subscribeStaffSession(listener: () => void) {
+  window.addEventListener('staff-session-change', listener);
+  return () => window.removeEventListener('staff-session-change', listener);
+}
 export function getUser() { return currentUser; }
 
-export function setToken(t: string | null, user?: AdminUser | null) {
-  token = t;
+/** Compatibility setter for UI state and tests. This value is never a bearer credential. */
+export function setToken(value: string | null, user?: AdminUser | null, expiresAt?: number) {
+  token = value;
   if (user !== undefined) currentUser = user;
-  if (!t) currentUser = null;
+  if (!value) currentUser = null;
+  sessionExpiresAt = value ? expiresAt ?? null : null;
+  sessionReady = true;
+  sessionGeneration++;
   try {
-    if (t) localStorage.setItem(TOKEN_KEY, t);
-    else localStorage.removeItem(TOKEN_KEY);
-    if (currentUser) localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-    else localStorage.removeItem(USER_KEY);
-  } catch {
-    /* ignore missing localStorage in tests */
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch { /* storage may be unavailable */ }
+  window.dispatchEvent(new Event('staff-session-change'));
+}
+
+export async function initializeStaffSession() {
+  if (sessionReady) return;
+  if (sessionLoad) return sessionLoad;
+  const generation = sessionGeneration;
+  sessionLoad = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/dashboard-session`, {
+        credentials: 'include', cache: 'no-store', headers: { 'X-Dashboard-Request': '1' },
+      });
+      if (!response.ok) throw new Error('Session unavailable');
+      const result = await response.json() as { user: AdminUser; expiresAt: number };
+      if (generation === sessionGeneration) setToken('cookie-session', result.user, result.expiresAt);
+    } catch {
+      if (generation === sessionGeneration) setToken(null);
+    } finally { sessionLoad = null; }
+  })();
+  return sessionLoad;
+}
+
+export async function logout() {
+  // A failed network request must not pretend to have removed an HttpOnly cookie.
+  const response = await fetch(`${API_BASE}/api/auth/dashboard-logout`, {
+    method: 'POST', credentials: 'include', headers: { 'X-Dashboard-Request': '1' },
+  });
+  if (!response.ok) throw new Error('Could not sign out. Please try again.');
+  setToken(null);
+}
+
+/** Only invalidate the staff surface; ministry sessions are independent. */
+function handleStaffAuthFailure(status: number, message: string, sentToken: string | null) {
+  if (!sentToken || sentToken !== token || !window.location.pathname.startsWith('/app/dashboard')) return;
+  if (status === 401 || (status === 403 && /^Insufficient dashboard role\.?$/i.test(message.trim()))) {
+    setToken(null);
   }
 }
 
@@ -97,19 +123,24 @@ export class ApiError extends Error {
   status: number;
   body: unknown;
   constructor(status: number, message: string, body?: unknown) {
-    super(message);
+    super(status === 403 && /^Insufficient dashboard role\.?$/i.test(message.trim())
+      ? 'Please sign out and log in again to refresh your dashboard access. If this continues, contact your administrator.'
+      : message);
     this.status = status;
     this.body = body ?? null;
   }
 }
 
 export async function apiUpload<T = unknown>(path: string, file: File, field: string): Promise<T> {
+  const sentToken = token;
+  const generation = sessionGeneration;
   const body = new FormData();
   body.append(field, file);
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     body,
-    headers: token ? { authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+    headers: { 'X-Dashboard-Request': '1' },
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
@@ -117,6 +148,7 @@ export async function apiUpload<T = unknown>(path: string, file: File, field: st
       const parsed = await res.json();
       if (parsed && typeof parsed === 'object' && typeof parsed.message === 'string') message = parsed.message;
     } catch { /* non-JSON */ }
+    if (generation === sessionGeneration) handleStaffAuthFailure(res.status, message, sentToken);
     throw new ApiError(res.status, message);
   }
   return res.json();
@@ -128,11 +160,16 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
     path.startsWith('/api/churches') ||
     path.startsWith('/api/classes') ||
     path.startsWith('/api/safeguarding');
-  const activeToken = isPastorPath && pastorTok ? pastorTok : (token || pastorTok);
+  const staffRequest = window.location.pathname.startsWith('/app/dashboard') || path.includes('/auth/dashboard-');
+  const activeToken = !staffRequest && !path.endsWith('/auth/login') && (isPastorPath || !token) ? pastorTok : null;
+  const staffGeneration = sessionGeneration;
+  const sentStaffSession = token;
   const hasBody = options.body != null && options.body !== '';
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
+      'X-Dashboard-Request': '1',
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(activeToken ? { authorization: `Bearer ${activeToken}` } : {}),
       ...(options.headers || {}),
@@ -147,6 +184,7 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
         message = (body as { message: string }).message;
       }
     } catch { /* non-JSON */ }
+    if (staffGeneration === sessionGeneration && !activeToken) handleStaffAuthFailure(res.status, message, sentStaffSession);
     throw new ApiError(res.status, message, body);
   }
   if (res.status === 204) return undefined as T;
@@ -155,15 +193,15 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
   return JSON.parse(text) as T;
 }
 
-const DASHBOARD_ROLES = new Set(['APP_MANAGER', 'SUPER_ADMIN', 'SUPER_EDITOR', 'EDITOR']);
+const DASHBOARD_ROLES = new Set(['SUPER_ADMIN', 'SUPER_EDITOR', 'EDITOR']);
 
 export async function login(email: string, password: string) {
-  const res = await api<{ token: string; user: AdminUser }>('/api/auth/login', {
+  const res = await api<{ expiresAt: number; user: AdminUser }>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, surface: 'dashboard' }),
   });
   if (!DASHBOARD_ROLES.has(res.user.role)) throw new ApiError(403, 'Dashboard access required');
-  setToken(res.token, res.user);
+  setToken('cookie-session', res.user, res.expiresAt);
   return res;
 }
 
@@ -203,24 +241,9 @@ export async function resetPassword(resetToken: string, password: string) {
   });
 }
 
-const APPLICANT_TOKEN_KEY = 'askhub_church_applicant_token';
-
-export function getApplicantToken(): string | null {
-  try {
-    return globalThis.localStorage?.getItem(APPLICANT_TOKEN_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function setApplicantToken(value: string | null) {
-  try {
-    if (value) localStorage.setItem(APPLICANT_TOKEN_KEY, value);
-    else localStorage.removeItem(APPLICANT_TOKEN_KEY);
-  } catch {
-    /* ignore missing localStorage in tests */
-  }
-}
+let applicantToken: string | null = null;
+export function getApplicantToken(): string | null { return applicantToken; }
+export function setApplicantToken(value: string | null) { applicantToken = value; }
 
 /** Calls that belong to a verified church-application account, not the mobile app. */
 export async function applicantApi<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -252,7 +275,7 @@ export async function applicantApi<T>(path: string, options: RequestInit = {}): 
 export async function publicWrite<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Dashboard-Request': '1' },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -268,10 +291,21 @@ export async function publicWrite<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Unauthenticated GET for public pages (privacy / terms). */
-export async function publicApi<T>(path: string): Promise<T> {
+const publicReads = new Map<string, Promise<unknown>>();
+
+/** Share simultaneous public CMS reads; retain no stale copy after completion. */
+export function publicApi<T>(path: string): Promise<T> {
+  const existing = publicReads.get(path);
+  if (existing) return existing as Promise<T>;
+  const pending = fetchPublic<T>(path).finally(() => publicReads.delete(path));
+  publicReads.set(path, pending);
+  return pending;
+}
+
+async function fetchPublic<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { Accept: 'application/json' },
+    credentials: 'omit',
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;

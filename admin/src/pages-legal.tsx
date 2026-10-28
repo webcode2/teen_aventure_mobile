@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import { RichTextEditor, richTextHasContent } from './rich-text-editor';
 import { askConfirm, askPrompt } from './prompt-dialog';
+import { safePageHtml } from './safe-html';
 import { Alert, Button, Badge, Empty, Field, Spinner } from './ui';
 
 export type SitePage = {
@@ -390,7 +391,7 @@ export function LegalDocsPage() {
                   <div role="tabpanel" id="page-panel-preview" aria-labelledby="page-tab-preview" hidden={view !== 'preview'}>
                     <article className="mx-auto min-h-[26rem] max-w-3xl px-1 py-3 sm:px-6">
                       <h1 className="mb-6 mt-0 text-2xl font-bold tracking-tight text-navy">{form.title || 'Untitled page'}</h1>
-                      <div className={PREVIEW_BODY_CLASS} dangerouslySetInnerHTML={{ __html: form.html }} />
+                      <div className={PREVIEW_BODY_CLASS} dangerouslySetInnerHTML={{ __html: safePageHtml(form.html) }} />
                     </article>
                   </div>
                 </div>
@@ -413,7 +414,7 @@ export function LegalDocsPage() {
               <article className="mx-auto w-full max-w-3xl py-3 sm:px-4">
                 <div
                   className={PREVIEW_BODY_CLASS}
-                  dangerouslySetInnerHTML={{ __html: form.html }}
+                  dangerouslySetInnerHTML={{ __html: safePageHtml(form.html) }}
                 />
               </article>
             )}

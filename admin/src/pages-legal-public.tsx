@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { publicApi } from './api';
 import { PublicLayout } from './public-shell';
+import { safePageHtml } from './safe-html';
 import { Spinner } from './ui';
 
 type SitePage = {
@@ -105,7 +106,7 @@ function SitePageView({ slug }: { slug: string }) {
           {!loading && doc ? (
             <article
               className="rounded-card border border-border bg-surface px-5 py-6 text-sm leading-relaxed text-text-2 shadow-xs sm:px-8 sm:py-8 [&_a]:text-teal [&_a]:underline [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-extrabold [&_h2]:text-navy [&_h3]:mb-1.5 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-navy [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
-              dangerouslySetInnerHTML={{ __html: doc.html }}
+              dangerouslySetInnerHTML={{ __html: safePageHtml(doc.html) }}
             />
           ) : null}
         </div>

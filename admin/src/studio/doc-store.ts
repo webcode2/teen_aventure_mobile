@@ -77,6 +77,7 @@ export type StudioAction =
   | { type: 'replace'; doc: StudioDoc; draftId?: string | null; version?: number }
   | { type: 'setMeta'; title?: string; scripture?: string }
   | { type: 'addStep'; step: StudioStep }
+  | { type: 'addSteps'; steps: StudioStep[] }
   | { type: 'updateStep'; id: string; patch: Partial<StudioStep> }
   /** Live typing. Shares the open 1s undo snapshot instead of a new step per letter. */
   | { type: 'patchStep'; id: string; patch: Partial<StudioStep> }
@@ -143,6 +144,12 @@ export function studioReducer(state: StudioState, action: StudioAction): StudioS
       };
       return commit(state, next);
     }
+    case 'addSteps':
+      if (!action.steps.length) return state;
+      return commit({ ...state, historyAt: null, selectedStepId: action.steps[0]!.id }, {
+        ...state.present,
+        data: { steps: [...state.present.data.steps, ...action.steps] },
+      });
     case 'addStep':
       return commit(state, {
         ...state.present,

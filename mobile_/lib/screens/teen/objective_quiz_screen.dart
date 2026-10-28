@@ -6,6 +6,7 @@ import '../../models/game_controller.dart';
 import '../../models/puzzle.dart';
 import '../../theme.dart';
 import 'week_quest_flow.dart';
+import '../../services/api_client.dart';
 
 class ObjectiveQuizScreen extends StatefulWidget {
   const ObjectiveQuizScreen({
@@ -37,6 +38,8 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   String fillBlankText = '';
   int score = 0;
   bool isSubmitted = false;
+  /// Guards the final submit against double taps.
+  bool _finishing = false;
   final List<Object?> _answers = [];
   late final TextEditingController _fillBlankController;
 
@@ -130,6 +133,8 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   }
 
   Future<void> _showQuizResults() async {
+    if (_finishing) return;
+    _finishing = true;
     final answers = <Object>[
       for (var i = 0; i < _answers.length; i++)
         _answers[i] ?? (questions[i].isFillBlank ? '' : 0),
@@ -140,7 +145,10 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$e'), backgroundColor: AppColors.navy),
+            SnackBar(
+              content: Text(e is ApiException ? e.message : 'Could not save your quiz. Check your connection.'),
+              backgroundColor: AppColors.navy,
+            ),
           );
         }
       }

@@ -10,7 +10,7 @@ Use Google Cloud Run functions (2nd generation, request-based billing) for Fasti
 
 Sources: https://cloud.google.com/run/pricing and https://developers.cloudflare.com/workers/platform/pricing/ . Rates/eligibility can change. Billing must be enabled. Database hosting, R2 storage, email, network egress, Scheduler, Cloud Build, Artifact Registry and Secret Manager have separate pricing/free quotas. Min instances zero and instance caps reduce costs; they do not enforce a zero-cost budget. Configure billing alerts. Cold starts are expected.
 
-Default region is us-central1 for pricing predictability; choose a region near your PostgreSQL provider and users when latency/residency matters. No region or database is moved automatically.
+The saved compute region is europe-southwest1 (Madrid); Cloud Scheduler uses europe-west1 because Madrid is not a supported Scheduler location. The pricing example above uses us-central1; choose a region near your PostgreSQL provider and users when latency/residency matters. No region or database is moved automatically.
 
 ## Runtime design
 
@@ -68,7 +68,8 @@ From the repository root, set public deployment configuration:
 
 ```bash
 export GOOGLE_CLOUD_PROJECT=your-project-id
-export GOOGLE_CLOUD_REGION=us-central1
+export GOOGLE_CLOUD_REGION=europe-southwest1
+export GOOGLE_SCHEDULER_REGION=europe-west1
 export RUNTIME_SERVICE_ACCOUNT=teen-runtime@your-project-id.iam.gserviceaccount.com
 export SCHEDULER_SERVICE_ACCOUNT=teen-scheduler@your-project-id.iam.gserviceaccount.com
 export RUNTIME_ENV_FILE=/absolute/external/path/runtime.yaml

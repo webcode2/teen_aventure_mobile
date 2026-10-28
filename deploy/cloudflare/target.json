@@ -1,0 +1,5 @@
+{
+  "frontendHostname": "tba.elastrocloud.com",
+  "adminHostname": "admin.tba.elastrocloud.com",
+  "accessProtection": "staff-login"
+}

@@ -1,11 +1,35 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
-import { getToken } from './api';
+import { getToken, setToken, staffTokenExpiresAt, subscribeStaffSession, initializeStaffSession, staffSessionReady } from './api';
 import { legacyHashToPath } from './path-helpers';
+
+function useStaffSession() {
+  const ready = useSyncExternalStore(subscribeStaffSession, staffSessionReady, () => false);
+  useEffect(() => { void initializeStaffSession(); }, []);
+  const token = useSyncExternalStore(subscribeStaffSession, getToken, () => null);
+  const expiresAt = useSyncExternalStore(subscribeStaffSession, staffTokenExpiresAt, () => null);
+  useEffect(() => {
+    if (expiresAt == null) return;
+    const expire = () => {
+      if (expiresAt <= Date.now()) setToken(null);
+    };
+    const timer = window.setTimeout(expire, Math.min(Math.max(0, expiresAt - Date.now()), 2_147_483_647));
+    window.addEventListener('focus', expire);
+    document.addEventListener('visibilitychange', expire);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', expire);
+      document.removeEventListener('visibilitychange', expire);
+    };
+  }, [token, expiresAt]);
+  return { token, ready };
+}
 
 export function RequireStaff({ children }: { children: ReactNode }) {
   const location = useLocation();
-  if (!getToken()) {
+  const { token, ready } = useStaffSession();
+  if (!ready) return <p role="status">Checking your session…</p>;
+  if (!token) {
     const next = encodeURIComponent(`${location.pathname}${location.search}`);
     return <Navigate to={`/app/login?next=${next}`} replace />;
   }
@@ -13,7 +37,9 @@ export function RequireStaff({ children }: { children: ReactNode }) {
 }
 
 export function RequireGuest({ children }: { children: ReactNode }) {
-  if (getToken()) return <Navigate to="/app/dashboard" replace />;
+  const { token, ready } = useStaffSession();
+  if (!ready) return <p role="status">Checking your session…</p>;
+  if (token) return <Navigate to="/app/dashboard" replace />;
   return children;
 }
 

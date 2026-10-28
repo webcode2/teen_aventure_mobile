@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { StudioStep } from './doc-store';
 import { clueNumberById } from './clue-numbers';
+import { parsePastedWords, type PastedWord } from './paste-words';
 
 type Props = {
   steps: StudioStep[];
@@ -8,6 +9,7 @@ type Props = {
   onSelect: (id: string) => void;
   onChange: (id: string, patch: Partial<StudioStep>) => void;
   onAdd: () => void;
+  onImport: (words: PastedWord[]) => void;
   onRemove: (id: string) => void;
 };
 
@@ -21,8 +23,12 @@ export function WordListEditor({
   onSelect,
   onChange,
   onAdd,
+  onImport,
   onRemove,
 }: Props) {
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const parsed = useMemo(() => parsePastedWords(pasteText), [pasteText]);
   const numbers = useMemo(() => clueNumberById(steps), [steps]);
   const ordered = useMemo(
     () =>
@@ -44,16 +50,27 @@ export function WordListEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Words</h3>
-        <button
-          type="button"
-          className="cursor-pointer bg-transparent p-0 text-xs font-semibold text-teal"
-          onClick={onAdd}
-        >
-          Add word
-        </button>
+      <div className="studio-panel-heading">
+        <div><span className="studio-eyebrow">BUILD YOUR PUZZLE</span><h2>Words <span className="studio-count">{steps.length}</span></h2></div>
+        <button type="button" className="studio-add" onClick={onAdd}>+ Add word</button>
       </div>
+      <button type="button" className="studio-paste-toggle" aria-expanded={pasteOpen} onClick={() => setPasteOpen(!pasteOpen)}>Paste a word list <span aria-hidden="true">{pasteOpen ? '−' : '+'}</span></button>
+      {pasteOpen ? (
+        <div className="studio-import">
+          <label htmlFor="studio-paste">Words to add</label>
+          <p id="studio-paste-help">Separate words with commas or new lines. To include clues and scripture, use one row per word: answer | clue | reference. You can also paste three columns from a spreadsheet.</p>
+          <textarea id="studio-paste" rows={6} autoFocus value={pasteText} onChange={(e) => setPasteText(e.target.value)} aria-describedby="studio-paste-help" placeholder={'FAITH | Trust in God | Hebrews 11:1\nGRACE | God’s undeserved gift | Ephesians 2:8'} />
+          <div aria-live="polite">
+            {parsed.errors.map((error) => <p className="studio-import-error" key={error}>{error}</p>)}
+            {parsed.words.length > 0 ? <p>{parsed.words.length} words ready: {parsed.words.map((word) => word.answer).join(', ')}</p> : null}
+          </div>
+          <div className="studio-import-actions">
+            <button type="button" className="studio-add" disabled={!parsed.words.length || !!parsed.errors.length} onClick={() => { onImport(parsed.words); setPasteText(''); setPasteOpen(false); }}>Add {parsed.words.length || ''} words</button>
+            <button type="button" className="studio-text-button" onClick={() => setPasteOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : null}
+      {steps.length === 0 && !pasteOpen ? <div className="studio-empty"><span aria-hidden="true" className="studio-empty-symbol">Aa</span><h3>Start with a few words</h3><p>Add an answer, write a clue, and include its scripture reference. Have a list ready? Paste it above.</p><button type="button" className="studio-text-button" onClick={onAdd}>Add your first word →</button></div> : null}
 
       {steps.length > 0 ? (
         <div className="studio-word-bar">
@@ -67,6 +84,7 @@ export function WordListEditor({
                 key={step.id}
                 type="button"
                 className={`studio-word-chip ${step.id === selectedId ? 'is-active' : ''} ${!placed ? 'is-unplaced' : ''}`}
+                aria-pressed={step.id === selectedId}
                 onClick={() => onSelect(step.id)}
               >
                 {number != null ? <span className="tabular-nums text-[10px] opacity-70">{number}</span> : null}
@@ -80,7 +98,7 @@ export function WordListEditor({
       ) : null}
 
       {selected ? (
-        <div className="flex flex-col gap-3">
+        <div className="studio-word-details flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-navy">
               {selectedNumber != null ? `Word ${selectedNumber}` : 'Word'}
@@ -113,6 +131,7 @@ export function WordListEditor({
                   ? 'bg-navy text-white border-navy'
                   : 'bg-surface text-navy border-border hover:border-navy'
               }`}
+              aria-pressed={selected.direction === 'across'}
               onClick={() => onChange(selected.id, { direction: 'across' })}
             >
               Across →
@@ -124,6 +143,7 @@ export function WordListEditor({
                   ? 'bg-navy text-white border-navy'
                   : 'bg-surface text-navy border-border hover:border-navy'
               }`}
+              aria-pressed={selected.direction === 'down'}
               onClick={() => onChange(selected.id, { direction: 'down' })}
             >
               Down ↓
@@ -135,7 +155,7 @@ export function WordListEditor({
             <textarea
               rows={2}
               value={selected.clue}
-              placeholder="Clue"
+              placeholder="What will help explorers find this answer?"
               onChange={(e) => onChange(selected.id, { clue: e.target.value })}
               className="w-full rounded-lg border border-border bg-surface p-2.5 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-teal/30 font-sans leading-relaxed"
             />

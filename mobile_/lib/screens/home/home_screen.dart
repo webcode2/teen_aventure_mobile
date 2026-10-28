@@ -1,3 +1,6 @@
+import '../family/family_screen.dart';
+import '../shared/offline_videos_screen.dart';
+import '../../config/store_config.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,10 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/game_controller.dart';
 import '../../theme.dart';
-import '../../config/store_config.dart';
 import '../../family/family_account_rules.dart';
 import '../../models/auth_session.dart';
-import '../shared/offline_videos_screen.dart';
 import '../shared/widgets/adventure_header.dart';
 import '../shared/widgets/adventure_bottom_nav.dart';
 import '../shared/widgets/adventure_logo.dart';
@@ -18,7 +19,6 @@ import '../account/legal_screen.dart';
 import '../shared/report_issue_screen.dart';
 import '../teen/achievements_screen.dart';
 import '../teen/explorer_home_tab.dart';
-import '../family/family_screen.dart';
 import '../groups/groups_screen.dart';
 import '../groups/join_invite_screen.dart';
 import '../teacher/teacher_home_tab.dart';
@@ -31,7 +31,6 @@ import '../../services/engagement_service.dart';
 import '../../services/family_service.dart';
 import '../../services/push_hooks.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -42,6 +41,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   AdventureTab _tab = AdventureTab.home;
+
   /// Bumped after a successful join so the embedded Groups tab remounts fresh.
   int _groupsEpoch = 0;
   List<Nudge> _nudges = const [];
@@ -83,7 +83,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     _loadInbox();
     if (notice.type == 'nudge') _loadAskScore();
-    final text = [notice.title, notice.body].whereType<String>().where((t) => t.trim().isNotEmpty).join(' — ');
+    final text = [notice.title, notice.body]
+        .whereType<String>()
+        .where((t) => t.trim().isNotEmpty)
+        .join(' — ');
     if (text.isEmpty || _bellOpen) return;
     final actionLabel = (notice.actionLabel?.trim().isNotEmpty ?? false)
         ? notice.actionLabel!.trim()
@@ -145,7 +148,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       var deletions = const <Map<String, dynamic>>[];
       if (!mounted) return;
       try {
-        final memberships = await context.read<FamilyService>().getMemberships();
+        final memberships =
+            await context.read<FamilyService>().getMemberships();
         final items = memberships['items'];
         if (items is List) {
           deletions = [
@@ -274,7 +278,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     child: const Text(
                       'Join Group',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                     ),
                   ),
               ],
@@ -338,7 +343,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         isUnderAgeExplorer: session.isUnderAgeExplorer)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Your parent accepts group invites from their account.'),
+          content:
+              Text('Your parent accepts group invites from their account.'),
           backgroundColor: AppColors.navy,
         ),
       );
@@ -464,7 +470,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       onTap: () async {
                         Navigator.pop(context);
                         try {
-                          await context.read<AuthSession>().switchWatchingProfile();
+                          await context
+                              .read<AuthSession>()
+                              .switchWatchingProfile();
                         } catch (_) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -519,39 +527,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const ReportIssueScreen()),
-                      );
-                    },
-                  ),
-                  for (final resource in const [
-                    (LegalDoc.dataCollection, 'Data Collection', Icons.policy_outlined),
-                    (LegalDoc.about, 'About', Icons.info_outline),
-                    (LegalDoc.contact, 'Contact & Support', Icons.support_agent_outlined),
-                  ])
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      leading: Icon(resource.$3, color: AppColors.textMuted),
-                      title: Text(resource.$2, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => LegalScreen(doc: resource.$1)));
-                      },
-                    ),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: const Icon(Icons.privacy_tip_outlined,
-                        color: AppColors.textMuted),
-                    title: const Text(
-                      'Privacy Policy',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                const LegalScreen(doc: LegalDoc.privacy)),
                       );
                     },
                   ),

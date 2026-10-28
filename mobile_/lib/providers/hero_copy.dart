@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -11,6 +12,7 @@ import 'hero_image_store.dart';
 
 class WelcomeCopy {
   const WelcomeCopy({
+    this.enabled = true,
     required this.title,
     required this.subtitle,
     required this.quote,
@@ -22,6 +24,7 @@ class WelcomeCopy {
     quote: 'Your word is a lamp to my feet and a light to my path. — Psalm 119:105',
   );
 
+  final bool enabled;
   final String title;
   final String subtitle;
   final String quote;
@@ -34,6 +37,7 @@ class WelcomeCopy {
     final raw = data['welcome'];
     if (raw is! Map) return current;
     return WelcomeCopy(
+      enabled: raw['enabled'] is bool ? raw['enabled'] as bool : current.enabled,
       title: _field(raw, 'title', current.title),
       subtitle: _field(raw, 'subtitle', current.subtitle),
       quote: _field(raw, 'quote', current.quote),
@@ -41,6 +45,7 @@ class WelcomeCopy {
   }
 
   Map<String, dynamic> toJson() => {
+        'enabled': enabled,
         'title': title,
         'subtitle': subtitle,
         'quote': quote,
@@ -118,9 +123,9 @@ class HeroCopy {
     required this.greeting,
     required this.tagline,
     this.abiUrl = '',
-    this.zackUrl = '',
+    this.zachUrl = '',
     this.abiFile,
-    this.zackFile,
+    this.zachFile,
   });
 
   static const defaultGreeting = 'Hey, Explorer!';
@@ -129,9 +134,9 @@ class HeroCopy {
   final String greeting;
   final String tagline;
   final String abiUrl;
-  final String zackUrl;
+  final String zachUrl;
   final String? abiFile;
-  final String? zackFile;
+  final String? zachFile;
 
   static const fallback = HeroCopy(
     greeting: defaultGreeting,
@@ -142,19 +147,19 @@ class HeroCopy {
     String? greeting,
     String? tagline,
     String? abiUrl,
-    String? zackUrl,
+    String? zachUrl,
     String? abiFile,
-    String? zackFile,
+    String? zachFile,
     bool clearAbiFile = false,
-    bool clearZackFile = false,
+    bool clearZachFile = false,
   }) {
     return HeroCopy(
       greeting: greeting ?? this.greeting,
       tagline: tagline ?? this.tagline,
       abiUrl: abiUrl ?? this.abiUrl,
-      zackUrl: zackUrl ?? this.zackUrl,
+      zachUrl: zachUrl ?? this.zachUrl,
       abiFile: clearAbiFile ? null : (abiFile ?? this.abiFile),
-      zackFile: clearZackFile ? null : (zackFile ?? this.zackFile),
+      zachFile: clearZachFile ? null : (zachFile ?? this.zachFile),
     );
   }
 
@@ -167,7 +172,7 @@ class HeroCopy {
       greeting: _text(hero['greeting'], current.greeting),
       tagline: _text(hero['tagline'], current.tagline),
       abiUrl: _url(hero, 'abiUrl', current.abiUrl),
-      zackUrl: _url(hero, 'zackUrl', current.zackUrl),
+      zachUrl: _url({...hero, if (!hero.containsKey('zachUrl') && hero.containsKey('zackUrl')) 'zachUrl': hero['zackUrl']}, 'zachUrl', current.zachUrl),
     );
   }
 
@@ -175,20 +180,21 @@ class HeroCopy {
         'greeting': greeting,
         'tagline': tagline,
         'abiUrl': abiUrl,
-        'zackUrl': zackUrl,
+        'zachUrl': zachUrl,
         'abiFile': abiFile,
-        'zackFile': zackFile,
+        'zachFile': zachFile,
       };
 
   static HeroCopy fromJson(Object? raw) {
     if (raw is! Map) return fallback;
+    final canonical = {...raw, if (!raw.containsKey('zachUrl')) 'zachUrl': raw['zackUrl'], if (!raw.containsKey('zachFile')) 'zachFile': raw['zackFile']};
     return HeroCopy(
-      greeting: _text(raw['greeting'], defaultGreeting),
-      tagline: _text(raw['tagline'], defaultTagline),
-      abiUrl: raw['abiUrl'] is String ? (raw['abiUrl'] as String).trim() : '',
-      zackUrl: raw['zackUrl'] is String ? (raw['zackUrl'] as String).trim() : '',
-      abiFile: raw['abiFile'] is String ? raw['abiFile'] as String : null,
-      zackFile: raw['zackFile'] is String ? raw['zackFile'] as String : null,
+      greeting: _text(canonical['greeting'], defaultGreeting),
+      tagline: _text(canonical['tagline'], defaultTagline),
+      abiUrl: canonical['abiUrl'] is String ? (canonical['abiUrl'] as String).trim() : '',
+      zachUrl: canonical['zachUrl'] is String ? (canonical['zachUrl'] as String).trim() : '',
+      abiFile: canonical['abiFile'] is String ? canonical['abiFile'] as String : null,
+      zachFile: canonical['zachFile'] is String ? canonical['zachFile'] as String : null,
     );
   }
 
@@ -255,8 +261,9 @@ class HeroCopyCache {
   }
 }
 
-class HeroCopyController extends ChangeNotifier {
+class HeroCopyController extends ChangeNotifier with WidgetsBindingObserver {
   HeroCopyController(this._api, this._prefs) {
+    WidgetsBinding.instance.addObserver(this);
     _copy = HeroCopyCache.read(_prefs);
     _storedAnnouncement = HeroCopyCache.readAnnouncement(_prefs);
     _storedWelcome = HeroCopyCache.readWelcome(_prefs);
@@ -276,6 +283,20 @@ class HeroCopyController extends ChangeNotifier {
     final value = group is Map ? group[key] : null;
     return value is String && value.trim().isNotEmpty ? value : fallback;
   }
+  bool get maintenanceMode => _appText['system'] is Map && (_appText['system'] as Map)['maintenanceMode'] == true;
+  String get maintenanceMessage => text('system', 'maintenanceMessage', "We're making Teen Bible Adventures even better. Back shortly!");
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(refresh());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   Map<String, String> _questCopy = {};
   Map<String, String> get questCopy => Map.unmodifiable(_questCopy);
 
@@ -294,15 +315,30 @@ class HeroCopyController extends ChangeNotifier {
         filePath: _copy.abiFile,
       );
 
-  ImageProvider get zackImage => heroImageProvider(
-        asset: AdventureAssets.zack,
-        url: _absolute(_copy.zackUrl),
-        filePath: _copy.zackFile,
+  ImageProvider get zachImage => heroImageProvider(
+        asset: AdventureAssets.zach,
+        url: _absolute(_copy.zachUrl),
+        filePath: _copy.zachFile,
       );
 
-  Future<void> refresh() async {
+  Future<void>? _refreshing;
+
+  Future<void> refresh() {
+    final current = _refreshing;
+    if (current != null) return current;
+    final run = _refreshFromDashboard();
+    _refreshing = run;
+    return run.whenComplete(() {
+      if (identical(_refreshing, run)) _refreshing = null;
+    });
+  }
+
+  Future<void> _refreshFromDashboard() async {
     try {
-      final response = await _api.dio.get('/api/content/mobile');
+      final wasMaintenance = maintenanceMode;
+      final previousMessage = maintenanceMessage;
+      // Dashboard maintenance must not wait out the published-content cache.
+      final response = await _api.dio.get('/api/content/mobile', options: Options(extra: const {'skipCache': true}));
       final previous = _copy;
       var questChanged = false;
       if (response.data is Map) {
@@ -310,6 +346,7 @@ class HeroCopyController extends ChangeNotifier {
         questChanged = jsonEncode(next) != jsonEncode(_appText);
         _appText = next;
         await _prefs.setString('cms_app_text', jsonEncode(next));
+        questChanged = questChanged || wasMaintenance != maintenanceMode || previousMessage != maintenanceMessage;
       }
       final payload = response.data;
       if (payload is Map && payload['quest'] is Map) {
@@ -322,19 +359,20 @@ class HeroCopyController extends ChangeNotifier {
       final previousAnnouncement = announcement;
       var copy = HeroCopy.resolve(response.data, previous).copyWith(
         abiFile: previous.abiFile,
-        zackFile: previous.zackFile,
+        zachFile: previous.zachFile,
       );
       _copy = copy;
       final previousWelcome = welcome;
       _storedAnnouncement = HomeAnnouncement.resolve(response.data, previousAnnouncement);
       _storedWelcome = WelcomeCopy.resolve(response.data, previousWelcome);
       final textChanged = copy.greeting != previous.greeting || copy.tagline != previous.tagline;
-      final imagesChanged = copy.abiUrl != previous.abiUrl || copy.zackUrl != previous.zackUrl;
+      final imagesChanged = copy.abiUrl != previous.abiUrl || copy.zachUrl != previous.zachUrl;
       final announcementChanged = announcement.enabled != previousAnnouncement.enabled ||
           announcement.badge != previousAnnouncement.badge ||
           announcement.text != previousAnnouncement.text ||
           announcement.actionLabel != previousAnnouncement.actionLabel;
-      final welcomeChanged = welcome.title != previousWelcome.title ||
+      final welcomeChanged = welcome.enabled != previousWelcome.enabled ||
+          welcome.title != previousWelcome.title ||
           welcome.subtitle != previousWelcome.subtitle ||
           welcome.quote != previousWelcome.quote;
       if (questChanged || textChanged ||
@@ -344,7 +382,7 @@ class HeroCopyController extends ChangeNotifier {
         notifyListeners();
       }
       copy = await _syncImage(copy, 'abi', previous.abiUrl);
-      copy = await _syncImage(copy, 'zack', previous.zackUrl);
+      copy = await _syncImage(copy, 'zach', previous.zachUrl);
       _copy = copy;
       await HeroCopyCache.write(
         _prefs,
@@ -359,12 +397,12 @@ class HeroCopyController extends ChangeNotifier {
 
   Future<HeroCopy> _syncImage(HeroCopy copy, String which, String previousUrl) async {
     final isAbi = which == 'abi';
-    final url = isAbi ? copy.abiUrl : copy.zackUrl;
-    final file = isAbi ? copy.abiFile : copy.zackFile;
+    final url = isAbi ? copy.abiUrl : copy.zachUrl;
+    final file = isAbi ? copy.abiFile : copy.zachFile;
     if (url.isEmpty) {
       if (file == null) return copy;
       await deleteHeroImage(file);
-      final cleared = isAbi ? copy.copyWith(clearAbiFile: true) : copy.copyWith(clearZackFile: true);
+      final cleared = isAbi ? copy.copyWith(clearAbiFile: true) : copy.copyWith(clearZachFile: true);
       _copy = cleared;
       notifyListeners();
       return cleared;
@@ -379,12 +417,12 @@ class HeroCopyController extends ChangeNotifier {
       if (bytes == null || bytes.isEmpty) return copy;
       final saved = await saveHeroImage(which, bytes);
       if (saved != null && file != null && file != saved) await deleteHeroImage(file);
-      final updated = isAbi ? copy.copyWith(abiFile: saved ?? file) : copy.copyWith(zackFile: saved ?? file);
+      final updated = isAbi ? copy.copyWith(abiFile: saved ?? file) : copy.copyWith(zachFile: saved ?? file);
       _copy = updated;
       notifyListeners();
       return updated;
     } catch (_) {
-      final reverted = isAbi ? copy.copyWith(abiUrl: previousUrl) : copy.copyWith(zackUrl: previousUrl);
+      final reverted = isAbi ? copy.copyWith(abiUrl: previousUrl) : copy.copyWith(zachUrl: previousUrl);
       _copy = reverted;
       return reverted;
     }

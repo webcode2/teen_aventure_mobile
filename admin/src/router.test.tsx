@@ -146,7 +146,7 @@ describe('AppRoutes', () => {
   it('renders about page at /about', async () => {
     renderAt('/about');
     expect(await screen.findByRole('heading', { name: /Discipleship Built for the Next Generation/i })).toBeTruthy();
-    expect(screen.getByText('Zack')).toBeTruthy();
+    expect(screen.getByText('Zach')).toBeTruthy();
     expect(screen.getByText('Abi')).toBeTruthy();
     expect(screen.getByText(/The Four Discipleship Pillars/i)).toBeTruthy();
   });
