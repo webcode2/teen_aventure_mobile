@@ -4,6 +4,7 @@ import '../services/content_service.dart';
 import '../services/video_download_service.dart';
 import '../models/api_models.dart';
 import '../models/video_lesson.dart';
+import '../services/error_text.dart';
 
 /// Provider for Teen Quest content from the backend.
 class VideoProvider extends ChangeNotifier {
@@ -61,7 +62,7 @@ class VideoProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = errorText(e);
       _isLoading = false;
       notifyListeners();
     }

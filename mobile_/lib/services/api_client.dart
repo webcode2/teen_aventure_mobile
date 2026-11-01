@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'error_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -280,65 +281,18 @@ class ApiException implements Exception {
   });
 
   factory ApiException.fromDioError(DioException error) {
-    if (error.response != null) {
-      final data = error.response!.data;
-      if (data is Map) {
-        return ApiException(
-          statusCode: error.response!.statusCode,
-          message: _friendlyApiMessage(data['message']),
-          code: data['code'] is String ? data['code'] as String : null,
-          errors: data['errors'] is Map<String, dynamic>
-              ? data['errors'] as Map<String, dynamic>
-              : null,
-        );
-      }
-      return ApiException(
-        statusCode: error.response!.statusCode,
-        message: _friendlyApiMessage(data),
-      );
-    }
+    final response = error.response;
+    if (response == null) return ApiException(message: networkErrorText(error));
+    final data = response.data;
+    final body = data is Map ? data : const {};
     return ApiException(
-      statusCode: null,
-      message: _friendlyNetworkMessage(error),
+      statusCode: response.statusCode,
+      message: httpErrorText(response.statusCode, body['message']),
+      code: body['code'] is String ? body['code'] as String : null,
+      errors: body['errors'] is Map<String, dynamic>
+          ? body['errors'] as Map<String, dynamic>
+          : null,
     );
-  }
-
-  /// Turns Zod dumps and other raw payloads into a short line for the UI.
-  static String _friendlyApiMessage(Object? raw) {
-    if (raw == null) return 'Something went wrong. Please try again.';
-    if (raw is List && raw.isNotEmpty) {
-      final first = raw.first;
-      if (first is Map && first['message'] is String) {
-        return (first['message'] as String).trim();
-      }
-    }
-    final text = raw.toString().trim();
-    if (text.isEmpty) return 'Something went wrong. Please try again.';
-    if (text.startsWith('[') || text.startsWith('{')) {
-      try {
-        final decoded = raw is String ? raw : text;
-        // Zod issue dumps include "message":"…" — pull the first one.
-        final match = RegExp(r'"message"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"').firstMatch(decoded);
-        if (match != null) {
-          return match.group(1)!.replaceAll(r'\"', '"').trim();
-        }
-      } catch (_) {}
-      return 'Please check your details and try again.';
-    }
-    return text;
-  }
-
-  static String _friendlyNetworkMessage(DioException error) {
-    final raw = error.message ?? '';
-    final looksBlocked = raw.contains('XMLHttpRequest') ||
-        raw.toLowerCase().contains('cors') ||
-        error.type == DioExceptionType.connectionError ||
-        error.type == DioExceptionType.connectionTimeout;
-    if (looksBlocked) {
-      return 'Could not reach the server. Check your connection and try again.';
-    }
-    if (raw.trim().isEmpty) return 'Network error';
-    return raw;
   }
 
   @override

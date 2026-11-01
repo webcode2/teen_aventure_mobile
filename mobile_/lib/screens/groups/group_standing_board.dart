@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
-import '../../services/api_client.dart';
 import '../../services/content_service.dart';
 import '../../services/engagement_service.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 /// Rankings for a single group, shown inside group detail only.
 class GroupStandingBoard extends StatefulWidget {
@@ -120,7 +120,7 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
         }
       }
     } catch (e) {
-      _error = e is ApiException ? e.message : e.toString();
+      _error = errorText(e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -141,7 +141,7 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -165,7 +165,7 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }

@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/api_models.dart';
 import '../models/week_quest_progress.dart';
-import '../services/api_client.dart';
 import '../services/content_service.dart';
+import '../services/error_text.dart';
 
 /// The explorer's self-paced week from the backend, or the last copy saved on
 /// this device. Finished activities are posted to the server and retried so
@@ -250,7 +250,7 @@ class CurrentQuestProvider extends ChangeNotifier {
       );
       _error = null;
     } catch (e) {
-      _error = e is ApiException ? e.message : e.toString();
+      _error = errorText(e);
     } finally {
       _switching = false;
       notifyListeners();
@@ -315,7 +315,7 @@ class CurrentQuestProvider extends ChangeNotifier {
         await _writeCache(_anchor!);
       }
     } catch (e) {
-      _error = e is ApiException ? e.message : e.toString();
+      _error = errorText(e);
       _offline = !await _online();
       // Keep the last device copy so returning users do not restart the week.
       if (_current == null && _identity != null) {
@@ -389,7 +389,7 @@ class CurrentQuestProvider extends ChangeNotifier {
         _anchor = _current;
         await _writeCache(_current!);
       }
-      _error = e is ApiException ? e.message : e.toString();
+      _error = errorText(e);
       notifyListeners();
       return 0;
     }

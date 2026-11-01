@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../providers/cms_text.dart';
-import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/service_locator.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 /// Lists FCM-registered devices for the signed-in account and lets the user remove them.
 class DevicesScreen extends StatefulWidget {
@@ -46,7 +46,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is ApiException ? e.message : 'Could not load devices';
+        _error = errorText(e, fallback: 'Could not load devices');
       });
     }
   }
@@ -90,7 +90,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       if (!mounted) return;
       setState(() => _removingId = null);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : 'Could not remove device')),
+        SnackBar(content: Text(errorText(e, fallback: 'Could not remove device'))),
       );
     }
   }

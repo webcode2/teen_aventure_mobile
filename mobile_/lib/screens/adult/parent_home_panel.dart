@@ -12,6 +12,7 @@ import '../../theme.dart';
 import '../../family/family_account_rules.dart';
 import '../groups/groups_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
+import '../../services/error_text.dart';
 
 const _avatarPalette = [
   AppColors.navy,
@@ -82,7 +83,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         _error = e.message;
       }
     } catch (e) {
-      _error = e.toString();
+      _error = errorText(e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -153,7 +154,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     }
   }
 
@@ -203,7 +204,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     } finally {
       pin.dispose();
     }
@@ -282,7 +283,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       await _load();
                     } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
                     }
                   },
                   child: const Text('Enable independent login'),
@@ -313,7 +314,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                       if (ctx.mounted) Navigator.pop(ctx);
                       await _load();
                     } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
                     }
                   },
                   child: const Text('Transition to adult account'),
@@ -339,7 +340,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     }
   }
 
@@ -430,7 +431,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 await context.read<FamilyService>().cancelDeletion();
                 await _load();
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
               }
             },
           ),

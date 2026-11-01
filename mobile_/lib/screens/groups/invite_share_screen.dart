@@ -13,6 +13,7 @@ import '../../join_payload.dart';
 import '../../services/api_client.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 class InviteShareScreen extends StatefulWidget {
   const InviteShareScreen({
@@ -86,7 +87,7 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

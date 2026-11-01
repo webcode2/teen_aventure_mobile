@@ -8,6 +8,7 @@ import '../../theme.dart';
 import 'widgets/curriculum_week_tile.dart';
 import 'week_lesson_detail_screen.dart';
 import 'what_to_learn_screen.dart';
+import '../../services/error_text.dart';
 
 class BibleCatalogScreen extends StatefulWidget {
   const BibleCatalogScreen({super.key, this.embedded = false});
@@ -59,7 +60,7 @@ class _BibleCatalogScreenState extends State<BibleCatalogScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = errorText(e);
         _loading = false;
       });
     }

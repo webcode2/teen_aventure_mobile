@@ -6,7 +6,7 @@ import '../../models/game_controller.dart';
 import '../../models/puzzle.dart';
 import '../../theme.dart';
 import 'week_quest_flow.dart';
-import '../../services/api_client.dart';
+import '../../services/error_text.dart';
 
 class ObjectiveQuizScreen extends StatefulWidget {
   const ObjectiveQuizScreen({
@@ -146,7 +146,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(e is ApiException ? e.message : 'Could not save your quiz. Check your connection.'),
+              content: Text(errorText(e, fallback: 'Could not save your quiz. Check your connection.')),
               backgroundColor: AppColors.navy,
             ),
           );

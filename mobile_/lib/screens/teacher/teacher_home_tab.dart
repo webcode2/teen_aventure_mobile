@@ -10,6 +10,8 @@ import '../groups/group_standing_board.dart';
 import '../groups/teacher_class_members.dart';
 import '../shared/widgets/adventure_list_card.dart';
 import '../shared/widgets/circle_stats_card.dart';
+import '../../services/api_client.dart';
+import '../../services/error_text.dart';
 
 /// Classes tab for church TEACHER — only assigned classes; members + points + cheers.
 class TeacherHomeTab extends StatefulWidget {
@@ -35,7 +37,7 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
     try {
       await context.read<AuthSession>().refreshProfile();
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = errorText(e));
     }
   }
 
@@ -181,7 +183,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
       final weeksRes = await ServiceLocator.instance.apiClient.dio.get('/api/teen-quest/weeks');
       final weeks = (weeksRes.data as List).cast<Map<String, dynamic>>();
       if (weeks.isEmpty) {
-        throw Exception('No published quest weeks yet.');
+        throw ApiException(message: 'No published quest weeks yet.');
       }
       final activeRes = await ServiceLocator.instance.apiClient.dio
           .get('/api/teen-quest/class/${_cls.id}/active');
@@ -255,7 +257,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
         ),
       );
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _quizBusy = false);
     }

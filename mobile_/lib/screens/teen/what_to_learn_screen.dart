@@ -13,6 +13,7 @@ import 'widgets/week_video_progress_card.dart';
 import 'bible_catalog_screen.dart';
 import 'video_learning_screen.dart';
 import 'week_lesson_detail_screen.dart';
+import '../../services/error_text.dart';
 
 class WhatToLearnScreen extends StatefulWidget {
   const WhatToLearnScreen({super.key, this.embedded = false});
@@ -49,7 +50,7 @@ class _WhatToLearnScreenState extends State<WhatToLearnScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '$e';
+        _error = errorText(e);
         _loading = false;
       });
     }

@@ -7,6 +7,7 @@ import '../../platform/invite_qr_scanner.dart';
 import '../../services/api_client.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 class JoinInviteScreen extends StatefulWidget {
   const JoinInviteScreen({super.key, this.showScanner = true});
@@ -195,7 +196,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = '$e');
+        setState(() => _error = errorText(e));
         _handlingScan = false;
         await _safeStartCamera();
       }
@@ -246,7 +247,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
         setState(() => _error = e.message);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -5,6 +5,7 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../theme.dart';
 import 'auth_chrome.dart';
+import '../../services/error_text.dart';
 
 /// Switch into a family teen who has independent login.
 /// Signs them in with email/password and ends the parent session on this device.
@@ -85,7 +86,7 @@ class _ChildTeenLoginScreenState extends State<ChildTeenLoginScreen> {
     } on ApiException catch (e) {
       setState(() => _formError = e.message);
     } catch (e) {
-      setState(() => _formError = e.toString());
+      setState(() => _formError = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

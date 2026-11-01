@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../shared/widgets/double_back_exit.dart';
 import 'auth_chrome.dart';
 import 'register_adult_screen.dart';
+import '../../services/error_text.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.onAuthenticated, this.auth});
@@ -62,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       setState(() => _formError = e.message);
     } catch (e) {
-      setState(() => _formError = e.toString());
+      setState(() => _formError = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

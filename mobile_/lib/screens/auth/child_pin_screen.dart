@@ -6,6 +6,7 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../theme.dart';
 import 'auth_chrome.dart';
+import '../../services/error_text.dart';
 
 class ChildPinScreen extends StatefulWidget {
   const ChildPinScreen({
@@ -96,7 +97,7 @@ class _ChildPinScreenState extends State<ChildPinScreen> {
     } on ApiException catch (e) {
       setState(() => _formError = e.message);
     } catch (e) {
-      setState(() => _formError = e.toString());
+      setState(() => _formError = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

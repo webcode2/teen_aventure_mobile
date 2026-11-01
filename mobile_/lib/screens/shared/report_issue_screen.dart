@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 /// Shared report form used across the app (groups, profile, etc.).
 class ReportIssueScreen extends StatefulWidget {
@@ -107,7 +108,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       if (!mounted) return;
       setState(() {
         _sending = false;
-        _error = '$e';
+        _error = errorText(e);
       });
     }
   }

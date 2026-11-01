@@ -17,6 +17,7 @@ import '../shared/widgets/adventure_list_card.dart';
 import '../shared/widgets/circle_stats_card.dart';
 import 'group_standing_board.dart';
 import 'teacher_class_members.dart';
+import '../../services/error_text.dart';
 
 bool _isGroupAdmin(Map<String, dynamic>? item) {
   if (item == null) return false;
@@ -112,7 +113,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -229,7 +230,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.navy));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy));
       }
     }
   }
@@ -254,7 +255,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.navy));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy));
       }
     }
   }
@@ -288,7 +289,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       return true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.navy));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy));
       }
       return false;
     }
@@ -452,7 +453,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: AppColors.navy),
+          SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy),
         );
       }
     }

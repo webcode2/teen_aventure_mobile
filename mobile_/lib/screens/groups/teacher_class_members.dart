@@ -8,6 +8,7 @@ import '../../services/engagement_service.dart';
 import '../../services/service_locator.dart';
 import '../../theme.dart';
 import '../../utils/classroom_name.dart';
+import '../../services/error_text.dart';
 
 /// Roster for a church-assigned teacher: teen members, points, cheer all or selected.
 class TeacherClassMembers extends StatefulWidget {
@@ -77,7 +78,7 @@ class _TeacherClassMembersState extends State<TeacherClassMembers> {
     } on DioException catch (e) {
       if (mounted) setState(() => _error = ApiException.fromDioError(e).message);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -160,7 +161,7 @@ class _TeacherClassMembersState extends State<TeacherClassMembers> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -214,7 +215,7 @@ class _TeacherClassMembersState extends State<TeacherClassMembers> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     } finally {
       if (mounted) setState(() => _busyEnrollmentId = null);
     }

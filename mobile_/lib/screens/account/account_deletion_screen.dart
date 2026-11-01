@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/api_client.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
+import '../../services/error_text.dart';
 
 class AccountDeletionScreen extends StatefulWidget {
   const AccountDeletionScreen({super.key});
@@ -58,7 +59,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
       setState(() => _error = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -78,7 +79,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
       setState(() => _error = e.message);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
