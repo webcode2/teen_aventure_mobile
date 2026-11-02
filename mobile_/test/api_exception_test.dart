@@ -40,6 +40,14 @@ void main() {
     expect(ApiException.fromDioError(_response({'message': 'Invalid credentials'}, status: 401)).message, 'Invalid credentials');
   });
 
+  test('a 429 from the hosting layer does not blame the user', () {
+    expect(ApiException.fromDioError(_response('Rate exceeded.', status: 429)).message, serverErrorText);
+    expect(
+      ApiException.fromDioError(_response({'message': 'Too many attempts. Try again in 15 minutes.'}, status: 429)).message,
+      'Too many attempts. Try again in 15 minutes.',
+    );
+  });
+
   test('timeouts and plain exceptions get safe text', () {
     final timeout = DioException(
       requestOptions: RequestOptions(path: '/x'),

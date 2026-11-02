@@ -37,7 +37,8 @@ String httpErrorText(int? status, Object? serverMessage) {
     408 => timeoutErrorText,
     409 => 'That was changed somewhere else. Refresh and try again.',
     413 => 'That file is too large.',
-    429 => 'Too many attempts. Please wait a moment and try again.',
+    // Our API always words its own 429s, so a bare one is the hosting layer at capacity.
+    429 => serverErrorText,
     _ => genericErrorText,
   };
 }
