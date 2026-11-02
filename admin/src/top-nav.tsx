@@ -66,8 +66,8 @@ export function TopNav({
   const role = user?.role?.replace(/_/g, ' ') || 'Manager';
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-border bg-surface/90 backdrop-blur-md px-6 py-3.5 transition-all">
-      <div className="flex items-center gap-3 min-w-0">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-2 sm:gap-4 border-b border-border bg-surface/90 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3.5 transition-all">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {onToggleSidebar ? (
           <button
             type="button"
@@ -80,13 +80,13 @@ export function TopNav({
             <MenuIcon />
           </button>
         ) : null}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Teen Bible Adventures</p>
-          <h2 className="text-lg font-bold text-navy tracking-tight truncate leading-tight">{TAB_TITLES[tab]}</h2>
+        <div className="min-w-0">
+          <p className="hidden md:block truncate text-[10px] font-bold uppercase tracking-wider text-muted">Teen Bible Adventures</p>
+          <h2 className="text-base sm:text-lg font-bold text-navy tracking-tight truncate leading-tight">{TAB_TITLES[tab]}</h2>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <button
           type="button"
           className="relative p-2 rounded-xl text-muted hover:text-navy hover:bg-surface-2 transition-colors cursor-pointer border border-border/50"
@@ -116,18 +116,21 @@ export function TopNav({
           ) : null}
         </button>
 
-        <Button
-          type="button"
-          variant="soft"
-          size="sm"
-          className="hidden sm:inline-flex"
-          onClick={() => navigate('/app/dashboard/quests/new')}
-        >
-          + New quest
-        </Button>
+        {/* Button's own inline-flex beats a `hidden` class, so the wrapper does the hiding. */}
+        <div className="hidden md:block">
+          <Button
+            type="button"
+            variant="soft"
+            size="sm"
+            className="whitespace-nowrap"
+            onClick={() => navigate('/app/dashboard/quests/new')}
+          >
+            + New quest
+          </Button>
+        </div>
 
-        <div className="flex items-center gap-2.5 pl-2 border-l border-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-gold ring-2 ring-white shadow-xs" aria-hidden>
+        <div className="flex items-center gap-1.5 sm:gap-2.5 pl-1.5 sm:pl-2 border-l border-border">
+          <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-gold ring-2 ring-white shadow-xs" aria-hidden>
             {initials(user?.name, user?.email)}
           </div>
           <div className="hidden lg:flex flex-col text-left">
@@ -138,7 +141,7 @@ export function TopNav({
             type="button"
             variant="secondary"
             size="sm"
-            className="px-2.5 py-1"
+            className="px-2.5 py-1 whitespace-nowrap"
             disabled={logoutBusy}
             onClick={async () => {
               setLogoutBusy(true);
@@ -150,7 +153,7 @@ export function TopNav({
           >
             {logoutBusy ? 'Signing out…' : 'Sign out'}
           </Button>
-          {logoutError ? <span role="alert" className="text-xs text-error">{logoutError}</span> : null}
+          {logoutError ? <span role="alert" className="absolute right-3 top-full mt-1 rounded-lg bg-surface px-2 py-1 text-xs text-error shadow-xs">{logoutError}</span> : null}
         </div>
       </div>
     </header>
