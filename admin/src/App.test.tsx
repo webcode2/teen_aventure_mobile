@@ -18,6 +18,9 @@ vi.mock('./api', async () => {
   };
 });
 
+// jsdom has no Element.scrollTo; the CMS preview calls it.
+Element.prototype.scrollTo = vi.fn();
+
 const mockedApi = vi.mocked(api);
 const mockedLogin = vi.mocked((await import('./api')).login);
 const mockedPastorLogin = vi.mocked((await import('./api')).pastorLogin);
@@ -73,6 +76,9 @@ beforeEach(() => {
         },
       };
     }
+    if (path.startsWith('/api/admin/activity-trend')) {
+      return { buckets: [{ start: '2026-10-12T00:00:00Z', count: 5 }] };
+    }
     if (path.startsWith('/api/admin/people')) {
       return { users: [], children: [], families: [] };
     }
@@ -103,7 +109,7 @@ describe('Teen Bible Adventures Admin', () => {
     setToken('test-token');
     renderApp('/app/dashboard');
     expect(await screen.findByText('Community snapshot')).toBeTruthy();
-    expect(screen.getByText('Active users')).toBeTruthy();
+    expect(screen.getByText('Active accounts')).toBeTruthy();
     expect(screen.getByText('Bar Graph')).toBeTruthy();
     expect(screen.getByText('Line Graph')).toBeTruthy();
     expect(screen.getByText('Kids on parent account')).toBeTruthy();
@@ -163,8 +169,8 @@ describe('Teen Bible Adventures Admin', () => {
     setToken('test-token');
     renderApp('/app/dashboard');
     await userEvent.click(screen.getByRole('button', { name: 'Quest' }));
-    expect(await screen.findByText('Objective question builder')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add question' })).toBeTruthy();
+    await userEvent.click(await screen.findByRole('button', { name: '+ New quest week' }));
+    expect(await screen.findByRole('button', { name: 'Add multiple-choice question' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add scramble' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Auto-scramble' })).toBeNull();
     expect(screen.queryByPlaceholderText('objectiveQuiz JSON')).toBeNull();
@@ -211,8 +217,8 @@ describe('Teen Bible Adventures Admin', () => {
     renderApp('/app/dashboard');
     await userEvent.click(screen.getByRole('button', { name: 'Puzzle Studio' }));
     expect(await screen.findByRole('button', { name: /\+ Add word/i })).toBeTruthy();
-    expect(screen.getByText('Checklist')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Drafts & published/i })).toBeTruthy();
+    expect(screen.getByText('Your crossword')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Library' })).toBeTruthy();
     expect(screen.getByLabelText('Puzzle title')).toBeTruthy();
   });
 
@@ -456,7 +462,7 @@ describe('Teen Bible Adventures Admin', () => {
     expect(await screen.findByText('Kingdom Explorers')).toBeTruthy();
 
     // 2. Open Roster & Approve Enrollment
-    const rosterButtons = screen.getAllByRole('button', { name: /👥 Roster/i });
+    const rosterButtons = screen.getAllByRole('button', { name: 'Roster' });
     await userEvent.click(rosterButtons[0]);
     expect(await screen.findByText('David J.')).toBeTruthy();
     expect(screen.getByText('PENDING')).toBeTruthy();
@@ -467,12 +473,13 @@ describe('Teen Bible Adventures Admin', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
 
     // 3. Open Streaks & Activity
-    const streakButtons = screen.getAllByRole('button', { name: /🔥 Streaks/i });
+    const streakButtons = screen.getAllByRole('button', { name: 'Streaks' });
     await userEvent.click(streakButtons[0]);
     expect(await screen.findByText(/🔥 5 Days/i)).toBeTruthy();
     expect(screen.getByText(/WEEK_1_QUIZ/i)).toBeTruthy();
     expect(screen.getByText('+50 pts')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Close Activity' }));
+    await userEvent.click(screen.getAllByRole('button', { name: 'Close' })[0]);
+    expect(screen.queryByText(/Discipleship Activity/)).toBeNull();
 
     // Church-wide freeform broadcasts removed — only approved student nudges remain.
     expect(screen.queryByRole('button', { name: /📢 Notify/i })).toBeNull();
@@ -624,7 +631,8 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.getAllByAltText('Zach').length).toBeGreaterThan(0);
     await userEvent.clear(greeting);
     await userEvent.type(greeting, 'Hello, team!');
-    expect(screen.getByText('Hello, team!')).toBeTruthy();
+    // The field and the live preview.
+    expect(screen.getAllByText('Hello, team!')).toHaveLength(2);
   });
 });
 
