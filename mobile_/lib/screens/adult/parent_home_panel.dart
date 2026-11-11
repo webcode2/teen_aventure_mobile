@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -158,45 +160,246 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
   }
 
-  Future<void> _setPin(Map<String, dynamic> child) async {
-    final pin = TextEditingController();
+  Future<void> _editFamily() async {
+    final service = context.read<FamilyService>();
+    var name = _family?['name'] as String? ?? '';
+    var description = _family?['description'] as String? ?? '';
+    final form = GlobalKey<FormState>();
+    var busy = false;
+    String? error;
     final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) => PopScope(
+          canPop: !busy,
+          child: AlertDialog(
+            title: const Text('Edit family'),
+            scrollable: true,
+            content: Form(
+              key: form,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    initialValue: name,
+                    enabled: !busy,
+                    maxLength: 100,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: _fieldDecoration('Family name'),
+                    onChanged: (value) => name = value,
+                    validator: (value) => value?.trim().isNotEmpty == true
+                        ? null
+                        : 'Enter a family name',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: description,
+                    enabled: !busy,
+                    maxLength: 500,
+                    minLines: 2,
+                    maxLines: 4,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: _fieldDecoration('Description (optional)'),
+                    onChanged: (value) => description = value,
+                  ),
+                  if (error != null)
+                    Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: busy ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: busy ? null : () async {
+                  if (form.currentState?.validate() != true) return;
+                  update(() {
+                    busy = true;
+                    error = null;
+                  });
+                  try {
+                    final details = description.trim();
+                    await service.updateMyFamily(
+                      name: name.trim(),
+                      description: details.isEmpty ? null : details,
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx, true);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      update(() {
+                        busy = false;
+                        error = errorText(e);
+                      });
+                    }
+                  }
+                },
+                child: Text(busy ? 'Saving…' : 'Save'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      setState(() {
+        _family?['name'] = name.trim();
+        _family?['description'] = description.trim();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Family details saved.')),
+      );
+    }
+  }
+
+  Future<void> _addGuardian() async {
+    final service = context.read<FamilyService>();
+    final form = GlobalKey<FormState>();
+    var email = '';
+    var busy = false;
+    String? error;
+    final added = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) => PopScope(
+          canPop: !busy,
+          child: AlertDialog(
+            title: const Text('Add guardian'),
+            scrollable: true,
+            content: Form(
+              key: form,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Use the email of an existing adult account. Adding them gives them guardian access to this family.'),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    enabled: !busy,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    decoration: _fieldDecoration('Adult email'),
+                    onChanged: (value) => email = value,
+                    validator: (value) => validateEmail(value ?? ''),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: busy ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: busy ? null : () async {
+                  if (form.currentState?.validate() != true) return;
+                  update(() {
+                    busy = true;
+                    error = null;
+                  });
+                  try {
+                    await service.addGuardian(email);
+                    if (ctx.mounted) Navigator.pop(ctx, true);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      update(() {
+                        busy = false;
+                        error = errorText(e);
+                      });
+                    }
+                  }
+                },
+                child: Text(busy ? 'Adding…' : 'Add guardian'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (added == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Guardian added.')),
+      );
+      await _load();
+    }
+  }
+
+  Future<void> _setPin(Map<String, dynamic> child) async {
+    final form = GlobalKey<FormState>();
+    var pin = '';
+    var generatedPin = '';
+    var generation = 0;
+    var visible = false;
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) => AlertDialog(
           title: Text('Set PIN for ${child['name']}'),
-          content: TextField(
-            controller: pin,
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            obscureText: true,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: '4-digit PIN',
-              counterText: '',
+          scrollable: true,
+          content: Form(
+            key: form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  key: ValueKey(generation),
+                  initialValue: generatedPin,
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                  obscureText: !visible,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (value) => pin = value,
+                  validator: (value) => validatePin(value ?? ''),
+                  decoration: InputDecoration(
+                    labelText: '4-digit PIN',
+                    counterText: '',
+                    suffixIcon: IconButton(
+                      tooltip: visible ? 'Hide PIN' : 'Show PIN',
+                      onPressed: () => update(() => visible = !visible),
+                      icon: Icon(visible ? Icons.visibility_off : Icons.visibility),
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => update(() {
+                    generatedPin = Random.secure().nextInt(10000).toString().padLeft(4, '0');
+                    pin = generatedPin;
+                    generation++;
+                    visible = true;
+                  }),
+                  icon: const Icon(Icons.autorenew),
+                  label: const Text('Generate PIN'),
+                ),
+              ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                if (form.currentState?.validate() == true) Navigator.pop(ctx, pin);
+              },
+              child: const Text('Save'),
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
-    if (saved != true) {
-      pin.dispose();
-      return;
-    }
-    final error = validatePin(pin.text);
-    if (error != null) {
-      pin.dispose();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-      return;
-    }
+    if (saved == null || !mounted) return;
     try {
       await context.read<AuthService>().setChildPin(
             childId: child['id'] as String,
-            pin: pin.text,
+            pin: saved,
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,8 +408,6 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
-    } finally {
-      pin.dispose();
     }
   }
 
@@ -391,7 +592,12 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
 
     final familyName = _family?['name'] as String? ?? 'Your family';
+    final description = (_family?['description'] as String?)?.trim() ?? '';
+    final guardians = (_family?['guardians'] as List?)?.whereType<Map>() ?? const [];
+    final canManage = _family?['deletionStage'] == null;
     final kids = _children;
+    final userId = context.watch<AuthSession>().userId;
+    final ownsFamily = userId != null && _family?['ownerUserId'] == userId;
     final points = _summary?.familyAskScore ?? 0;
     final jar = _summary?.familyJar ?? 0;
 
@@ -418,11 +624,41 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         const SizedBox(height: 12),
         AdventureListCard(
           title: familyName,
-          subtitle: 'Family · Standing',
+          subtitle: description.isEmpty ? null : description,
           icon: Icons.home_rounded,
           accent: AdventureListAccent.orange,
-          onTap: null,
+          trailing: canManage
+              ? IconButton(
+                  tooltip: 'Edit family',
+                  onPressed: _editFamily,
+                  icon: const Icon(Icons.edit_outlined),
+                )
+              : null,
         ),
+        if (guardians.isNotEmpty || (canManage && ownsFamily)) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Guardians',
+            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.navy),
+          ),
+          for (final guardian in guardians)
+            if (guardian['user'] case final Map user)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.person_outline),
+                title: Text(user['name'] as String? ?? user['email'] as String? ?? 'Guardian'),
+                subtitle: Text(guardian['relation'] as String? ?? 'Guardian'),
+              ),
+          if (canManage && ownsFamily)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: OutlinedButton.icon(
+                onPressed: _addGuardian,
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Add guardian'),
+              ),
+            ),
+        ],
         if (_family?['deletionStage'] == 'recoverable') ...[
           const SizedBox(height: 12),
           _RestoreBanner(

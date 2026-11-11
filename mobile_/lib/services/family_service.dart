@@ -50,6 +50,30 @@ class FamilyService {
     }
   }
 
+  Future<void> updateMyFamily({
+    required String name,
+    required String? description,
+  }) async {
+    try {
+      await _apiClient.dio.patch('/api/families/my', data: {
+        'name': name,
+        'description': description,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<void> addGuardian(String email) async {
+    try {
+      await _apiClient.dio.post('/api/families/guardians', data: {
+        'email': email.trim().toLowerCase(),
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   /// Explorers aged 15+ must come with an [email] and [password] so they can sign in on their own.
   Future<Map<String, dynamic>> addChild({
     required String name,

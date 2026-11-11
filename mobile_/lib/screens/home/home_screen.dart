@@ -15,6 +15,7 @@ import '../shared/widgets/adventure_bottom_nav.dart';
 import '../shared/widgets/adventure_logo.dart';
 import '../shared/widgets/double_back_exit.dart';
 import '../account/account_screen.dart';
+import '../account/profile_edit_screen.dart';
 import '../account/legal_screen.dart';
 import '../shared/report_issue_screen.dart';
 import '../teen/achievements_screen.dart';
@@ -289,7 +290,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         bottomNavigationBar: AdventureBottomNav(
           current: _tab,
-          onSelect: (tab) => setState(() => _tab = tab),
+          onSelect: (tab) {
+            if (tab == AdventureTab.account && session.canEditProfile) {
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
+              );
+            } else {
+              setState(() => _tab = tab);
+            }
+          },
           groupsLabel: session.isTeacher ? 'Classes' : 'Groups',
         ),
       ),
@@ -451,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.person_outline_rounded,
                         color: AppColors.navy),
-                    title: const Text('Profile'),
+                    title: const Text('Account'),
                     onTap: () => _goTab(AdventureTab.account),
                   ),
                   if ((session.isParent && session.children.isNotEmpty) ||
