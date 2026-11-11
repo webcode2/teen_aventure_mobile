@@ -84,9 +84,9 @@ describe('join pass', () => {
     expect(written[0]).not.toContain('Youth');
     expect(written[0]).not.toContain('>AB12<');
     await userEvent.click(screen.getByRole('button', { name: 'Share' }));
-    expect(writeText).toHaveBeenCalledWith('tba-join:class:AB12');
+    expect(writeText).toHaveBeenCalledWith('https://tba.elastrocloud.com/join/class/AB12');
     await userEvent.click(screen.getByRole('button', { name: /Copied|Copy link/ }));
-    expect(writeText).toHaveBeenCalledWith('tba-join:class:AB12');
+    expect(writeText).toHaveBeenCalledWith('https://tba.elastrocloud.com/join/class/AB12');
   });
 });
 

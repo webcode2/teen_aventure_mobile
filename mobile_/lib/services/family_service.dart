@@ -101,6 +101,17 @@ class FamilyService {
     }
   }
 
+  Future<void> changeDependentDeletion(String childId, String password, {required bool restore}) async {
+    try {
+      await _apiClient.dio.post('/api/families/children/$childId/deletion', data: {
+        'password': password,
+        'restore': restore,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<void> requestDeletion({required String reason, required String password}) async {
     try {
       await _apiClient.dio.post(

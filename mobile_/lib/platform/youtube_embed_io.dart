@@ -76,10 +76,10 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
       _controller.play();
     }
     widget.onPosition?.call(value.position, value.metaData.duration);
-    if (!_endedFired && value.playerState == PlayerState.ended) {
-      _endedFired = true;
-      widget.onEnded?.call();
-    }
+    final ended = value.playerState == PlayerState.ended;
+    if (ended == _endedFired) return;
+    _endedFired = ended;
+    if (ended) widget.onEnded?.call();
   }
 
   @override

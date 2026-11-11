@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teen_aventure/models/api_models.dart';
 import 'package:teen_aventure/models/week_quest_progress.dart';
 import 'package:teen_aventure/providers/current_quest_provider.dart';
+import 'package:teen_aventure/services/content_service.dart';
 
 Map<String, dynamic> _response({List<String> watched = const [], int videoCount = 4}) => {
       'weekNumber': 50,
@@ -361,32 +362,60 @@ void main() {
     expect(completed, ['50:QUIZ']);
   });
 
-  test('failed video watch is retried on the next refresh', () async {
+  test('a completed video shows its tick before the points request returns', () async {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final posted = <String>[];
-    var allowPost = false;
+    final response = Completer<ActivityAward>();
     final provider = CurrentQuestProvider(
       null,
-      prefs: prefs,
+      prefs: await SharedPreferences.getInstance(),
       online: () async => true,
       fetch: () async => CurrentQuest.fromJson(_response()),
-      markVideo: (week, videoId) async {
-        if (!allowPost) return false;
-        posted.add(videoId);
-        return true;
-      },
+      markVideo: (_, __) => response.future,
     );
     provider.syncIdentity(authenticated: true, userId: 'u', childId: 'c');
     await _untilSettled(provider);
 
-    await provider.recordVideoWatched(videoId: 'w50-v1', weekNumber: 50);
-    expect(provider.current?.watchedVideoIds, contains('w50-v1'));
-    expect(posted, isEmpty);
+    final completion = provider.recordVideoWatched(videoId: 'w50-v1', weekNumber: 50);
+    expect(provider.progress?.watchedAt(0), isTrue);
+    expect(provider.progress?.watchedAt(1), isFalse);
+    response.complete(const ActivityAward(ok: true, points: 7, alreadyAwarded: false));
+    expect(await completion, 7);
+  });
 
-    allowPost = true;
+  test('video points apply once when queued playback syncs and on fresh playback', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final posted = <String>{};
+    final awarded = <int>[];
+    var online = false;
+    final provider = CurrentQuestProvider(
+      null,
+      prefs: prefs,
+      online: () async => online,
+      fetch: () async => CurrentQuest.fromJson(_response()),
+      onVideoPoints: awarded.add,
+      markVideo: (week, videoId) async => ActivityAward(
+        ok: true,
+        points: 7,
+        alreadyAwarded: !posted.add(videoId),
+      ),
+    );
+    provider.syncIdentity(authenticated: true, userId: 'u', childId: 'c');
+    await _untilSettled(provider);
+
+    expect(await provider.recordVideoWatched(videoId: 'w50-v1', weekNumber: 50), 0);
+    expect(provider.progress?.watchedAt(0), isTrue);
+    expect(posted, isEmpty);
+    expect(awarded, isEmpty);
+
+    online = true;
     await provider.refresh();
-    expect(posted, ['w50-v1']);
+    expect(posted, {'w50-v1'});
+    expect(awarded, [7]);
+
+    expect(await provider.recordVideoWatched(videoId: 'w50-v2', weekNumber: 50), 7);
+    expect(await provider.recordVideoWatched(videoId: 'w50-v2', weekNumber: 50), 0);
+    expect(awarded, [7, 7]);
   });
 
   test('browseToWeek loads finished activities from the server', () async {

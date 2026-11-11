@@ -36,4 +36,54 @@ void main() {
     expect(find.byTooltip('Previous week'), findsNothing);
     expect(find.byTooltip('Next week'), findsNothing);
   });
+
+  testWidgets('the next unwatched video leads the current stage', (tester) async {
+    int? opened;
+    Future<void> show(Set<int> watched) => tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TodaysQuestSlide(
+                passage: 'Psalm 23',
+                subtitle: 'Week 4',
+                videoSubtitles: const ['Part 1', 'Part 2', 'Part 3'],
+                onOpenVideo: (index) => opened = index,
+                onQuiz: () {},
+                onPuzzle: () {},
+                progress: WeekQuestProgress(
+                  videosDone: watched.length,
+                  quizDone: false,
+                  puzzleDone: false,
+                  watchedIndexes: watched,
+                ),
+              ),
+            ),
+          ),
+        ));
+    Finder row(int index) => find.byKey(ValueKey('home-video-$index'));
+    Finder tick(int index) => find.descendant(
+          of: row(index),
+          matching: find.byIcon(Icons.check_rounded),
+        );
+
+    for (var next = 0; next < 3; next++) {
+      await show({for (var i = 0; i < next; i++) i});
+      final action = find.widgetWithText(FilledButton, 'Watch video');
+      expect(find.descendant(of: row(next), matching: action), findsOneWidget);
+      for (var i = 0; i < 3; i++) {
+        expect(tick(i), i < next ? findsOneWidget : findsNothing);
+        if (i != next) {
+          expect(tester.getTopLeft(row(next)).dy, lessThan(tester.getTopLeft(row(i)).dy));
+        }
+      }
+      await tester.tap(action);
+      expect(opened, next);
+    }
+
+    await show({0, 1, 2});
+    expect(find.widgetWithText(FilledButton, 'Watch video'), findsNothing);
+    for (var i = 0; i < 3; i++) {
+      expect(tick(i), findsOneWidget);
+    }
+  });
+
 }

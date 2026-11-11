@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
+import { PasswordInput } from './ui';
 
 export type PromptTone = 'default' | 'danger';
 
@@ -188,11 +189,11 @@ function PromptFields({ request }: { request: PromptRequest }) {
     >
       <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-navy">
         {request.label}
-        <input
+        <PasswordInput
           type={request.inputType ?? 'text'}
           autoComplete={request.inputType === 'password' ? 'current-password' : 'off'}
           autoFocus
-          className="rounded-xl border border-border bg-white px-3 py-2 text-sm font-normal normal-case text-navy outline-none focus:border-navy"
+          className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-normal normal-case text-navy outline-none focus:border-navy"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {

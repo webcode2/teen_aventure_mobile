@@ -81,8 +81,13 @@ class TodaysQuestSlide extends StatelessWidget {
     final videosOpen = stepsOpen || progress.videosFinished;
     final active = progress.nextVideoIndex;
     final count = videoSubtitles.length < progress.videoCount ? videoSubtitles.length : progress.videoCount;
+    final videoOrder = [
+      if (active != null && active < count) active,
+      for (var index = 0; index < count; index++)
+        if (index != active) index,
+    ];
     final rows = <Widget>[];
-    for (var index = 0; index < count; index++) {
+    for (final index in videoOrder) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
       final title = videoSubtitles[index];
       if (progress.watchedAt(index)) {
@@ -341,7 +346,7 @@ class TodaysQuestCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              cmsText(context, 'home', 'startReading', 'Start Reading'),
+                              cmsText(context, 'home', 'watchVideo', 'Watch video'),
                               style: TextStyle(
                                   fontWeight: FontWeight.w600, fontSize: 13),
                             ),

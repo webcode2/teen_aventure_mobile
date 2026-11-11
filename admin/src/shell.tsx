@@ -179,7 +179,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
       className={`min-h-screen bg-cream text-navy ${
         isMobile
           ? 'flex flex-col'
-          : `grid ${isCollapsed ? 'grid-cols-[72px_1fr]' : 'grid-cols-[232px_1fr]'} transition-[grid-template-columns] duration-200`
+          : `grid ${isCollapsed ? 'grid-cols-[72px_1fr]' : 'grid-cols-[232px_1fr]'}`
       }`}
     >
       {isMobile && mobileNavOpen ? (
@@ -192,9 +192,9 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
       ) : null}
 
       <aside
-        className={`bg-navy text-cream flex flex-col p-3 z-40 transition-all duration-200 ${
+        className={`bg-navy text-cream flex flex-col p-3 z-40 ${
           isMobile
-            ? `fixed inset-y-0 left-0 w-64 shadow-2xl transform overflow-y-auto scrollbar-none ${
+            ? `fixed inset-y-0 left-0 w-64 shadow-2xl motion-safe:transition-[translate] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.32,0.72,0,1)] overflow-y-auto scrollbar-none ${
                 mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
               }`
             : 'sticky top-0 h-screen overflow-hidden'
@@ -238,7 +238,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
                 return (
                   <button
                     key={id}
-                    className={`relative flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`relative flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-semibold motion-safe:transition-[scale] motion-safe:duration-150 motion-safe:ease-[cubic-bezier(0.23,1,0.32,1)] motion-safe:active:scale-[0.97] cursor-pointer ${
                       isCollapsed ? 'justify-center' : 'w-full text-left'
                     } ${
                       active
@@ -247,6 +247,7 @@ export function Shell({ tab, children }: { tab: Tab; children: ReactNode }) {
                           ? 'text-white bg-white/8 hover:bg-white/12'
                           : 'text-cream/75 hover:bg-white/8 hover:text-white'
                     }`}
+                    aria-current={active ? 'page' : undefined}
                     aria-label={title}
                     title={title}
                     onClick={() => {

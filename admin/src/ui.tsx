@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useState, type ButtonHTMLAttributes, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 export const APP_NAME = 'Teen Bible Adventures';
 export const DASHBOARD_TITLE = `${APP_NAME} Manager`;
@@ -64,6 +64,24 @@ export function Brand({ size = 'md' }: { size?: 'sm' | 'header' | 'md' | 'lg' })
     <div className="flex items-center">
       <img src="/logo.svg" alt={APP_NAME} className={`block w-auto max-w-full object-contain ${sizeClasses}`} />
     </div>
+  );
+}
+
+export function PasswordInput({ className, type = 'password', ...props }: ComponentPropsWithoutRef<'input'>) {
+  const [visible, setVisible] = useState(false);
+  if (type !== 'password') return <input {...props} type={type} className={className} />;
+  return (
+    <span className="relative block min-w-0 [&>input]:pr-16">
+      <input {...props} type={visible ? 'text' : 'password'} className={className} />
+      <button
+        type="button"
+        className="absolute inset-y-0 right-0 px-3 text-xs font-semibold normal-case tracking-normal text-navy hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-teal"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        onClick={() => setVisible(value => !value)}
+      >
+        {visible ? 'Hide' : 'Show'}
+      </button>
+    </span>
   );
 }
 

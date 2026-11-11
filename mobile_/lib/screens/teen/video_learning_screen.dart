@@ -41,6 +41,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   final WatchProgress _watch = WatchProgress();
   final _watchClock = Stopwatch()..start();
   Duration _lastWatchSample = Duration.zero;
+  Duration _lastWatchPosition = Duration.zero;
   bool _skipNoticeShown = false;
 
   double progressSeconds = 0;
@@ -125,38 +126,28 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     );
   }
 
-  void _markLessonWatched() {
+  Future<void> _markLessonWatched() async {
     if (_lessonMarked) return;
-    _lessonMarked = true;
-    if (mounted) setState(() {});
+    setState(() => _lessonMarked = true);
     final index = widget.videoIndex ?? widget.lesson.partNumber - 1;
-    GameController? game;
     try {
-      game = context.read<GameController>();
-      game.completeVideoPart(index);
+      context.read<GameController>().completeVideoPart(index);
     } catch (_) {}
     try {
-      final quests = context.read<CurrentQuestProvider>();
-      // One POST awards points and returns the admin table — no follow-up /current.
-      quests
-          .recordVideoWatched(
-            videoId: widget.lesson.id,
-            weekNumber: widget.lesson.weekNumber,
-          )
-          .then((points) {
-            if (points > 0) game?.applyActivityPoints(points);
-            if (mounted) setState(() {});
-          });
+      await context.read<CurrentQuestProvider>().recordVideoWatched(
+        videoId: widget.lesson.id,
+        weekNumber: widget.lesson.weekNumber,
+      );
     } catch (_) {}
   }
 
   Future<void> _finishAndContinue() async {
-    if (_continuing || (!_lessonMarked && !_watch.fullyWatched)) return;
+    if (_continuing || !_watch.fullyWatched) return;
     _continuing = true;
-    _markLessonWatched();
-    final leave = _leaveVideoPlayback();
-    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
-    await leave;
+    await Future.wait([_markLessonWatched(), _leaveVideoPlayback()]);
+    if (mounted && ModalRoute.of(context)?.isCurrent == true && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _loadPlaybackSource() async {
@@ -405,7 +396,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _lessonMarked ? 'Earned $pointsLabel' : pointsLabel,
+                          _lessonMarked ? 'Saving progress…' : pointsLabel,
                           style: const TextStyle(
                             color: AppColors.gold,
                             fontWeight: FontWeight.w900,
@@ -446,7 +437,10 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                             duration,
                             sampleInterval: sample - _lastWatchSample,
                           );
-                          _lastWatchSample = sample;
+                          if (position != _lastWatchPosition) {
+                            _lastWatchSample = sample;
+                            _lastWatchPosition = position;
+                          }
                           progressSeconds = position.inSeconds.toDouble();
                           if (duration.inSeconds > 0) {
                             totalSeconds = duration.inSeconds.toDouble();
@@ -513,31 +507,6 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                   child: ListView(
                     padding: const EdgeInsets.only(top: 12, bottom: 28),
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: FilledButton(
-                          onPressed: _lessonMarked ? _finishAndContinue : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.orange,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppRadii.cardRadius,
-                            ),
-                          ),
-                          child: Text(
-                            _lessonMarked
-                                ? (pointsLabel != null
-                                    ? 'Continue · earned $pointsLabel'
-                                    : 'Continue to next')
-                                : 'Watch to the end',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
                       if (lesson.takeaways.isNotEmpty) ...[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(32, 4, 32, 4),

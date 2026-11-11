@@ -14,7 +14,7 @@ import {
 } from './api';
 import { PastorPortalPage } from './pages-pastor';
 import { PublicLayout } from './public-shell';
-import { Alert, Brand, Field, Button } from './ui';
+import { PasswordInput, Alert, Brand, Field, Button } from './ui';
 
 const fieldClass =
   'rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-navy outline-none focus:border-teal focus:ring-2 focus:ring-teal/20';
@@ -587,8 +587,7 @@ export function ChurchApplyPage() {
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
                   <span>{copy.passwordLabel}</span>
-                  <input
-                    type="password"
+                  <PasswordInput
                     className={gateInputClass}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -601,8 +600,7 @@ export function ChurchApplyPage() {
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
                   <span>Confirm password</span>
-                  <input
-                    type="password"
+                  <PasswordInput
                     className={gateInputClass}
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
@@ -649,8 +647,7 @@ export function ChurchApplyPage() {
                 {password.length < 8 ? (
                   <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
                     <span>Choose your password</span>
-                    <input
-                      type="password"
+                    <PasswordInput
                       className={gateInputClass}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -690,8 +687,7 @@ export function ChurchApplyPage() {
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
                   <span>{copy.passwordLabel}</span>
-                  <input
-                    type="password"
+                  <PasswordInput
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

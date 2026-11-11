@@ -1,4 +1,7 @@
 const KEY = 'published/site-content.json';
+// Matches applicationId in mobile_/android/app/build.gradle.kts.
+const PLAY_STORE = 'https://play.google.com/store/apps/details?id=com.elasctroclud.teen_aventure';
+const JOIN_LINK = /^\/join\/(church|class)\/([A-Za-z0-9]{4,12})\/?$/;
 export function publicRoute(path) {
   return path.replace(/^\/api\/v1\//, '/api/').match(/^\/api\/(content\/(web|mobile)|site-pages(?:\/([^/]+))?)$/);
 }
@@ -25,6 +28,14 @@ export default {
     const url = new URL(request.url);
     // Keep old cached frontend builds working after the mascot asset rename.
     if (url.pathname === '/zack.png') return Response.redirect(new URL('/zach.png', url), 301);
+    // Printed join passes: phone camera -> Google Play. The code rides along as the
+    // install referrer; the in-app scanner reads the same link.
+    const join = url.pathname.match(JOIN_LINK);
+    if (join) {
+      const store = new URL(PLAY_STORE);
+      store.searchParams.set('referrer', `join=${join[1]}:${join[2].toUpperCase()}`);
+      return new Response(null, { status: 302, headers: { Location: store.href, 'Cache-Control': 'no-store' } });
+    }
     if (env.ADMIN_HOSTNAME) {
       const adminHost = url.hostname === env.ADMIN_HOSTNAME;
       if (adminHost && url.pathname === '/') return Response.redirect(new URL('/app/dashboard', url), 302);

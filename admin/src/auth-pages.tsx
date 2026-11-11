@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { forgotPassword, login, resetPassword } from './api';
 import { safeStaffNext } from './path-helpers';
-import { Alert, APP_NAME, Brand, Button, DASHBOARD_TITLE, Field } from './ui';
+import { PasswordInput, Alert, APP_NAME, Brand, Button, DASHBOARD_TITLE, Field } from './ui';
 
 const DEMO_PASSWORD = 'password123';
 const DEMO_ADMINS = [
@@ -84,8 +84,7 @@ export function LoginPage() {
             />
           </Field>
           <Field label="Password">
-            <input
-              type="password"
+            <PasswordInput
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -241,8 +240,7 @@ export function ResetPage({ token }: { token: string }) {
           </div>
           {!token ? <Alert kind="error">Missing reset token. Open the link from your email.</Alert> : null}
           <Field label="New password" hint="At least 8 characters">
-            <input
-              type="password"
+            <PasswordInput
               placeholder="New password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -252,8 +250,7 @@ export function ResetPage({ token }: { token: string }) {
             />
           </Field>
           <Field label="Confirm password">
-            <input
-              type="password"
+            <PasswordInput
               placeholder="Confirm password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

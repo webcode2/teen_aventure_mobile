@@ -95,12 +95,10 @@ class LessonVideoPlayerState extends State<LessonVideoPlayer> {
     final duration = player.value.duration;
     final position = player.value.position;
     widget.onPosition?.call(position, duration);
-    if (!_endedFired &&
-        duration > Duration.zero &&
-        player.value.isCompleted) {
-      _endedFired = true;
-      widget.onEnded?.call();
-    }
+    final ended = duration > Duration.zero && player.value.isCompleted;
+    if (ended == _endedFired) return;
+    _endedFired = ended;
+    if (ended) widget.onEnded?.call();
   }
 
   void _seek(Duration to) {

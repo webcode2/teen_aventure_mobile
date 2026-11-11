@@ -15,7 +15,6 @@ import '../shared/widgets/adventure_bottom_nav.dart';
 import '../shared/widgets/adventure_logo.dart';
 import '../shared/widgets/double_back_exit.dart';
 import '../account/account_screen.dart';
-import '../account/profile_edit_screen.dart';
 import '../account/legal_screen.dart';
 import '../shared/report_issue_screen.dart';
 import '../teen/achievements_screen.dart';
@@ -58,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _pushReceived = PushHooks.received.listen(_onPushReceived);
     _pushOpened = PushHooks.opened.listen(_onPushOpened);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAskScore();
+      _loadAskScore(reset: true);
       _loadInbox();
       final pending = PushHooks.takePendingOpen();
       if (pending != null) _onPushOpened(pending);
@@ -222,15 +221,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadAskScore() async {
+  Future<void> _loadAskScore({bool reset = false}) async {
     try {
       final session = context.read<AuthSession>();
+      final userId = session.userId;
       final childId = session.childId;
-      if (childId == null) return;
-      final score =
-          await context.read<EngagementService>().getAskScore(childId);
-      if (!mounted) return;
-      context.read<GameController>().setAskScore(score.askScore, score.streak);
+      final game = context.read<GameController>();
+      if (reset) game.setAskScore(0, 0);
+      if (childId != null) {
+        final score = await context.read<EngagementService>().getAskScore(childId);
+        if (mounted && session.childId == childId) {
+          game.setAskScore(score.askScore, score.streak);
+        }
+      } else if (userId != null) {
+        final profile = await context.read<FamilyService>().getSession();
+        if (!mounted || session.userId != userId || session.childId != null) return;
+        final progress = profile['progress'] as Map?;
+        final streak = progress?['streak'] as Map?;
+        game.setAskScore(
+          (progress?['points'] as num?)?.toInt() ?? 0,
+          (streak?['current'] as num?)?.toInt() ?? 0,
+        );
+      }
     } catch (_) {}
   }
 
@@ -290,16 +302,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         bottomNavigationBar: AdventureBottomNav(
           current: _tab,
-          onSelect: (tab) {
-            if (tab == AdventureTab.account && session.canEditProfile) {
-              Navigator.push<void>(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
-              );
-            } else {
-              setState(() => _tab = tab);
-            }
-          },
+          onSelect: (tab) => setState(() => _tab = tab),
           groupsLabel: session.isTeacher ? 'Classes' : 'Groups',
         ),
       ),

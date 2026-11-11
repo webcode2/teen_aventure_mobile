@@ -50,16 +50,20 @@ const CODE39_PATTERNS: Record<string, string> = {
   '*': '010010100', // start / stop delimiter
 };
 
-/** Payload the mobile app accepts for ministry bulletin passes. */
+/**
+ * Passes are web links so any phone camera can open them. The Cloudflare Worker
+ * redirects /join/* to Google Play; the in-app scanner reads the code.
+ */
+const JOIN_LINK_BASE = 'https://tba.elastrocloud.com/join';
+
 export function churchJoinQrPayload(joinCode: string) {
   const code = (joinCode || '').trim().toUpperCase();
-  return `tba-join:church:${code}`;
+  return `${JOIN_LINK_BASE}/church/${encodeURIComponent(code)}`;
 }
 
-/** Payload the mobile app accepts for class / church-group bulletin passes. */
 export function classJoinQrPayload(joinCode: string) {
   const code = (joinCode || '').trim().toUpperCase();
-  return `tba-join:class:${code}`;
+  return `${JOIN_LINK_BASE}/class/${encodeURIComponent(code)}`;
 }
 
 export function joinPassQrPayload(kind: 'church' | 'class', joinCode: string) {
@@ -275,8 +279,8 @@ export function JoinPassCard({
   const helpText =
     instructions ??
     (passKind === 'class'
-      ? 'Explorers scan this pass in the Teen Bible Adventures app or enter the group code to join.'
-      : 'Visiting families scan this pass in the Teen Bible Adventures app or enter the code during family profile setup.');
+      ? 'Explorers scan this pass with their phone camera or in the Teen Bible Adventures app, or enter the group code to join.'
+      : 'Visiting families scan this pass with their phone camera or in the Teen Bible Adventures app, or enter the code during family profile setup.');
 
   function copyCode() {
     navigator.clipboard.writeText(cleanCode).then(() => {

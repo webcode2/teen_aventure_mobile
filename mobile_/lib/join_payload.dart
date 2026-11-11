@@ -1,14 +1,17 @@
 const joinScheme = 'tba-join:';
 const joinUri = 'tba://join/';
+/// Printed passes link here so any phone camera can open them; the Worker sends
+/// people without the app to Google Play.
+const joinLinkBase = 'https://tba.elastrocloud.com/join/';
 const maxMemberships = 5;
 
 String encodeJoinToken(String token) => '$joinScheme$token';
 
 String encodeChurchJoinCode(String joinCode) =>
-    '${joinScheme}church:${normalizeJoinCode(joinCode)}';
+    '${joinLinkBase}church/${normalizeJoinCode(joinCode)}';
 
 String encodeClassJoinCode(String joinCode) =>
-    '${joinScheme}class:${normalizeJoinCode(joinCode)}';
+    '${joinLinkBase}class/${normalizeJoinCode(joinCode)}';
 
 String normalizeJoinCode(String raw) {
   var value = raw.trim();
@@ -26,6 +29,12 @@ String? parseJoinToken(String raw) {
       .firstMatch(trimmed);
   if (askhub != null) {
     trimmed = askhub.group(1)!.trim();
+  }
+
+  final link = RegExp(r'^https?://[^/\s]+/join/([^?#\s]+)', caseSensitive: false)
+      .firstMatch(trimmed);
+  if (link != null) {
+    trimmed = link.group(1)!;
   }
 
   if (trimmed.startsWith(joinScheme)) {

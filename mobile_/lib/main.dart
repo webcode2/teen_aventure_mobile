@@ -89,6 +89,7 @@ class AskHubTeenApp extends StatelessWidget {
           create: (context) => CurrentQuestProvider(
             context.read<ContentService>(),
             prefs: ServiceLocator.instance.prefs,
+            onVideoPoints: context.read<GameController>().applyActivityPoints,
           ),
           update: (_, session, quest) => quest!
             ..syncIdentity(

@@ -256,10 +256,19 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
   }
 
-  Future<void> _addGuardian() async {
+  Future<void> _addGuardian(Iterable<Map> guardians) async {
+    final candidates = <String, String>{
+      for (final guardian in guardians)
+        if (guardian['relation'] != 'Owner' && guardian['relation'] != 'Admin')
+          if (guardian['user'] case {'email': final String email, 'name': final String name})
+            if (email.trim().isNotEmpty && name.trim().isNotEmpty)
+              email: name,
+    };
     final service = context.read<FamilyService>();
     final form = GlobalKey<FormState>();
     var email = '';
+    String? selectedEmail;
+    var byEmail = false;
     var busy = false;
     String? error;
     final added = await showDialog<bool>(
@@ -277,15 +286,41 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Use the email of an existing adult account. Adding them lets them manage this family and its explorers.'),
+                  const Text('Family admins can manage the family and its explorers.'),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    enabled: !busy,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    decoration: _fieldDecoration('Adult email'),
-                    onChanged: (value) => email = value,
-                    validator: (value) => validateEmail(value ?? ''),
+                  if (byEmail)
+                    TextFormField(
+                      initialValue: email,
+                      enabled: !busy,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      decoration: _fieldDecoration('Adult email'),
+                      onChanged: (value) => email = value,
+                      validator: (value) => validateEmail(value ?? ''),
+                    )
+                  else if (candidates.isEmpty)
+                    const Text('There are no family members eligible to become an admin.')
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedEmail,
+                      isExpanded: true,
+                      decoration: _fieldDecoration('Family member'),
+                      items: [
+                        for (final candidate in candidates.entries)
+                          DropdownMenuItem(
+                            value: candidate.key,
+                            child: Text(candidate.value, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: busy ? null : (value) => selectedEmail = value,
+                      validator: (value) => value == null ? 'Select a family member' : null,
+                    ),
+                  TextButton(
+                    onPressed: busy ? null : () => update(() {
+                      byEmail = !byEmail;
+                      error = null;
+                    }),
+                    child: Text(byEmail ? 'Choose a family member' : 'Add by email'),
                   ),
                   if (error != null) ...[
                     const SizedBox(height: 8),
@@ -300,14 +335,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                onPressed: busy ? null : () async {
+                onPressed: busy || (!byEmail && candidates.isEmpty) ? null : () async {
                   if (form.currentState?.validate() != true) return;
                   update(() {
                     busy = true;
                     error = null;
                   });
                   try {
-                    await service.addGuardian(email, asAdmin: true);
+                    await service.addGuardian(byEmail ? email : selectedEmail!, asAdmin: true);
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
@@ -330,6 +365,43 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         const SnackBar(content: Text('Family admin added.')),
       );
       await _load();
+    }
+  }
+
+  Future<void> _changeDependentDeletion(Map child, {bool restore = false}) async {
+    var password = '';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(restore ? 'Restore ${child['name']}?' : 'Request deletion of ${child['name']}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(restore
+                ? 'This will make the profile available again.'
+                : 'Only this profile is affected. You can restore it for 30 days unless it is archived, in which case contact support. Its data is eligible for permanent deletion after 90 days.'),
+            TextField(
+              obscureText: true,
+              onChanged: (value) => password = value,
+              decoration: const InputDecoration(labelText: 'Your account password'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(restore ? 'Restore profile' : 'Request deletion')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || password.isEmpty) return;
+    final session = context.read<AuthSession>();
+    try {
+      await context.read<FamilyService>().changeDependentDeletion(child['id'] as String, password, restore: restore);
+      if (!mounted) return;
+      await _load();
+      await session.refreshProfile();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     }
   }
 
@@ -459,6 +531,9 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 if (!linked) ...[
                   TextField(
                     controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.next,
                     decoration: _fieldDecoration('Login email'),
                   ),
                   const SizedBox(height: 10),
@@ -503,7 +578,13 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                     style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
                   ),
                   const SizedBox(height: 8),
-                  TextField(controller: adultEmail, decoration: _fieldDecoration('Adult account email')),
+                  TextField(
+                    controller: adultEmail,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: _fieldDecoration('Adult account email'),
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: adultPassword,
@@ -573,7 +654,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _FamilyCircleStats(
+          const _FamilyCircleStats(
             explorers: 0,
             points: 0,
             familyJar: 0,
@@ -610,6 +691,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     final canAddAdmin = canManage && (ownsFamily || guardians.any(
       (guardian) => guardian['userId'] == userId && userId != null && guardian['relation'] == 'Admin',
     ));
+    final pending = (_family?['dependentDeletions'] as List?) ?? const [];
     final points = _summary?.familyAskScore ?? 0;
     final jar = _summary?.familyJar ?? 0;
 
@@ -665,7 +747,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
-                onPressed: _addGuardian,
+                onPressed: () => _addGuardian(guardians),
                 icon: const Icon(Icons.person_add_alt_1),
                 label: const Text('Add family admin'),
               ),
@@ -679,7 +761,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 await context.read<FamilyService>().cancelDeletion();
                 await _load();
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
               }
             },
           ),
@@ -728,8 +810,19 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                   ? () => _explorerAccess(kids[i])
                   : null,
             ),
+            if (ownsFamily && kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null)
+              TextButton(
+                onPressed: () => _changeDependentDeletion(kids[i]),
+                child: Text('Request deletion of ${kids[i]['name']}'),
+              ),
             const SizedBox(height: 12),
           ],
+        if (ownsFamily)
+          for (final child in pending.whereType<Map>())
+            ListTile(
+              title: Text('${child['name']} · Deletion requested'),
+              trailing: TextButton(onPressed: () => _changeDependentDeletion(child, restore: true), child: const Text('Restore')),
+            ),
         const SizedBox(height: 8),
         _AddChildCard(
           name: _childName,
@@ -1180,6 +1273,7 @@ class _AddChildCardState extends State<_AddChildCard> {
         );
         return;
       }
+      FocusScope.of(context).unfocus();
       if (kind == ExplorerAgeKind.child) {
         widget.onAdd();
         _resetSteps();
@@ -1242,6 +1336,7 @@ class _AddChildCardState extends State<_AddChildCard> {
             ),
             const SizedBox(height: 10),
             TextField(
+              key: const ValueKey('explorer-age'),
               controller: widget.age,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -1261,8 +1356,11 @@ class _AddChildCardState extends State<_AddChildCard> {
             ),
             const SizedBox(height: 10),
             TextField(
+              key: const ValueKey('explorer-email'),
               controller: widget.email,
               keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              textInputAction: TextInputAction.next,
               decoration: _fieldDecoration('Email (optional)'),
               onChanged: (_) => setState(() {}),
             ),

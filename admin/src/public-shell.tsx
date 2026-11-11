@@ -196,8 +196,11 @@ export function GooglePlayIcon({ className = "w-5 h-5" }: { className?: string }
   );
 }
 
+/** Matches applicationId in mobile_/android/app/build.gradle.kts. */
+export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.elasctroclud.teen_aventure";
+
 export function GooglePlayButton({
-  href = "https://play.google.com/store/apps/details?id=com.askhub.teenbibleadventures",
+  href = PLAY_STORE_URL,
   className = "",
 }: {
   href?: string;

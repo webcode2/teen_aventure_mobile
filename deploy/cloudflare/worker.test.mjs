@@ -78,3 +78,16 @@ test('separates admin pages from the public and workers.dev hostnames', async ()
   assert.equal(response.headers.get('location'), 'https://admin.tba.elastrocloud.com/app/reset?token=non-secret-test');
   assert.equal(response.headers.get('cache-control'), 'no-store');
 });
+
+test('join pass links go straight to Google Play with the code as install referrer', async () => {
+  const { default: worker } = await import('./worker.mjs');
+  const response = await worker.fetch(new Request('https://tba.example.com/join/church/m10ghy'), {});
+  assert.equal(response.status, 302);
+  const location = new URL(response.headers.get('location'));
+  assert.equal(location.origin + location.pathname, 'https://play.google.com/store/apps/details');
+  assert.equal(location.searchParams.get('id'), 'com.elasctroclud.teen_aventure');
+  assert.equal(location.searchParams.get('referrer'), 'join=church:M10GHY');
+  let served = false;
+  await worker.fetch(new Request('https://tba.example.com/join/church/<script>'), { ASSETS: { fetch: async () => { served = true; return new Response('spa'); } } });
+  assert.ok(served, 'malformed join links fall through to the site');
+});

@@ -9,7 +9,7 @@ import {
 } from './church-applications';
 import { GroupJoinPassImages } from './barcode';
 import { askConfirm, askPrompt } from './prompt-dialog';
-import { Alert, Badge, Button, Dialog, Drawer, Empty, Field, Pager, slicePage, Spinner } from './ui';
+import { PasswordInput, Alert, Badge, Button, Dialog, Drawer, Empty, Field, Pager, slicePage, Spinner } from './ui';
 import { ActiveUsersTrendChart, type ActiveUserWindows } from './active-users-chart';
 import { CommunityReachDonut } from './community-reach-donut';
 import {
@@ -297,6 +297,7 @@ function ministryState(row: { disabledAt?: string | null; deletedAt?: string | n
 }
 
 type ChurchDetail = {
+  deletionImpact?: { closeAccounts: string[]; removeAccessOnly: string[] };
   id: string;
   name: string;
   joinCode: string;
@@ -452,7 +453,7 @@ export function ChurchDetailPage() {
   async function archiveMinistry() {
     if (!churchId) return;
     const ok = await askConfirm(
-      'This deleted ministry moves to Church archive.',
+      'This ministry moves to the archive. Self-service recovery ends; an administrator can restore it within the original 30-day window if the email has not been reused. The purge date stays the same.',
       { title: 'Archive ministry', confirmLabel: 'Archive' },
     );
     if (!ok) return;
@@ -472,9 +473,14 @@ export function ChurchDetailPage() {
 
   async function removeMinistry() {
     if (!churchId) return;
+    const impact = detail?.deletionImpact;
     const ok = await askConfirm(
-      'Permanently delete this ministry, all its groups, and exclusive staff accounts now? Shared personal accounts remain. This cannot be undone and will not move the ministry to archive.',
-      { title: 'Permanently delete ministry', confirmLabel: 'Delete permanently', tone: 'danger' },
+      'Request deletion of this ministry, its pastor account, all groups, and staff accounts tied only to this ministry with no family responsibilities? Workers with other ministry or family ties keep their accounts; their access to this ministry ends. Recovery is available for 30 days; purge is eligible after 90 days.' +
+        (impact ? `
+
+Accounts included: ${impact.closeAccounts.join(', ') || 'None'}
+Remove ministry access only: ${impact.removeAccessOnly.join(', ') || 'None'}` : ''),
+      { title: 'Request ministry deletion', confirmLabel: 'Request deletion', tone: 'danger' },
     );
     if (!ok) return;
     const password = await askPrompt('Confirm your password', { inputType: 'password' });
@@ -745,7 +751,7 @@ export function ChurchDetailPage() {
                   onClick={() => void removeMinistry()}
                   className="cursor-pointer rounded-full border border-error/30 bg-white px-3 py-1 text-xs font-bold text-error hover:bg-error/5 disabled:opacity-50"
                 >
-                  Delete
+                  Request deletion
                 </button>
               )}
               {detail._count.reports > 0 ? (
@@ -1240,7 +1246,7 @@ export function ChurchesPage() {
 
   async function archive(id: string) {
     const ok = await askConfirm(
-      'This deleted ministry moves to Church archive.',
+      'This ministry moves to the archive. Self-service recovery ends; an administrator can restore it within the original 30-day window if the email has not been reused. The purge date stays the same.',
       { title: 'Archive ministry', confirmLabel: 'Archive' },
     );
     if (!ok) return;
@@ -1551,8 +1557,7 @@ export function ChurchesPage() {
               />
             </Field>
             <Field label="Temporary password" hint="Min 8 characters. Share securely with the pastor.">
-              <input
-                type="password"
+              <PasswordInput
                 value={pastorPassword}
                 onChange={(e) => setPastorPassword(e.target.value)}
                 minLength={8}

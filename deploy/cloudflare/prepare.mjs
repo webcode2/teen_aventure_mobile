@@ -18,7 +18,7 @@ if (adminHostname) {
   if (!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(adminHostname)) throw new Error('ADMIN_HOSTNAME must be a valid hostname.');
   config.routes = [...(config.routes ?? []), { pattern: adminHostname.toLowerCase(), custom_domain: true }];
   config.vars.ADMIN_HOSTNAME = adminHostname.toLowerCase();
-  config.assets.run_worker_first = ['/', '/app/*', '/api/*', '/zack.png'];
+  config.assets.run_worker_first = ['/', '/app/*', '/api/*', '/join/*', '/zack.png'];
 }
 config.account_id = account;
 config.r2_buckets[0].bucket_name = bucket;

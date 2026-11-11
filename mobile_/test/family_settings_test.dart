@@ -27,7 +27,12 @@ void main() {
       'children': <Map<String, dynamic>>[
         {'id': 'explorer', 'name': 'Rejoice', 'ageBand': 'CHILD'},
       ],
-      'guardians': <Map<String, dynamic>>[],
+      'guardians': <Map<String, dynamic>>[
+        {
+          'relation': 'Guardian',
+          'user': {'name': 'Existing Adult', 'email': 'existing@example.com'},
+        },
+      ],
     };
     String? savedPin;
     String? guardianEmail;
@@ -46,10 +51,16 @@ void main() {
           case 'POST /api/v1/families/guardians':
             guardianEmail = (request.data as Map)['email'] as String;
             expect((request.data as Map)['relation'], 'Admin');
-            (family['guardians'] as List).add({
-              'relation': (request.data as Map)['relation'],
-              'user': {'name': 'Second Adult', 'email': guardianEmail},
-            });
+            final guardians = family['guardians'] as List<Map<String, dynamic>>;
+            final existing = guardians.where((row) => (row['user'] as Map)['email'] == guardianEmail);
+            if (existing.isNotEmpty) {
+              existing.first['relation'] = 'Admin';
+            } else {
+              guardians.add({
+                'relation': 'Admin',
+                'user': {'name': 'Second Adult', 'email': guardianEmail},
+              });
+            }
           case 'POST /api/v1/families/children':
             createdExplorer = Map<String, dynamic>.from(request.data as Map);
             (family['children'] as List).add({
@@ -101,6 +112,24 @@ void main() {
         matching: find.widgetWithText(FilledButton, 'Add family admin'));
     await tester.tap(add);
     await tester.pumpAndSettle();
+    expect(find.text('Select a family member'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Existing Adult').last);
+    await tester.pumpAndSettle();
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(guardianEmail, 'existing@example.com');
+    expect((family['guardians'] as List).first['relation'], 'Admin');
+
+    await tester.ensureVisible(find.text('Add family admin'));
+    await tester.tap(find.text('Add family admin'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    await tester.tap(find.text('Add by email'));
+    await tester.pumpAndSettle();
+    await tester.tap(add);
+    await tester.pumpAndSettle();
     expect(find.text('Email is required'), findsOneWidget);
     await tester.enterText(
         find.descendant(of: dialog, matching: find.byType(TextFormField)),
@@ -133,12 +162,23 @@ void main() {
     await tester.ensureVisible(next);
     await tester.tap(next);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(TextField, 'Age'));
-    await tester.enterText(find.widgetWithText(TextField, 'Age'), '16');
+    final age = find.widgetWithText(TextField, 'Age');
+    await tester.ensureVisible(age);
+    await tester.tap(age);
+    await tester.pumpAndSettle();
+    await tester.enterText(age, '16');
+    expect(tester.testTextInput.isVisible, isTrue);
     await tester.ensureVisible(next);
     await tester.tap(next);
     await tester.pumpAndSettle();
-    expect(find.text('Email (optional)'), findsOneWidget);
+    final teenEmail = find.widgetWithText(TextField, 'Email (optional)');
+    expect(tester.testTextInput.isVisible, isFalse);
+    await tester.ensureVisible(teenEmail);
+    await tester.tap(teenEmail);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.testTextInput.setClientArgs?['inputType'],
+        containsPair('name', 'TextInputType.emailAddress'));
     final create = find.widgetWithText(FilledButton, 'Create explorer');
     await tester.ensureVisible(create);
     await tester.tap(create);

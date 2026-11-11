@@ -60,6 +60,36 @@ void main() {
     expect(watch.fullyWatched, isTrue);
   });
 
+  test('batched playback callbacks still complete the video', () {
+    final watch = WatchProgress();
+    for (var t = 0.0; t < 8; t += 0.5) {
+      watch.update(s(t), s(8), sampleInterval: s(0.1));
+    }
+    watch.markEnded();
+    expect(watch.fullyWatched, isTrue);
+  });
+
+  test('an early final-position report does not swallow the real end event', () {
+    final watch = WatchProgress();
+    for (var t = 0.0; t <= 59.5; t += 0.5) {
+      watch.update(s(t), s(60), sampleInterval: s(0.5));
+    }
+    watch.update(s(60), s(60), sampleInterval: Duration.zero);
+    expect(watch.fullyWatched, isFalse);
+    watch.markEnded();
+    expect(watch.fullyWatched, isTrue);
+  });
+
+  test('an end event still rejects an earlier gap in playback', () {
+    final watch = WatchProgress();
+    for (var t = 0.0; t <= 50; t += 0.5) {
+      if (t > 5 && t < 10) continue;
+      watch.update(s(t), s(50.5));
+    }
+    watch.markEnded();
+    expect(watch.fullyWatched, isFalse);
+  });
+
   test('rewinding and rewatching still counts the whole video', () {
     final watch = WatchProgress();
     for (var t = 0.0; t <= 30; t += 0.5) {

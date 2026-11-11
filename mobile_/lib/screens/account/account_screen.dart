@@ -99,15 +99,18 @@ class _AccountScreenState extends State<AccountScreen> {
     var weeksCompleted = 0;
     var sessionsDone = 0;
     var points = 0;
+    var tracked = false;
     try {
       final game = context.watch<GameController>();
       sessionsDone = game.weekQuest.completed;
       points = game.score;
     } catch (_) {}
     try {
-      weeksCompleted = context.watch<CurrentQuestProvider>().current?.weeksCompleted ?? 0;
+      final quest = context.watch<CurrentQuestProvider>().current;
+      weeksCompleted = quest?.weeksCompleted ?? 0;
+      tracked = quest?.tracked == true;
     } catch (_) {}
-    final showQuestMilestone = session.isChild;
+    final showQuestMilestone = session.isChild || tracked;
 
     return Material(
       color: AppColors.cream,

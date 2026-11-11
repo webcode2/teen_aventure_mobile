@@ -21,7 +21,8 @@ class CurrentQuestProvider extends ChangeNotifier {
     Future<CurrentQuest?> Function(int weekNumber, String step)? complete,
     Future<TeenQuest> Function(int weekNumber)? loadWeek,
     Future<WeekActivityProgress?> Function(int weekNumber)? loadWeekProgress,
-    Future<bool> Function(int weekNumber, String videoId)? markVideo,
+    Future<ActivityAward> Function(int weekNumber, String videoId)? markVideo,
+    this.onVideoPoints,
   })  : _content = content,
         _prefs = prefs,
         _online = online ?? _deviceOnline,
@@ -41,7 +42,8 @@ class CurrentQuestProvider extends ChangeNotifier {
   final Future<CurrentQuest?> Function(int weekNumber, String step)? _completeOverride;
   final Future<TeenQuest> Function(int weekNumber)? _loadWeek;
   final Future<WeekActivityProgress?> Function(int weekNumber)? _loadWeekProgressOverride;
-  final Future<bool> Function(int weekNumber, String videoId)? _markVideoOverride;
+  final Future<ActivityAward> Function(int weekNumber, String videoId)? _markVideoOverride;
+  final void Function(int points)? onVideoPoints;
 
   CurrentQuest? _current;
   /// The week the server says this explorer is on. Browsing does not change it.
@@ -104,12 +106,7 @@ class CurrentQuestProvider extends ChangeNotifier {
 
   Future<ActivityAward> _markVideo(int weekNumber, String videoId) async {
     final override = _markVideoOverride;
-    if (override != null) {
-      final ok = await override(weekNumber, videoId);
-      return ok
-          ? const ActivityAward(ok: true, points: 0, alreadyAwarded: false)
-          : ActivityAward.failed;
-    }
+    if (override != null) return override(weekNumber, videoId);
     return _content!.markVideoWatched(
       weekNumber: weekNumber,
       videoId: videoId,
@@ -170,18 +167,20 @@ class CurrentQuestProvider extends ChangeNotifier {
     if (videoId.isEmpty) return 0;
     final identity = _identity;
     rememberWatched(videoId);
-    // Always POST — server resolves the explorer (child JWT or transitioned adult).
+    _pendingVideos.add(videoId);
+    await _writePending();
+    if (!await _online() || identity != _identity) return 0;
     final award = await _markVideo(weekNumber, videoId);
-    if (identity != _identity) return 0;
-    if (!award.ok) {
-      _pendingVideos.add(videoId);
-      await _writePending();
-      return 0;
-    }
-    if (_pendingVideos.remove(videoId)) await _writePending();
-    _applyActivityPointsFromAward(award);
-    // Local progress already updated — no second /current round-trip.
+    if (identity != _identity || !award.ok) return 0;
+    _acceptVideoAward(videoId, award);
+    await _writePending();
     return award.awardedFresh ? award.points : 0;
+  }
+
+  void _acceptVideoAward(String videoId, ActivityAward award) {
+    _pendingVideos.remove(videoId);
+    if (award.awardedFresh) onVideoPoints?.call(award.points);
+    _applyActivityPointsFromAward(award);
   }
 
   void _applyActivityPointsFromAward(ActivityAward award) {
@@ -451,7 +450,7 @@ class CurrentQuestProvider extends ChangeNotifier {
     for (final videoId in videos) {
       final award = await _markVideo(weekNumber, videoId);
       if (identity != _identity) return;
-      if (award.ok) _pendingVideos.remove(videoId);
+      if (award.ok) _acceptVideoAward(videoId, award);
     }
 
     final steps = _pendingSteps.toList();

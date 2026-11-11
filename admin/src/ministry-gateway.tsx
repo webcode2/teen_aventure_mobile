@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { PublicCopy } from './public-shell';
 import { mergeCms } from './cms-fields';
 import { DEFAULT_MINISTRY_COPY } from './ministry-copy';
-import { Alert, Button } from './ui';
+import { PasswordInput, Alert, Button } from './ui';
 
 function useMinistryCopy() {
   return mergeCms(DEFAULT_MINISTRY_COPY, useContext(PublicCopy)?.ministryPage);
@@ -60,8 +60,7 @@ export function MinistryGateway({ email = '', password = '', onEmail, onPassword
 
                 <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
                   <span>{copy.passwordLabel}</span>
-                  <input
-                    type="password"
+                  <PasswordInput
                     autoComplete="current-password"
                     readOnly={preview}
                     required

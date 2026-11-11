@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import { api } from './api';
 import { askConfirm, askPrompt } from './prompt-dialog';
-import { Alert, Badge, Dialog, Drawer, Empty, Field, Pager, PencilIcon, slicePage, Spinner, Button } from './ui';
+import { PasswordInput, Alert, Badge, Dialog, Drawer, Empty, Field, Pager, PencilIcon, slicePage, Spinner, Button } from './ui';
 import {
   accountTypeKey,
   accountTypeLabel,
@@ -268,8 +268,7 @@ function CreateAccountDialog({
           </Field>
         ) : null}
         {accountKind === 'user' && <Field label="Password" hint="At least 8 characters; teens use this with email on Teen sign in">
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -418,13 +417,13 @@ function UserAccountPanel({
 
   async function remove() {
     if (!user) return;
-    const ok = await askConfirm(`Permanently delete ${user.name} (${user.email}) and linked account resources now? This cannot be undone and will not move the account to archive.`, {
-      title: 'Permanently delete account',
-      confirmLabel: 'Delete permanently',
+    const ok = await askConfirm(`Request deletion of ${user.name} (${user.email}) and linked resources? Access is suspended immediately. Recovery is available for 30 days and purge is eligible after 90 days.`, {
+      title: 'Request account deletion',
+      confirmLabel: 'Request deletion',
       tone: 'danger',
     });
     if (!ok) return;
-    const deletionPassword = await askPrompt('Confirm your password', { inputType: 'password', title: 'Verify permanent deletion' });
+    const deletionPassword = await askPrompt('Confirm your password', { inputType: 'password', title: 'Verify deletion request' });
     if (!deletionPassword) return;
     setSaveError('');
     setDeleting(true);
@@ -725,8 +724,7 @@ function UserAccountPanel({
               label={accountKind === 'staff' ? 'Reset password' : 'New password'}
               hint={accountKind === 'staff' ? 'Set a new dashboard login password' : 'Leave blank to keep current password'}
             >
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -758,7 +756,7 @@ function UserAccountPanel({
               disabled={saving || deleting}
               onClick={() => void remove()}
             >
-              {deleting ? 'Deleting…' : 'Delete account'}
+              {deleting ? 'Requesting…' : 'Request deletion'}
             </button>
           </div>
         </div>

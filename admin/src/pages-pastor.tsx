@@ -6,7 +6,7 @@ import { askConfirm } from './prompt-dialog';
 import { HomeIcon, ShieldIcon, UsersIcon } from './dashboard-helpers';
 import { CheerIcon, GroupsIcon } from './nav-icons';
 import { SideNavLayout, type SideNavGroup } from './side-nav';
-import { Alert, Badge, Brand, Dialog, Drawer, Empty, Field, PencilIcon, Spinner, Button } from './ui';
+import { PasswordInput, Alert, Badge, Brand, Dialog, Drawer, Empty, Field, PencilIcon, Spinner, Button } from './ui';
 import { GroupJoinBarcodeCard } from './barcode';
 import { PublicLayout } from './public-shell';
 import type { NudgeTemplate } from './pages-nudges';
@@ -2716,8 +2716,7 @@ export function PastorPortalPage({
 
           <label className="flex flex-col gap-1 font-semibold text-navy">
             <span>Initial Password:</span>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={6}
               placeholder="Minimum 6 characters"

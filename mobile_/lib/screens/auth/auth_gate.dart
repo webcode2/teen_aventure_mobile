@@ -34,6 +34,6 @@ class AuthGate extends StatelessWidget {
       return const FamilyProfilePickerScreen();
     }
     return authenticatedChild ??
-        const HomeScreen(key: Key('authenticated-shell'));
+        HomeScreen(key: ValueKey((session.userId, session.childId)));
   }
 }
