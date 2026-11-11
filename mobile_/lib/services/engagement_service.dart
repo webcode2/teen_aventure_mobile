@@ -21,9 +21,9 @@ class EngagementService {
   }
 
   /// Get family summary (parent view)
-  Future<FamilySummary> getFamilySummary() async {
+  Future<FamilySummary> getFamilySummary({String? familyId}) async {
     try {
-      final response = await _apiClient.dio.get('/api/engagement/family');
+      final response = await _apiClient.dio.get('/api/engagement/family', queryParameters: {if (familyId != null) 'familyId': familyId});
       return FamilySummary.fromJson(response.data);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

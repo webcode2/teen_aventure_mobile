@@ -40,6 +40,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthSession>();
+    final activeChildren = session.children.where((child) => !child.loginDeactivated).toList();
     final parentName = session.displayName?.trim().isNotEmpty == true
         ? session.displayName!
         : '';
@@ -82,7 +83,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: session.children.length,
+                      itemCount: activeChildren.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
@@ -90,7 +91,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
                         childAspectRatio: 0.88,
                       ),
                       itemBuilder: (context, i) {
-                        final child = session.children[i];
+                        final child = activeChildren[i];
                         return _WatcherCard(
                           name: child.name,
                           subtitle: child.isUnderAge ? 'Explorer' : 'Teen',

@@ -314,16 +314,18 @@ class _GroupsScreenState extends State<GroupsScreen> {
           membership: item,
           canLeave: !isFamily && item?['canLeave'] == true,
           canInvite: !isFamily && _isGroupAdmin(item),
-          canDelete: _isGroupAdmin(item),
+          canDelete: _isGroupAdmin(item) && (!isFamily || item?['role'] == 'Owner'),
           canNudge: !isFamily && _isGroupAdmin(item),
           ranksOverride: widget.ranksOverride,
           onLeave: isFamily || item == null ? null : () => _leave(item),
           onInvite: isFamily || item == null || !_isGroupAdmin(item) ? null : () => _openInvite(item),
-          onDelete: item == null || !_isGroupAdmin(item) ? null : () => _deleteGroup(item),
+          onDelete: item == null || !_isGroupAdmin(item) || (isFamily && item['role'] != 'Owner')
+              ? null : () => _deleteGroup(item),
+          canManageFamily: isFamily && _isGroupAdmin(item),
           onCancelDeletion: item != null &&
                   item['deletionPending'] == true &&
                   item['kind'] == 'FAMILY' &&
-                  _isGroupAdmin(item)
+                  item['role'] == 'Owner'
               ? () => _cancelPendingDeletion(item)
               : null,
         ),
@@ -652,6 +654,7 @@ class _GroupStandingScreen extends StatefulWidget {
     this.canInvite = false,
     this.canDelete = false,
     this.canNudge = false,
+    this.canManageFamily = false,
     this.onInvite,
     this.onDelete,
     this.onCancelDeletion,
@@ -665,6 +668,7 @@ class _GroupStandingScreen extends StatefulWidget {
   final bool canInvite;
   final bool canDelete;
   final bool canNudge;
+  final bool canManageFamily;
   final VoidCallback? onInvite;
   final VoidCallback? onDelete;
   final VoidCallback? onCancelDeletion;
@@ -749,6 +753,21 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                        if (widget.canManageFamily)
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                await Navigator.push<void>(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => FamilyScreen(familyId: widget.cls.id)),
+                                );
+                                if (mounted) await _load();
+                              },
+                              icon: const Icon(Icons.family_restroom_rounded),
+                              label: const Text('Manage family'),
+                            ),
+                          ),
                         _GroupDetailBody(
                           cls: widget.cls,
                           membership: membership,

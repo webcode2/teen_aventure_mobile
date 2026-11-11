@@ -66,7 +66,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       final family = context.read<FamilyService>();
       final engagement = context.read<EngagementService>();
       _family = await family.getMyFamily();
-      _summary = await engagement.getFamilySummary();
+      _summary = await engagement.getFamilySummary(familyId: family.familyId);
       try {
         _cheers = await engagement.getNudgeTemplates();
       } catch (_) {
@@ -106,7 +106,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
 
   Future<void> _ensureOwnedFamily() async {
     final session = context.read<AuthSession>();
-    if (!session.canCreateGroups || !canCreateOwnedFamily(session.familyId)) return;
+    if (_family != null || !session.canCreateGroups || !canCreateOwnedFamily(session.familyId)) return;
     final name = defaultFamilyName(session.displayName);
     await context.read<FamilyService>().createFamily(name);
     await session.refreshProfile();
@@ -269,7 +269,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         builder: (ctx, update) => PopScope(
           canPop: !busy,
           child: AlertDialog(
-            title: const Text('Add guardian'),
+            title: const Text('Add family admin'),
             scrollable: true,
             content: Form(
               key: form,
@@ -277,7 +277,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Use the email of an existing adult account. Adding them gives them guardian access to this family.'),
+                  const Text('Use the email of an existing adult account. Adding them lets them manage this family and its explorers.'),
                   const SizedBox(height: 12),
                   TextFormField(
                     enabled: !busy,
@@ -307,7 +307,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                     error = null;
                   });
                   try {
-                    await service.addGuardian(email);
+                    await service.addGuardian(email, asAdmin: true);
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
@@ -318,7 +318,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                     }
                   }
                 },
-                child: Text(busy ? 'Adding…' : 'Add guardian'),
+                child: Text(busy ? 'Adding…' : 'Add family admin'),
               ),
             ],
           ),
@@ -327,7 +327,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     );
     if (added == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Guardian added.')),
+        const SnackBar(content: Text('Family admin added.')),
       );
       await _load();
     }
@@ -400,6 +400,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       await context.read<AuthService>().setChildPin(
             childId: child['id'] as String,
             pin: saved,
+            familyId: context.read<FamilyService>().familyId,
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -411,7 +412,9 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
   }
 
-  Future<void> _teenActions(Map<String, dynamic> child) async {
+  Future<void> _explorerAccess(Map<String, dynamic> child) async {
+    final linked = child['transitionedToUserId'] != null;
+    final active = child['independentLogin'] == true;
     final email = TextEditingController(text: child['email'] as String? ?? '');
     final password = TextEditingController();
     final adultEmail = TextEditingController();
@@ -444,30 +447,32 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Teen access for ${child['name']}',
+                  'Sign-in for ${child['name']}',
                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Set an independent login, or move them to an adult account when they age up.',
+                  'An email and password let this explorer sign in on their own device.',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.35),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: email,
-                  decoration: _fieldDecoration('Teen login email'),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: password,
-                  obscureText: true,
-                  decoration: _fieldDecoration('Password (8+ characters)'),
-                ),
-                const SizedBox(height: 12),
+                if (!linked) ...[
+                  TextField(
+                    controller: email,
+                    decoration: _fieldDecoration('Login email'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: _fieldDecoration('Password (8+ characters)'),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 FilledButton(
                   onPressed: () async {
                     final pwd = password.text;
-                    final pwdError = validatePassword(pwd);
+                    final pwdError = linked ? null : validateEmail(email.text) ?? validatePassword(pwd);
                     if (pwdError != null) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pwdError)));
@@ -477,49 +482,53 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                     try {
                       await context.read<FamilyService>().enableIndependentLogin(
                             childId: child['id'] as String,
-                            enabled: true,
-                            email: email.text.trim(),
-                            password: pwd,
+                            enabled: !active,
+                            email: linked ? null : email.text.trim(),
+                            password: linked ? null : pwd,
                           );
                       if (ctx.mounted) Navigator.pop(ctx);
-                      await _load();
+                      if (!mounted) return;
+                      await context.read<AuthSession>().refreshProfile();
+                      if (mounted) await _load();
                     } catch (e) {
                       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
                     }
                   },
-                  child: const Text('Enable independent login'),
+                  child: Text(active ? 'Deactivate sign-in' : linked ? 'Reactivate sign-in' : 'Enable sign-in'),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Age-up',
-                  style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
-                ),
-                const SizedBox(height: 8),
-                TextField(controller: adultEmail, decoration: _fieldDecoration('Adult account email')),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: adultPassword,
-                  obscureText: true,
-                  decoration: _fieldDecoration('Adult password'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      await context.read<FamilyService>().transitionToAdult(
-                            childId: child['id'] as String,
-                            email: adultEmail.text.trim(),
-                            password: adultPassword.text,
-                            name: child['name'] as String?,
-                          );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      await _load();
-                    } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
-                    }
-                  },
-                  child: const Text('Transition to adult account'),
-                ),
+                if (child['ageBand'] == 'TEEN') ...[
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Age-up',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(controller: adultEmail, decoration: _fieldDecoration('Adult account email')),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: adultPassword,
+                    obscureText: true,
+                    decoration: _fieldDecoration('Adult password'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () async {
+                      try {
+                        await context.read<FamilyService>().transitionToAdult(
+                              childId: child['id'] as String,
+                              email: adultEmail.text.trim(),
+                              password: adultPassword.text,
+                              name: child['name'] as String?,
+                            );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        await _load();
+                      } catch (e) {
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
+                      }
+                    },
+                    child: const Text('Transition to adult account'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -598,6 +607,9 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     final kids = _children;
     final userId = context.watch<AuthSession>().userId;
     final ownsFamily = userId != null && _family?['ownerUserId'] == userId;
+    final canAddAdmin = canManage && (ownsFamily || guardians.any(
+      (guardian) => guardian['userId'] == userId && userId != null && guardian['relation'] == 'Admin',
+    ));
     final points = _summary?.familyAskScore ?? 0;
     final jar = _summary?.familyJar ?? 0;
 
@@ -635,7 +647,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 )
               : null,
         ),
-        if (guardians.isNotEmpty || (canManage && ownsFamily)) ...[
+        if (guardians.isNotEmpty || canAddAdmin) ...[
           const SizedBox(height: 12),
           const Text(
             'Guardians',
@@ -649,13 +661,13 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 title: Text(user['name'] as String? ?? user['email'] as String? ?? 'Guardian'),
                 subtitle: Text(guardian['relation'] as String? ?? 'Guardian'),
               ),
-          if (canManage && ownsFamily)
+          if (canAddAdmin)
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
                 onPressed: _addGuardian,
                 icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Add guardian'),
+                label: const Text('Add family admin'),
               ),
             ),
         ],
@@ -712,8 +724,8 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               onPin: kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
                   ? () => _setPin(kids[i])
                   : null,
-              onManageTeen: kids[i]['ageBand'] == 'TEEN' && kids[i]['transitionedToUserId'] == null
-                  ? () => _teenActions(kids[i])
+              onManageTeen: canManage && kids[i]['canManageLogin'] != false
+                  ? () => _explorerAccess(kids[i])
                   : null,
             ),
             const SizedBox(height: 12),

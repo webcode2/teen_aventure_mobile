@@ -119,9 +119,10 @@ class AuthService {
   Future<void> setChildPin({
     required String childId,
     required String pin,
+    String? familyId,
   }) async {
     try {
-      await _apiClient.dio.put('/api/auth/children/$childId/pin', data: {
+      await _apiClient.dio.put('/api/auth/children/$childId/pin', queryParameters: {if (familyId != null) 'familyId': familyId}, data: {
         'pin': pin,
       });
     } on DioException catch (e) {

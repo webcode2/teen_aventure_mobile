@@ -28,6 +28,7 @@ class FamilyChildProfile {
   final String? email;
 
   final bool independentLogin;
+  final bool loginDeactivated;
 
 
 
@@ -42,6 +43,7 @@ class FamilyChildProfile {
     this.email,
 
     this.independentLogin = false,
+    this.loginDeactivated = false,
 
   });
 
@@ -50,7 +52,7 @@ class FamilyChildProfile {
   bool get isUnderAge => ageBand == 'CHILD';
 
   /// Family teen with their own login — switch uses email/password and ends the parent session.
-  bool get usesEmailPasswordSwitch => independentLogin && !isUnderAge;
+  bool get usesEmailPasswordSwitch => independentLogin;
 
   /// Short label for lists (never "Under-age").
   String get explorerBandLabel => isUnderAge ? 'Explorer' : 'Teen explorer';
@@ -68,6 +70,7 @@ class FamilyChildProfile {
       email: json['email'] as String?,
 
       independentLogin: json['independentLogin'] as bool? ?? false,
+      loginDeactivated: json['loginDeactivated'] == true,
 
     );
 

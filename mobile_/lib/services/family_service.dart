@@ -5,9 +5,15 @@ import 'api_client.dart';
 
 /// Family, session profile, and invites.
 class FamilyService {
-  FamilyService(this._apiClient);
+  FamilyService(this._apiClient, {this.familyId});
 
   final ApiClient _apiClient;
+  final String? familyId;
+
+  FamilyService forFamily(String id) => FamilyService(_apiClient, familyId: id);
+
+  Map<String, dynamic>? get _familyQuery => familyId == null ? null : {'familyId': familyId};
+
 
   Future<Map<String, dynamic>> getSession() async {
     try {
@@ -43,7 +49,7 @@ class FamilyService {
 
   Future<Map<String, dynamic>> getMyFamily() async {
     try {
-      final response = await _apiClient.dio.get('/api/families/my');
+      final response = await _apiClient.dio.get('/api/families/my', queryParameters: _familyQuery);
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -55,7 +61,7 @@ class FamilyService {
     required String? description,
   }) async {
     try {
-      await _apiClient.dio.patch('/api/families/my', data: {
+      await _apiClient.dio.patch('/api/families/my', queryParameters: _familyQuery, data: {
         'name': name,
         'description': description,
       });
@@ -64,10 +70,11 @@ class FamilyService {
     }
   }
 
-  Future<void> addGuardian(String email) async {
+  Future<void> addGuardian(String email, {bool asAdmin = false}) async {
     try {
-      await _apiClient.dio.post('/api/families/guardians', data: {
+      await _apiClient.dio.post('/api/families/guardians', queryParameters: _familyQuery, data: {
         'email': email.trim().toLowerCase(),
+        if (asAdmin) 'relation': 'Admin',
       });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -82,7 +89,7 @@ class FamilyService {
     String? password,
   }) async {
     try {
-      final response = await _apiClient.dio.post('/api/families/children', data: {
+      final response = await _apiClient.dio.post('/api/families/children', queryParameters: _familyQuery, data: {
         'name': name,
         'birthYear': birthYear,
         if (email != null && email.isNotEmpty) 'email': email,
@@ -97,7 +104,7 @@ class FamilyService {
   Future<void> requestDeletion({required String reason, required String password}) async {
     try {
       await _apiClient.dio.post(
-        '/api/families/request-deletion',
+        '/api/families/request-deletion', queryParameters: _familyQuery,
         data: {'reason': reason, 'password': password},
       );
     } on DioException catch (e) {
@@ -108,7 +115,7 @@ class FamilyService {
   Future<void> cancelDeletion() async {
     try {
       await _apiClient.dio.post(
-        '/api/families/cancel-deletion',
+        '/api/families/cancel-deletion', queryParameters: _familyQuery,
         data: <String, dynamic>{},
       );
     } on DioException catch (e) {
@@ -133,7 +140,7 @@ class FamilyService {
   }) async {
     try {
       final response = await _apiClient.dio.patch(
-        '/api/families/children/$childId/independent-login',
+        '/api/families/children/$childId/independent-login', queryParameters: _familyQuery,
         data: {
           'enabled': enabled,
           if (email != null) 'email': email,
@@ -155,7 +162,7 @@ class FamilyService {
   }) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/families/children/$childId/transition-to-adult',
+        '/api/families/children/$childId/transition-to-adult', queryParameters: _familyQuery,
         data: {
           'email': email,
           'password': password,

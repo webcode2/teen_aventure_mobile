@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/family_service.dart';
 import '../../theme.dart';
 import '../adult/parent_home_panel.dart';
 
 /// Family management — children and settings.
 /// Opened from Profile → Family (moved off the Home tab).
 class FamilyScreen extends StatelessWidget {
-  const FamilyScreen({super.key});
+  const FamilyScreen({super.key, this.familyId});
+
+  final String? familyId;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final id = familyId;
+    final page = Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
         backgroundColor: AppColors.navy,
@@ -24,5 +29,8 @@ class FamilyScreen extends StatelessWidget {
         child: ParentHomePanel(),
       ),
     );
+    return id == null
+        ? page
+        : Provider.value(value: context.read<FamilyService>().forFamily(id), child: page);
   }
 }

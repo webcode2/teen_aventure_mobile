@@ -45,8 +45,9 @@ void main() {
             family.addAll(Map<String, dynamic>.from(request.data as Map));
           case 'POST /api/v1/families/guardians':
             guardianEmail = (request.data as Map)['email'] as String;
+            expect((request.data as Map)['relation'], 'Admin');
             (family['guardians'] as List).add({
-              'relation': 'Guardian',
+              'relation': (request.data as Map)['relation'],
               'user': {'name': 'Second Adult', 'email': guardianEmail},
             });
           case 'POST /api/v1/families/children':
@@ -91,13 +92,13 @@ void main() {
     expect(family['description'], isNull);
     expect(find.text('Renamed family'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Add guardian'));
-    await tester.tap(find.text('Add guardian'));
+    await tester.ensureVisible(find.text('Add family admin'));
+    await tester.tap(find.text('Add family admin'));
     await tester.pumpAndSettle();
     final dialog = find.byType(AlertDialog);
     final add = find.descendant(
         of: dialog,
-        matching: find.widgetWithText(FilledButton, 'Add guardian'));
+        matching: find.widgetWithText(FilledButton, 'Add family admin'));
     await tester.tap(add);
     await tester.pumpAndSettle();
     expect(find.text('Email is required'), findsOneWidget);

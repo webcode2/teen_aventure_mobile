@@ -201,7 +201,7 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(height: 10),
           
             const SizedBox(height: 16),
-            for (final child in session.children) ...[
+            for (final child in session.children.where((child) => !child.loginDeactivated)) ...[
               _ChildSwitchTile(
                 child: child,
                 busy: _busy,

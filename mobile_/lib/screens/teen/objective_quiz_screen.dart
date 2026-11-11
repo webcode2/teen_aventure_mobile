@@ -37,6 +37,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   int? selectedOption;
   String fillBlankText = '';
   int score = 0;
+  int correctAnswers = 0;
   bool isSubmitted = false;
   /// Guards the final submit against double taps.
   bool _finishing = false;
@@ -94,17 +95,10 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
 
   void _checkAnswer() {
     if (!canCheck || isSubmitted) return;
-    if (isFillBlank) {
-      final typed = fillBlankText.trim();
-      _answers[currentIndex] = typed;
-      if (!widget.alreadyCompleted && current.matchesFillBlank(typed)) {
-        score += current.points;
-      }
-    } else {
-      _answers[currentIndex] = selectedOption;
-      if (!widget.alreadyCompleted && selectedOption == current.answerIndex) {
-        score += current.points;
-      }
+    _answers[currentIndex] = isFillBlank ? fillBlankText.trim() : selectedOption;
+    if (isCorrect) {
+      correctAnswers++;
+      if (!widget.alreadyCompleted) score += current.points;
     }
     setState(() => isSubmitted = true);
   }
@@ -198,6 +192,11 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
             ),
             const SizedBox(height: 10),
             Text(
+              '$correctAnswers / ${questions.length} correct',
+              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+            ),
+            const SizedBox(height: 8),
+            Text(
               practice
                   ? 'Nice review. No new points this time.'
                   : 'Great work. You earned +$score points.',
@@ -225,6 +224,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                   _fillBlankController.clear();
                   isSubmitted = false;
                   score = 0;
+                  correctAnswers = 0;
                   for (var i = 0; i < _answers.length; i++) {
                     _answers[i] = null;
                   }
