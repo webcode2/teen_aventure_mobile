@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../data/declaration_progress.dart';
-import '../../../data/quest_points.dart';
 import '../../../models/auth_session.dart';
 import '../../../models/game_controller.dart';
 import '../../../services/content_service.dart';
@@ -37,6 +38,8 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
   int _tapCount = 0;
   bool _awarded = false;
   DeclarationProgress? _saved;
+  late DateTime _day;
+  Timer? _midnight;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
       TweenSequenceItem(tween: Tween(begin: 1.04, end: 1), weight: 1),
     ]).animate(CurvedAnimation(parent: _press, curve: Curves.easeOut));
     _restoreTaps();
+    _startDay(DateTime.now());
   }
 
   void _restoreTaps() {
@@ -61,17 +65,28 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
         profile: '${session.userId ?? ''}:${session.effectiveChildId ?? ''}',
         refKey: widget.refKey,
       );
-      _tapCount = _saved!.load().clamp(0, widget.targetTaps);
-      if (_complete) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _awardIfNeeded(allowLocalFallback: false);
-        });
-      }
     } catch (_) {}
+  }
+
+  void _startDay(DateTime now) {
+    _day = now;
+    _tapCount = (_saved?.load(now) ?? 0).clamp(0, widget.targetTaps);
+    _saved?.save(now, _tapCount);
+    if (_complete) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _complete) _awardIfNeeded();
+      });
+    }
+    _midnight?.cancel();
+    _midnight = Timer(
+      DateTime(now.year, now.month, now.day + 1).difference(now),
+      () => setState(() => _startDay(DateTime.now())),
+    );
   }
 
   @override
   void dispose() {
+    _midnight?.cancel();
     _press.dispose();
     super.dispose();
   }
@@ -79,6 +94,10 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
   bool get _complete => _tapCount >= widget.targetTaps;
 
   void _onTap() {
+    final now = DateTime.now();
+    if (DeclarationProgress.dayKey(now) != DeclarationProgress.dayKey(_day)) {
+      setState(() => _startDay(now));
+    }
     if (_complete) {
       HapticFeedback.selectionClick();
       _press.forward(from: 0);
@@ -92,7 +111,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
       _tapCount += 1;
       _burstId++;
     });
-    _saved?.save(_tapCount);
+    _saved?.save(_day, _tapCount);
 
     if (_tapCount >= widget.targetTaps) {
       HapticFeedback.mediumImpact();
@@ -100,28 +119,20 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
     }
   }
 
-  void _awardIfNeeded({bool allowLocalFallback = true}) {
+  Future<void> _awardIfNeeded() async {
     if (_awarded) return;
     _awarded = true;
     try {
       final childId = context.read<AuthSession>().effectiveChildId;
       final game = context.read<GameController>();
-      context
-          .read<ContentService>()
-          .markPrayerDeclared(refKey: widget.refKey, childId: childId)
-          .then((award) {
-        if (!mounted) return;
-        if (award.awardedFresh) {
-          game.applyActivityPoints(award.points);
-        } else if (!award.ok && allowLocalFallback) {
-          game.addScoreAndGems(QuestPoints.prayer, 1);
-        }
-      });
+      final award = await context.read<ContentService>().markPrayerDeclared(
+        refKey: widget.refKey,
+        childId: childId,
+      );
+      if (mounted && award.awardedFresh) game.applyActivityPoints(award.points);
+      if (!award.ok) _awarded = false;
     } catch (_) {
-      if (!allowLocalFallback) return;
-      try {
-        context.read<GameController>().addScoreAndGems(QuestPoints.prayer, 1);
-      } catch (_) {}
+      _awarded = false;
     }
   }
 
@@ -129,7 +140,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
   Widget build(BuildContext context) {
     final progress = (_tapCount / widget.targetTaps).clamp(0.0, 1.0);
     final statusLabel = _complete
-        ? '✓ Completed this week  ·  ${widget.targetTaps}/${widget.targetTaps}'
+        ? '✓ Completed today  ·  ${widget.targetTaps}/${widget.targetTaps}'
         : '— ${widget.reference}  ·  $_tapCount/${widget.targetTaps}  ·  Tap ';
 
     return Stack(

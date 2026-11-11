@@ -162,6 +162,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               points: points,
               weeksCompleted: weeksCompleted,
               awards: awards,
+              recent: self.recent,
               groups: familyHub && !tracked ? const [] : self.groups,
               children: familyHub ? [if (tracked) self, ...explorers] : const [],
               onOpenChild: familyHub ? _openChild : null,
@@ -191,6 +192,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     required int points,
     required int weeksCompleted,
     required List<QuestMilestone> awards,
+    List<FamilyActivity> recent = const [],
     List<GroupPlace> groups = const [],
     List<AchievementRecord> children = const [],
     ValueChanged<AchievementRecord>? onOpenChild,
@@ -220,6 +222,25 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       ),
       const SizedBox(height: 12),
       _AwardsRow(weeksCompleted: weeksCompleted, awards: awards),
+      if (recent.isNotEmpty) ...[
+        const SizedBox(height: 22),
+        const Text(
+          'Recent activity',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
+        ),
+        const SizedBox(height: 12),
+        for (final activity in recent)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: AdventureListCard(
+              title: activityCaption(activity.activityType),
+              subtitle: compactWhen(activity.createdAt),
+              icon: Icons.check_circle_rounded,
+              accent: AdventureListAccent.green,
+              trailing: Text('+${activity.points} pts'),
+            ),
+          ),
+      ],
       if (groups.isNotEmpty) ...[
         const SizedBox(height: 22),
         const Text(

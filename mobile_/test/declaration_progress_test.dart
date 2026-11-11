@@ -9,10 +9,12 @@ void main() {
     final ada = DeclarationProgress(prefs, profile: 'u:ada', refKey: 'word-declaration-w3');
     final ben = DeclarationProgress(prefs, profile: 'u:ben', refKey: 'word-declaration-w3');
 
-    await ada.save(7);
+    final today = DateTime(2026, 11, 11);
+    await ada.save(today, 7);
 
-    expect(DeclarationProgress(prefs, profile: 'u:ada', refKey: 'word-declaration-w3').load(), 7);
-    expect(ben.load(), 0);
-    expect(DeclarationProgress(prefs, profile: 'u:ada', refKey: 'word-declaration-w4').load(), 0);
+    expect(DeclarationProgress(prefs, profile: 'u:ada', refKey: 'word-declaration-w3').load(today), 7);
+    expect(ben.load(today), 0);
+    expect(ada.load(DateTime(2026, 11, 12)), 0);
+    expect(DeclarationProgress(prefs, profile: 'u:ada', refKey: 'word-declaration-w4').load(today), 0);
   });
 }

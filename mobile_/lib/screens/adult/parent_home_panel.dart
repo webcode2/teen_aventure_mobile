@@ -127,7 +127,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
 
     String? email;
     String? password;
-    if (kind == ExplorerAgeKind.teen) {
+    if (kind == ExplorerAgeKind.teen && _teenEmail.text.trim().isNotEmpty) {
       email = _teenEmail.text.trim();
       password = _teenPassword.text;
       final error = validateEmail(email) ?? validatePassword(password);
@@ -709,7 +709,9 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               streakDays: _scoreFor(kids[i]['id'] as String)?.streak ?? 0,
               cheers: _cheers,
               onCheer: (key) => _nudge(kids[i]['id'] as String, key),
-              onPin: kids[i]['ageBand'] == 'CHILD' ? () => _setPin(kids[i]) : null,
+              onPin: kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
+                  ? () => _setPin(kids[i])
+                  : null,
               onManageTeen: kids[i]['ageBand'] == 'TEEN' && kids[i]['transitionedToUserId'] == null
                   ? () => _teenActions(kids[i])
                   : null,
@@ -1210,7 +1212,7 @@ class _AddChildCardState extends State<_AddChildCard> {
                 ? 'Step 1 — name'
                 : _step == 1
                     ? 'Step 2 — age'
-                    : 'Step 3 — their own login (ages 15+)',
+                    : 'Step 3 — optional login (ages 15+)',
             style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 14),
@@ -1237,7 +1239,7 @@ class _AddChildCardState extends State<_AddChildCard> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Ages 0–14 stay under your account. Ages 15–19 get their own login with email and password. Ages 20+ need their own adult account.',
+              'Ages 0–14 stay under your account. Ages 15–19 can have their own login with email and password. Ages 20+ need their own adult account.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
             ),
           ] else ...[
@@ -1249,18 +1251,20 @@ class _AddChildCardState extends State<_AddChildCard> {
             TextField(
               controller: widget.email,
               keyboardType: TextInputType.emailAddress,
-              decoration: _fieldDecoration('Email'),
+              decoration: _fieldDecoration('Email (optional)'),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: widget.password,
-              obscureText: true,
-              decoration: _fieldDecoration('Password (8+ characters)'),
-            ),
+            if (widget.email.text.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              TextField(
+                controller: widget.password,
+                obscureText: true,
+                decoration: _fieldDecoration('Password (8+ characters)'),
+              ),
+            ],
             const SizedBox(height: 8),
             const Text(
-              'They sign in with this email and password on their own device.',
+              'Leave email blank to use a PIN on your device. Set the PIN after creating the explorer.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
             ),
           ],
@@ -1289,7 +1293,7 @@ class _AddChildCardState extends State<_AddChildCard> {
                         if (kind == ExplorerAgeKind.child) return 'Create explorer';
                         return 'Next';
                       }
-                      return 'Create with login';
+                      return widget.email.text.trim().isEmpty ? 'Create explorer' : 'Create with login';
                     }(),
                   ),
                 ),

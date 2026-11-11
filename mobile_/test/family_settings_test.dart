@@ -24,13 +24,14 @@ void main() {
       'name': 'Original family',
       'description': 'Old description',
       'ownerUserId': 'owner',
-      'children': [
+      'children': <Map<String, dynamic>>[
         {'id': 'explorer', 'name': 'Rejoice', 'ageBand': 'CHILD'},
       ],
       'guardians': <Map<String, dynamic>>[],
     };
     String? savedPin;
     String? guardianEmail;
+    Map<String, dynamic>? createdExplorer;
     api.dio.interceptors.add(InterceptorsWrapper(
       onRequest: (request, handler) {
         final route = '${request.method} ${request.path}';
@@ -47,6 +48,14 @@ void main() {
             (family['guardians'] as List).add({
               'relation': 'Guardian',
               'user': {'name': 'Second Adult', 'email': guardianEmail},
+            });
+          case 'POST /api/v1/families/children':
+            createdExplorer = Map<String, dynamic>.from(request.data as Map);
+            (family['children'] as List).add({
+              'id': 'teen',
+              'name': createdExplorer!['name'],
+              'ageBand': 'TEEN',
+              'independentLogin': false,
             });
           case 'PUT /api/v1/auth/children/explorer/pin':
             savedPin = (request.data as Map)['pin'] as String;
@@ -116,6 +125,26 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(savedPin, generated);
+
+    final next = find.widgetWithText(FilledButton, 'Next');
+    await tester.ensureVisible(find.widgetWithText(TextField, 'Child/teen name'));
+    await tester.enterText(find.widgetWithText(TextField, 'Child/teen name'), 'Maya');
+    await tester.ensureVisible(next);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(TextField, 'Age'));
+    await tester.enterText(find.widgetWithText(TextField, 'Age'), '16');
+    await tester.ensureVisible(next);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    expect(find.text('Email (optional)'), findsOneWidget);
+    final create = find.widgetWithText(FilledButton, 'Create explorer');
+    await tester.ensureVisible(create);
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear']));
+    expect(createdExplorer?['name'], 'Maya');
+    expect(find.text('Set PIN'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 }

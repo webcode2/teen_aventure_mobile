@@ -1,3 +1,4 @@
+import '../family/family_screen.dart';
 import '../account/individual_account_deletion_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -459,33 +460,43 @@ class _GroupsScreenState extends State<GroupsScreen> {
     }
   }
 
-  Widget _yourGroupsHeader(bool canCreate) {
-    return Row(
+  Widget _yourGroupsHeader(AuthSession session) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your groups',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Open a group to see details and standing.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-              ),
-            ],
-          ),
+        const Text(
+          'Your groups',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
         ),
-        if (canCreate)
-          TextButton.icon(
-            key: const Key('create-group'),
-            onPressed: _createGroup,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('New group'),
-          ),
+        const SizedBox(height: 4),
+        const Text(
+          'Open a group to see details and standing.',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            if (session.isParent && session.familyId != null)
+              TextButton.icon(
+                onPressed: () async {
+                  await Navigator.push<void>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FamilyScreen()),
+                  );
+                  if (mounted) await _load();
+                },
+                icon: const Icon(Icons.family_restroom_rounded, size: 18),
+                label: const Text('Family'),
+              ),
+            if (session.canCreateGroups)
+              TextButton.icon(
+                key: const Key('create-group'),
+                onPressed: _createGroup,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New group'),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -539,7 +550,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _yourGroupsHeader(session.canCreateGroups),
+                _yourGroupsHeader(session),
                 const SizedBox(height: 12),
                 if (listings.isEmpty)
                   Container(

@@ -43,6 +43,7 @@ void main() {
     })))));
     await tester.pumpAndSettle();
     expect(find.text('Home family'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Family'), findsOneWidget);
     expect(find.text('Teen accepted circle'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

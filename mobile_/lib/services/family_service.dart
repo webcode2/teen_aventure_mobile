@@ -74,7 +74,7 @@ class FamilyService {
     }
   }
 
-  /// Explorers aged 15+ must come with an [email] and [password] so they can sign in on their own.
+  /// Pass both [email] and [password] for an independent teen login.
   Future<Map<String, dynamic>> addChild({
     required String name,
     required int birthYear,
