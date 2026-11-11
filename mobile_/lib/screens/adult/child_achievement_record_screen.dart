@@ -18,7 +18,7 @@ class ChildAchievementRecordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final first = child.firstName;
+    final first = child.firstName.isEmpty ? 'You' : child.firstName;
     final share =
         familyPoints <= 0 ? 0 : ((child.points / familyPoints) * 100).round();
     return Scaffold(
@@ -26,14 +26,14 @@ class ChildAchievementRecordScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.cream,
-        title: Text('$first’s record',
+        title: Text(child.firstName.isEmpty ? 'Your record' : '$first’s record',
             style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           CircleStatsCard(
-            title: '$first’s Journey',
+            title: child.firstName.isEmpty ? 'Your journey' : '$first’s Journey',
             subtitle: profileMilestoneLine(name: first, weeksCompleted: child.weeksCompleted),
             stats: [
               CircleStat(

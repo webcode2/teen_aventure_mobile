@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../models/video_lesson.dart';
 import '../../models/game_controller.dart';
 import '../../models/video_source.dart';
+import '../../models/watch_progress.dart';
 import '../../platform/local_fs.dart';
 import '../../providers/current_quest_provider.dart';
 import '../../providers/video_provider.dart';
@@ -37,6 +38,10 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   bool isFullScreen = false;
   bool _lessonMarked = false;
   bool _continuing = false;
+  final WatchProgress _watch = WatchProgress();
+  final _watchClock = Stopwatch()..start();
+  Duration _lastWatchSample = Duration.zero;
+  bool _skipNoticeShown = false;
 
   double progressSeconds = 0;
   // Download state
@@ -103,15 +108,21 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   void _onVideoProgress() {
-    if (_continuing) return;
-    if (totalSeconds <= 0) return;
-    // Mark near the end; auto-advance once practically finished.
-    if (progressSeconds >= totalSeconds - 10) {
-      _markLessonWatched();
-    }
-    if (progressSeconds >= totalSeconds - 1.5) {
+    if (_continuing || !_watch.reachedEnd) return;
+    if (_watch.fullyWatched) {
       _finishAndContinue();
+    } else {
+      _showSkipNotice();
     }
+  }
+
+  /// Reaching the end by skipping ahead does not complete the lesson.
+  void _showSkipNotice() {
+    if (_skipNoticeShown || !mounted) return;
+    _skipNoticeShown = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Watch the whole video to complete this lesson.')),
+    );
   }
 
   void _markLessonWatched() {
@@ -140,7 +151,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   Future<void> _finishAndContinue() async {
-    if (_continuing) return;
+    if (_continuing || (!_lessonMarked && !_watch.fullyWatched)) return;
     _continuing = true;
     _markLessonWatched();
     final leave = _leaveVideoPlayback();
@@ -429,15 +440,23 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                         localFilePath: _localPath,
                         useLocalFile: _preferLocal,
                         onPosition: (position, duration) {
+                          final sample = _watchClock.elapsed;
+                          _watch.update(
+                            position,
+                            duration,
+                            sampleInterval: sample - _lastWatchSample,
+                          );
+                          _lastWatchSample = sample;
                           progressSeconds = position.inSeconds.toDouble();
                           if (duration.inSeconds > 0) {
                             totalSeconds = duration.inSeconds.toDouble();
                           }
-                          _onVideoProgress();
+                          if (_watch.fullyWatched) _onVideoProgress();
                         },
                         onEnded: () {
                           if (!mounted) return;
-                          _finishAndContinue();
+                          _watch.markEnded();
+                          _onVideoProgress();
                         },
                       ),
                     ),
@@ -497,7 +516,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                         child: FilledButton(
-                          onPressed: _finishAndContinue,
+                          onPressed: _lessonMarked ? _finishAndContinue : null,
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.orange,
                             foregroundColor: Colors.white,
@@ -511,9 +530,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                                 ? (pointsLabel != null
                                     ? 'Continue · earned $pointsLabel'
                                     : 'Continue to next')
-                                : (pointsLabel != null
-                                    ? 'Finished — continue · $pointsLabel'
-                                    : 'Finished — continue'),
+                                : 'Watch to the end',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,

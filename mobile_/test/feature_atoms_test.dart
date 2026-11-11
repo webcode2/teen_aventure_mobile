@@ -117,7 +117,7 @@ void main() {
     expect(find.textContaining('9/10'), findsWidgets);
     await tester.tap(card);
     await tester.pump();
-    expect(find.textContaining('Declared!'), findsOneWidget);
+    expect(find.textContaining('Completed this week'), findsOneWidget);
   });
 
   testWidgets('the first back warns and the second exits', (tester) async {

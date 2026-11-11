@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teen_aventure/models/api_models.dart';
@@ -307,6 +309,26 @@ void main() {
 
     const done = WeekQuestProgress(videosDone: 4, quizDone: true, puzzleDone: true, videoCount: 4);
     expect(done.isCaughtUp, isTrue);
+  });
+
+  test('a late refresh cannot show the previous explorer’s ticks', () async {
+    final first = Completer<CurrentQuest?>();
+    var requests = 0;
+    final provider = CurrentQuestProvider(
+      null,
+      fetch: () => requests++ == 0
+          ? first.future
+          : Future.value(CurrentQuest.fromJson(_response())),
+    );
+    provider.syncIdentity(authenticated: true, userId: 'u', childId: 'ada');
+    await pumpEventQueue();
+    provider.syncIdentity(authenticated: true, userId: 'u', childId: 'ben');
+    await _untilSettled(provider);
+
+    first.complete(CurrentQuest.fromJson(_response(watched: ['w50-v1'])));
+    await pumpEventQueue();
+
+    expect(provider.progress?.videosDone, 0);
   });
 
   test('failed quiz step is retried on the next refresh', () async {

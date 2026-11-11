@@ -4,6 +4,8 @@ import 'package:teen_aventure/providers/hero_copy.dart';
 import 'package:teen_aventure/services/api_client.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('welcome toggle survives cached JSON and can be enabled again', () {
     expect(WelcomeCopy.fallback.enabled, isTrue);
     final off = WelcomeCopy.resolve({'welcome': {'enabled': false, 'title': 'Keep me'}}, WelcomeCopy.fallback);

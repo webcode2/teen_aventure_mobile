@@ -255,7 +255,11 @@ class GameController extends ChangeNotifier {
   }
 
   int? _activeWeek;
-  static const _localWeekPrefix = 'local_week_quest_v1:';
+  /// Week progress is saved per explorer: siblings share one family phone.
+  String _activeProfile = '';
+  static const _localWeekPrefix = 'local_week_quest_v2:';
+
+  String _weekKey(int weekNumber) => '$_localWeekPrefix$_activeProfile:$weekNumber';
 
   /// Bind the explorer to [weekNumber] and its Studio [puzzleId].
   /// Always loads the week's puzzle when the id changes — including the first
@@ -266,7 +270,17 @@ class GameController extends ChangeNotifier {
     bool quizDone = false,
     bool puzzleDone = false,
     String? puzzleId,
+    String profile = '',
   }) {
+    if (profile != _activeProfile) {
+      // Another explorer: drop the last one's week state and solved grid.
+      _activeProfile = profile;
+      _activeWeek = null;
+      _watchedVideoParts.clear();
+      weekQuizDone = false;
+      weekPuzzleDone = false;
+      boundPuzzleId = null;
+    }
     final switchingWeek = _activeWeek != null && _activeWeek != weekNumber;
     if (_activeWeek != weekNumber) {
       _activeWeek = weekNumber;
@@ -301,19 +315,20 @@ class GameController extends ChangeNotifier {
 
   Future<void> _restoreLocalWeek(int weekNumber) async {
     try {
+      final profile = _activeProfile;
+      final key = _weekKey(weekNumber);
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_localWeekPrefix$weekNumber');
-      if (raw == null || raw.isEmpty || _activeWeek != weekNumber) return;
+      if (_activeProfile != profile || _activeWeek != weekNumber) return;
+      final raw = prefs.getString(key);
+      if (raw == null || raw.isEmpty) return;
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
-      _watchedVideoParts
-        ..clear()
-        ..addAll([
-          for (final item in (decoded['watched'] as List? ?? const []))
-            if (item is int) item else if (item is num) item.toInt(),
-        ]);
-      weekQuizDone = decoded['quizDone'] == true;
-      weekPuzzleDone = decoded['puzzleDone'] == true;
+      _watchedVideoParts.addAll([
+        for (final item in (decoded['watched'] as List? ?? const []))
+          if (item is num) item.toInt(),
+      ]);
+      weekQuizDone = weekQuizDone || decoded['quizDone'] == true;
+      weekPuzzleDone = weekPuzzleDone || decoded['puzzleDone'] == true;
       notifyListeners();
     } catch (_) {}
   }
@@ -321,16 +336,13 @@ class GameController extends ChangeNotifier {
   void _persistLocalWeek() {
     final week = _activeWeek;
     if (week == null) return;
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(
-        '$_localWeekPrefix$week',
-        jsonEncode({
-          'watched': _watchedVideoParts.toList(),
-          'quizDone': weekQuizDone,
-          'puzzleDone': weekPuzzleDone,
-        }),
-      );
+    final key = _weekKey(week);
+    final value = jsonEncode({
+      'watched': _watchedVideoParts.toList(),
+      'quizDone': weekQuizDone,
+      'puzzleDone': weekPuzzleDone,
     });
+    SharedPreferences.getInstance().then((prefs) => prefs.setString(key, value));
   }
 
   int get weekVideosDone =>

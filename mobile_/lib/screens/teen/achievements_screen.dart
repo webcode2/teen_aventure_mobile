@@ -104,7 +104,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       MaterialPageRoute<void>(
         builder: (_) => ChildAchievementRecordScreen(
           child: child,
-          familyPoints: _data?.familyPoints ?? 0,
+          familyPoints: (_data?.familyPoints ?? 0) +
+              (_data?.tracked == true ? _data!.self.points : 0),
         ),
       ),
     );
@@ -162,7 +163,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               weeksCompleted: weeksCompleted,
               awards: awards,
               groups: familyHub && !tracked ? const [] : self.groups,
-              children: familyHub ? explorers : const [],
+              children: familyHub ? [if (tracked) self, ...explorers] : const [],
               onOpenChild: familyHub ? _openChild : null,
             ),
           ],
@@ -240,7 +241,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             key: Key('explorer-tile-${child.childId}'),
             padding: const EdgeInsets.only(bottom: 10),
             child: AdventureListCard(
-              title: child.firstName,
+              title: child.childId == null && child.name.isEmpty
+                  ? 'Your record'
+                  : child.firstName,
               subtitle: profileMilestoneLine(
                 name: child.firstName,
                 weeksCompleted: child.weeksCompleted,

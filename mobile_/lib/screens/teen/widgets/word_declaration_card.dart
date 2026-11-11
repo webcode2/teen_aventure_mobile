@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../data/declaration_progress.dart';
 import '../../../data/quest_points.dart';
 import '../../../models/auth_session.dart';
 import '../../../models/game_controller.dart';
 import '../../../services/content_service.dart';
+import '../../../services/service_locator.dart';
 import '../../../theme.dart';
 
 class WordDeclarationCard extends StatefulWidget {
@@ -34,6 +36,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
   int _burstId = 0;
   int _tapCount = 0;
   bool _awarded = false;
+  DeclarationProgress? _saved;
 
   @override
   void initState() {
@@ -47,6 +50,24 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.04), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 1.04, end: 1), weight: 1),
     ]).animate(CurvedAnimation(parent: _press, curve: Curves.easeOut));
+    _restoreTaps();
+  }
+
+  void _restoreTaps() {
+    try {
+      final session = context.read<AuthSession>();
+      _saved = DeclarationProgress(
+        ServiceLocator.instance.prefs,
+        profile: '${session.userId ?? ''}:${session.effectiveChildId ?? ''}',
+        refKey: widget.refKey,
+      );
+      _tapCount = _saved!.load().clamp(0, widget.targetTaps);
+      if (_complete) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _awardIfNeeded(allowLocalFallback: false);
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -71,6 +92,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
       _tapCount += 1;
       _burstId++;
     });
+    _saved?.save(_tapCount);
 
     if (_tapCount >= widget.targetTaps) {
       HapticFeedback.mediumImpact();
@@ -78,7 +100,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
     }
   }
 
-  void _awardIfNeeded() {
+  void _awardIfNeeded({bool allowLocalFallback = true}) {
     if (_awarded) return;
     _awarded = true;
     try {
@@ -88,13 +110,15 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
           .read<ContentService>()
           .markPrayerDeclared(refKey: widget.refKey, childId: childId)
           .then((award) {
+        if (!mounted) return;
         if (award.awardedFresh) {
           game.applyActivityPoints(award.points);
-        } else if (!award.ok) {
+        } else if (!award.ok && allowLocalFallback) {
           game.addScoreAndGems(QuestPoints.prayer, 1);
         }
       });
     } catch (_) {
+      if (!allowLocalFallback) return;
       try {
         context.read<GameController>().addScoreAndGems(QuestPoints.prayer, 1);
       } catch (_) {}
@@ -105,7 +129,7 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
   Widget build(BuildContext context) {
     final progress = (_tapCount / widget.targetTaps).clamp(0.0, 1.0);
     final statusLabel = _complete
-        ? 'Declared!  ·  ${widget.targetTaps}/${widget.targetTaps}'
+        ? '✓ Completed this week  ·  ${widget.targetTaps}/${widget.targetTaps}'
         : '— ${widget.reference}  ·  $_tapCount/${widget.targetTaps}  ·  Tap ';
 
     return Stack(

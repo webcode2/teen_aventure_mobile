@@ -97,7 +97,7 @@ class LessonVideoPlayerState extends State<LessonVideoPlayer> {
     widget.onPosition?.call(position, duration);
     if (!_endedFired &&
         duration > Duration.zero &&
-        position >= duration - const Duration(milliseconds: 400)) {
+        player.value.isCompleted) {
       _endedFired = true;
       widget.onEnded?.call();
     }

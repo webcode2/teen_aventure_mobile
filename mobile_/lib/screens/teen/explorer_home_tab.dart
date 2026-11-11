@@ -160,6 +160,8 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
     final quests = _quests;
     final current = quests?.current;
     final session = _session;
+    final profile = '${session?.userId ?? ""}:${session?.effectiveChildId ?? ""}';
+    final firstName = session?.displayName?.trim().split(RegExp(r'\s+')).first ?? '';
     _offerWelcomeIfNeeded(hero);
     _offerFamilyDialogIfNeeded(session);
     if (current != null) {
@@ -170,6 +172,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
             quizDone: current.quizDone,
             puzzleDone: current.puzzleDone,
             puzzleId: current.quest.puzzleId,
+            profile: profile,
           );
         }
       });
@@ -196,7 +199,9 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: sidePadding),
                 child: ExplorerHero(
-                  greeting: hero.greeting,
+                  greeting: firstName.isEmpty
+                      ? hero.greeting
+                      : 'Hey, $firstName!',
                   tagline: hero.tagline,
                   abi: hero.abiImage,
                   zach: hero.zachImage,
@@ -256,7 +261,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                   padding: const EdgeInsets.symmetric(horizontal: sidePadding),
                   child: WordDeclarationCard(
                     title: cmsText(context, 'home', 'declarationTitle', 'Word Declaration'),
-                    key: ValueKey('word-declaration-${current.quest.id}'),
+                    key: ValueKey('word-declaration-$profile-${current.quest.id}'),
                     declaration: current.quest.declarationText.trim(),
                     reference: _memoryVerse(current.quest.scripture),
                     refKey: 'word-declaration-${current.quest.id}',

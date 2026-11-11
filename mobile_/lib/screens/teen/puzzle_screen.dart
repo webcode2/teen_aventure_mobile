@@ -234,13 +234,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     if (!_handledWin) {
       _handledWin = true;
       _clock?.cancel();
+      final elapsed = game.puzzleElapsed;
+      final wordsSolved = game.solvedWordsCount;
+      final points = await WeekQuestFlow.recordPuzzleIfSolved(context);
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => PuzzleWinDialog(elapsed: game.puzzleElapsed),
+        builder: (_) => PuzzleWinDialog(
+          elapsed: elapsed,
+          wordsSolved: wordsSolved,
+          points: points,
+        ),
       );
-      if (!mounted) return;
-      await WeekQuestFlow.recordPuzzleIfSolved(context);
     }
 
     if (!mounted || _handledCatchUp) return;

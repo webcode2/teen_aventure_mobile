@@ -141,9 +141,9 @@ class WeekQuestFlow {
 
   /// Saves the week's puzzle on the server once the local grid is fully solved.
   /// Retries after the first finish are practice only — no step/reward claims.
-  static Future<void> recordPuzzleIfSolved(BuildContext context) async {
+  static Future<int> recordPuzzleIfSolved(BuildContext context) async {
     final game = context.read<GameController>();
-    if (!game.isPuzzleComplete && !game.weekPuzzleDone) return;
+    if (!game.isPuzzleComplete && !game.weekPuzzleDone) return 0;
 
     final provider = _provider(context);
     final content = context.read<ContentService>();
@@ -155,22 +155,25 @@ class WeekQuestFlow {
 
     if (serverDone) {
       game.completeWeekPuzzle();
-      return;
+      return 0;
     }
 
+    var points = 0;
     if (provider?.current?.tracked == true) {
-      await provider!.completeStep('PUZZLE');
+      points = await provider!.completeStep('PUZZLE');
       if (game.activePuzzleVersionId != null) {
         try {
           final award = await content.claimPuzzleReward(
             game.activePuzzleVersionId!,
             childId: childId,
           );
-          if (award.awardedFresh) game.applyActivityPoints(award.points);
+          if (award.awardedFresh) points += award.points;
         } catch (_) {}
       }
     }
+    if (points > 0) game.applyActivityPoints(points);
     game.completeWeekPuzzle();
+    return points;
   }
 
   /// Marks the week's game step done after a match game is fully solved.

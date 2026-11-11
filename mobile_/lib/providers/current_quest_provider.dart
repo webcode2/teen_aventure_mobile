@@ -121,15 +121,15 @@ class CurrentQuestProvider extends ChangeNotifier {
   WeekQuestProgress? get progress {
     final c = _current;
     if (c == null) return null;
-    final watched = c.watchedVideoIds.toSet();
+    final watched = {...c.watchedVideoIds, ..._pendingVideos};
     final indexes = <int>{};
     for (var i = 0; i < c.quest.videos.length; i++) {
       if (watched.contains(c.quest.videos[i].id)) indexes.add(i);
     }
     return WeekQuestProgress(
       videosDone: indexes.length,
-      quizDone: c.quizDone,
-      puzzleDone: c.puzzleDone,
+      quizDone: c.quizDone || _pendingSteps.contains("${c.weekNumber}:QUIZ"),
+      puzzleDone: c.puzzleDone || _pendingSteps.contains("${c.weekNumber}:PUZZLE"),
       videoCount: c.quest.videos.length,
       watchedIndexes: indexes,
     );
@@ -168,9 +168,11 @@ class CurrentQuestProvider extends ChangeNotifier {
     required int weekNumber,
   }) async {
     if (videoId.isEmpty) return 0;
+    final identity = _identity;
     rememberWatched(videoId);
     // Always POST — server resolves the explorer (child JWT or transitioned adult).
     final award = await _markVideo(weekNumber, videoId);
+    if (identity != _identity) return 0;
     if (!award.ok) {
       _pendingVideos.add(videoId);
       await _writePending();
@@ -219,10 +221,12 @@ class CurrentQuestProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    final identity = _identity;
     _switching = true;
     notifyListeners();
     try {
       final quest = await load(weekNumber);
+      if (identity != _identity) return;
       WeekActivityProgress? remoteProgress;
       final loadProgress = _loadWeekProgress;
       if (loadProgress != null && shown.tracked) {
@@ -230,6 +234,7 @@ class CurrentQuestProvider extends ChangeNotifier {
           remoteProgress = await loadProgress(quest.weekNumber);
         } catch (_) {}
       }
+      if (identity != _identity) return;
       _browsedWeek = quest.weekNumber;
       _current = CurrentQuest(
         quest: quest,
@@ -250,20 +255,25 @@ class CurrentQuestProvider extends ChangeNotifier {
       );
       _error = null;
     } catch (e) {
-      _error = errorText(e);
+      if (identity == _identity) _error = errorText(e);
     } finally {
-      _switching = false;
-      notifyListeners();
+      if (identity == _identity) {
+        _switching = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> refresh() async {
+    final identity = _identity;
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       await _flushPending();
+      if (identity != _identity) return;
       final next = await _fetch();
+      if (identity != _identity) return;
       if (next != null) {
         final base = _browsedWeek == null ? _current : _anchor;
         _anchor = CurrentQuest.preferLocalProgress(base, next);
@@ -272,6 +282,7 @@ class CurrentQuestProvider extends ChangeNotifier {
         final shownWeek = _browsedWeek ?? _anchor!.weekNumber;
         final freshQuest = await _reloadWeekDoc(shownWeek) ??
             (shownWeek == _anchor!.weekNumber ? _anchor!.quest : _current?.quest);
+        if (identity != _identity) return;
         if (freshQuest != null) {
           if (shownWeek == _anchor!.weekNumber) {
             _browsedWeek = null;
@@ -286,6 +297,7 @@ class CurrentQuestProvider extends ChangeNotifier {
                 remoteProgress = await loadProgress(freshQuest.weekNumber);
               } catch (_) {}
             }
+            if (identity != _identity) return;
             _current = CurrentQuest(
               quest: freshQuest,
               weekNumber: freshQuest.weekNumber,
@@ -315,16 +327,20 @@ class CurrentQuestProvider extends ChangeNotifier {
         await _writeCache(_anchor!);
       }
     } catch (e) {
+      final offline = !await _online();
+      if (identity != _identity) return;
       _error = errorText(e);
-      _offline = !await _online();
+      _offline = offline;
       // Keep the last device copy so returning users do not restart the week.
       if (_current == null && _identity != null) {
         _current = _readCache(_identity!);
       }
     } finally {
-      _loading = false;
-      _synced = true;
-      notifyListeners();
+      if (identity == _identity) {
+        _loading = false;
+        _synced = true;
+        notifyListeners();
+      }
     }
   }
 
@@ -363,13 +379,16 @@ class CurrentQuestProvider extends ChangeNotifier {
   Future<int> completeStep(String step, {List<Object>? answers}) async {
     final c = _current;
     if (c == null) return 0;
+    final identity = _identity;
     final weekNumber = c.weekNumber;
     final key = '$weekNumber:$step';
     try {
       final result = await _complete(weekNumber, step, answers: answers);
+      if (identity != _identity) return 0;
       final next = result.current;
       _pendingSteps.remove(key);
       await _writePending();
+      if (identity != _identity) return 0;
       if (_browsedWeek != null) {
         _current = c.withStep(step);
         notifyListeners();
@@ -381,9 +400,11 @@ class CurrentQuestProvider extends ChangeNotifier {
       }
       return result.award.awardedFresh ? result.award.points : 0;
     } catch (e) {
+      if (identity != _identity) return 0;
       // Save the step on device so the journey continues offline; retry later.
       _pendingSteps.add(key);
       await _writePending();
+      if (identity != _identity) return 0;
       _current = c.withStep(step);
       if (_browsedWeek == null) {
         _anchor = _current;
@@ -403,6 +424,8 @@ class CurrentQuestProvider extends ChangeNotifier {
     _childId = childId;
     _error = null;
     _offline = false;
+    _loading = false;
+    _switching = false;
     _browsedWeek = null;
     _pendingVideos.clear();
     _pendingSteps.clear();
@@ -419,13 +442,15 @@ class CurrentQuestProvider extends ChangeNotifier {
   }
 
   Future<void> _flushPending() async {
+    final identity = _identity;
     if (_pendingVideos.isEmpty && _pendingSteps.isEmpty) return;
-    if (!await _online()) return;
+    if (!await _online() || identity != _identity) return;
     final weekNumber = _current?.weekNumber ?? _anchor?.weekNumber ?? 1;
 
     final videos = _pendingVideos.toList();
     for (final videoId in videos) {
       final award = await _markVideo(weekNumber, videoId);
+      if (identity != _identity) return;
       if (award.ok) _pendingVideos.remove(videoId);
     }
 
@@ -444,8 +469,11 @@ class CurrentQuestProvider extends ChangeNotifier {
       }
       try {
         await _complete(week, step);
+        if (identity != _identity) return;
         _pendingSteps.remove(key);
-      } catch (_) {}
+      } catch (_) {
+        if (identity != _identity) return;
+      }
     }
     await _writePending();
   }

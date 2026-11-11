@@ -8,9 +8,16 @@ import '../../../theme.dart';
 
 /// Full-puzzle celebration with falling/cheer flower petals and finish time.
 class PuzzleWinDialog extends StatefulWidget {
-  const PuzzleWinDialog({super.key, required this.elapsed, this.buttonLabel = 'Continue'});
+  const PuzzleWinDialog(
+      {super.key,
+      required this.elapsed,
+      this.wordsSolved,
+      this.points,
+      this.buttonLabel = 'Continue'});
 
   final Duration elapsed;
+  final int? wordsSolved;
+  final int? points;
   final String buttonLabel;
 
   @override
@@ -87,103 +94,111 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
               elevation: 8,
               shadowColor: AppColors.navy.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(24),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ScaleTransition(
-                      scale: Tween(begin: 0.86, end: 1.06).animate(
-                        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-                      ),
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ScaleTransition(
+                        scale: Tween(begin: 0.86, end: 1.06).animate(
+                          CurvedAnimation(
+                              parent: _pulse, curve: Curves.easeInOut),
                         ),
-                        child: const Center(
-                          child: Text('🏆', style: TextStyle(fontSize: 40)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Puzzle complete!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        color: AppColors.navy,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      cmsText(context, 'messages', 'puzzleSuccess', 'Great work finishing this scripture puzzle.'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.35,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.puzzleTealTint,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppColors.teal.withValues(alpha: 0.28),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.timer_outlined,
-                            size: 20,
-                            color: AppColors.teal,
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Time  $timeLabel',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: AppColors.navy,
-                              fontFeatures: [FontFeature.tabularFigures()],
+                          child: const Center(
+                            child: Text('🏆', style: TextStyle(fontSize: 40)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Puzzle complete!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 22,
+                          color: AppColors.navy,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        cmsText(context, 'messages', 'puzzleSuccess',
+                            'Great work finishing this scripture puzzle.'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.35,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.puzzleTealTint,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.teal.withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.timer_outlined,
+                              size: 20,
+                              color: AppColors.teal,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Time  $timeLabel',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: AppColors.navy,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.wordsSolved != null)
+                        Text('${widget.wordsSolved} words solved'),
+                      if (widget.points != null)
+                        Text('${widget.points} points earned'),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.navy,
+                            foregroundColor: AppColors.cream,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.navy,
-                          foregroundColor: AppColors.cream,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                          child: Text(
+                            widget.buttonLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        child: Text(
-                          widget.buttonLabel,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
