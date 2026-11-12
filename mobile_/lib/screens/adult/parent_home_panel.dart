@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/cupertino.dart' show CupertinoPicker;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +25,11 @@ const _avatarPalette = [
 ];
 
 class ParentHomePanel extends StatefulWidget {
-  const ParentHomePanel({super.key});
+  const ParentHomePanel({super.key, this.addAdminAction});
+
+  /// When set, the "Add family admin" action is published here for the host's
+  /// top bar (null when the viewer may not add admins) instead of shown inline.
+  final ValueNotifier<VoidCallback?>? addAdminAction;
 
   @override
   State<ParentHomePanel> createState() => _ParentHomePanelState();
@@ -257,17 +262,22 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
   }
 
   Future<void> _addGuardian(Iterable<Map> guardians) async {
-    final candidates = <String, String>{
+    // Family members aged 15+. Adults can be picked; teens are shown but admins must be 20+.
+    final members = <_AdminCandidate>[
       for (final guardian in guardians)
         if (guardian['relation'] != 'Owner' && guardian['relation'] != 'Admin')
           if (guardian['user'] case {'email': final String email, 'name': final String name})
             if (email.trim().isNotEmpty && name.trim().isNotEmpty)
-              email: name,
-    };
+              _AdminCandidate(name: name, email: email, note: 'Adult'),
+      for (final child in _children)
+        if (_ageOf(child) case final int age when age >= 15 && age < 20)
+          _AdminCandidate(name: child['name'] as String? ?? 'Explorer', note: 'Teen · admins must be 20+'),
+    ];
+    final firstEligible = members.indexWhere((member) => member.eligible);
     final service = context.read<FamilyService>();
     final form = GlobalKey<FormState>();
     var email = '';
-    String? selectedEmail;
+    var selected = firstEligible < 0 ? 0 : firstEligible;
     var byEmail = false;
     var busy = false;
     String? error;
@@ -298,23 +308,49 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                       onChanged: (value) => email = value,
                       validator: (value) => validateEmail(value ?? ''),
                     )
-                  else if (candidates.isEmpty)
-                    const Text('There are no family members eligible to become an admin.')
-                  else
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedEmail,
-                      isExpanded: true,
-                      decoration: _fieldDecoration('Family member'),
-                      items: [
-                        for (final candidate in candidates.entries)
-                          DropdownMenuItem(
-                            value: candidate.key,
-                            child: Text(candidate.value, overflow: TextOverflow.ellipsis),
-                          ),
-                      ],
-                      onChanged: busy ? null : (value) => selectedEmail = value,
-                      validator: (value) => value == null ? 'Select a family member' : null,
+                  else if (members.isEmpty)
+                    const Text('No family members aged 15 or over yet. Add an adult by email.')
+                  else ...[
+                    const Text(
+                      'Choose a family member',
+                      style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
                     ),
+                    SizedBox(
+                      height: 150,
+                      child: CupertinoPicker(
+                        key: const ValueKey('admin-member-picker'),
+                        itemExtent: 48,
+                        scrollController: FixedExtentScrollController(initialItem: selected),
+                        onSelectedItemChanged: busy ? null : (index) => update(() => selected = index),
+                        children: [
+                          for (final member in members)
+                            Center(
+                              child: Text.rich(
+                                TextSpan(
+                                  text: member.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: member.eligible ? AppColors.navy : AppColors.textMuted,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: '  ${member.note}',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+                                    ),
+                                  ],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (!members[selected].eligible)
+                      Text(
+                        'Admins must be 20 or older.',
+                        style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                      ),
+                  ],
                   TextButton(
                     onPressed: busy ? null : () => update(() {
                       byEmail = !byEmail;
@@ -335,14 +371,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                onPressed: busy || (!byEmail && candidates.isEmpty) ? null : () async {
+                onPressed: busy || (!byEmail && (members.isEmpty || !members[selected].eligible)) ? null : () async {
                   if (form.currentState?.validate() != true) return;
                   update(() {
                     busy = true;
                     error = null;
                   });
                   try {
-                    await service.addGuardian(byEmail ? email : selectedEmail!, asAdmin: true);
+                    await service.addGuardian(byEmail ? email : members[selected].email!, asAdmin: true);
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
@@ -691,6 +727,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     final canAddAdmin = canManage && (ownsFamily || guardians.any(
       (guardian) => guardian['userId'] == userId && userId != null && guardian['relation'] == 'Admin',
     ));
+    final topBarAdmin = widget.addAdminAction;
+    if (topBarAdmin != null) {
+      final action = canAddAdmin ? () => _addGuardian(guardians) : null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Always refresh, so the dialog sees the current guardian list.
+        if (mounted) topBarAdmin.value = action;
+      });
+    }
     final pending = (_family?['dependentDeletions'] as List?) ?? const [];
     final points = _summary?.familyAskScore ?? 0;
     final jar = _summary?.familyJar ?? 0;
@@ -743,7 +787,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 title: Text(user['name'] as String? ?? user['email'] as String? ?? 'Guardian'),
                 subtitle: Text(guardian['relation'] as String? ?? 'Guardian'),
               ),
-          if (canAddAdmin)
+          if (canAddAdmin && topBarAdmin == null)
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
@@ -1445,4 +1489,22 @@ class _RestoreBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One row in the family-admin picker.
+class _AdminCandidate {
+  const _AdminCandidate({required this.name, this.email, required this.note});
+
+  final String name;
+  /// Set for adult accounts; teens have none and cannot be picked.
+  final String? email;
+  final String note;
+
+  bool get eligible => email != null;
+}
+
+/// Age this year from an explorer's birth year, or null when unknown.
+int? _ageOf(Map<String, dynamic> child) {
+  final birthYear = child['birthYear'];
+  return birthYear is int ? DateTime.now().year - birthYear : null;
 }

@@ -78,6 +78,7 @@ class WeekQuestFlow {
                   context.read<GameController>().applyActivityPoints(points);
                 } catch (_) {}
               }
+              return points;
             }
           : null,
     );

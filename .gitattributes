@@ -1,0 +1,2 @@
+# Hashed test fixtures must stay byte-for-byte (contracts_manifest_test checks sha256).
+mobile_/test/fixtures/contracts/** -text

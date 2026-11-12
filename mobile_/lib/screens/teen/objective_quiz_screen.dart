@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/game_controller.dart';
 import '../../models/puzzle.dart';
+import '../../models/quiz_rating.dart';
 import '../../theme.dart';
 import 'week_quest_flow.dart';
 import '../../services/error_text.dart';
@@ -22,7 +23,8 @@ class ObjectiveQuizScreen extends StatefulWidget {
   /// Week quiz from the API. Empty list shows an unavailable state (no bundled sample quiz).
   final List<QuizQuestion>? questionsOverride;
   /// Multiple-choice answers are ints; fill-in-the-blank answers are strings.
-  final Future<void> Function(List<Object> answers)? onSubmitLive;
+  /// Returns the points the server awarded for this score (0 when none).
+  final Future<int> Function(List<Object> answers)? onSubmitLive;
   final int? levelId;
   /// True when this week's quiz was already finished — practice only, no points.
   final bool alreadyCompleted;
@@ -36,7 +38,8 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
   int currentIndex = 0;
   int? selectedOption;
   String fillBlankText = '';
-  int score = 0;
+  /// Points the server awarded for this attempt; null when not known.
+  int? _awardedPoints;
   int correctAnswers = 0;
   bool isSubmitted = false;
   /// Guards the final submit against double taps.
@@ -98,7 +101,6 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
     _answers[currentIndex] = isFillBlank ? fillBlankText.trim() : selectedOption;
     if (isCorrect) {
       correctAnswers++;
-      if (!widget.alreadyCompleted) score += current.points;
     }
     setState(() => isSubmitted = true);
   }
@@ -135,7 +137,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
     ];
     if (widget.onSubmitLive != null) {
       try {
-        await widget.onSubmitLive!(answers);
+        _awardedPoints = await widget.onSubmitLive!(answers);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -154,6 +156,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
       } catch (_) {}
     }
     final practice = widget.alreadyCompleted;
+    final rating = QuizRating(correctAnswers, questions.length);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -192,17 +195,32 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              '$correctAnswers / ${questions.length} correct',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+              rating.label,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 30, color: AppColors.navy),
             ),
-            const SizedBox(height: 8),
             Text(
-              practice
-                  ? 'Nice review. No new points this time.'
-                  : 'Great work. You earned +$score points.',
+              '$correctAnswers / ${questions.length} correct',
+              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              rating.message,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
+                color: AppColors.navy,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              practice || (_awardedPoints ?? 0) <= 0
+                  ? (practice ? 'Nice review. No new points this time.' : 'No new points this time.')
+                  : 'You earned +$_awardedPoints points for this score.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
                 color: AppColors.textMuted,
                 height: 1.4,
               ),
@@ -223,7 +241,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
                   fillBlankText = '';
                   _fillBlankController.clear();
                   isSubmitted = false;
-                  score = 0;
+                  _awardedPoints = null;
                   correctAnswers = 0;
                   for (var i = 0; i < _answers.length; i++) {
                     _answers[i] = null;

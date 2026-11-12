@@ -3,6 +3,8 @@ class WatchProgress {
   static const _maxPlaybackStep = Duration(milliseconds: 2500);
   static const _sampleTolerance = Duration(milliseconds: 250);
   static const _batchedPlaybackStep = Duration(milliseconds: 750);
+  /// Players can stop just short of the reported length without an end event.
+  static const _endTolerance = Duration(seconds: 1);
 
   Duration _last = Duration.zero;
   Duration _duration = Duration.zero;
@@ -30,7 +32,7 @@ class WatchProgress {
       }
     }
     _last = position;
-    if (_duration > Duration.zero && position >= _duration) _ended = true;
+    if (_duration > Duration.zero && position >= _duration - _endTolerance) _ended = true;
   }
 
   void markEnded() {

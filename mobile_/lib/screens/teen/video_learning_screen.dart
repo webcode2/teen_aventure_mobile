@@ -117,18 +117,30 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
       _finishAndContinue();
     } else {
       _showSkipNotice();
+      _leaveWithoutCredit();
     }
   }
 
   /// Reaching the end after skipping most of the video does not complete the lesson.
+  /// The note stays visible on Home after this screen closes.
   void _showSkipNotice() {
     if (_skipNoticeShown || !mounted) return;
     _skipNoticeShown = true;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Watch most of the video to complete this lesson. Go back to the parts you skipped.'),
+        content: Text('Too much of this video was skipped, so it isn\'t ticked yet. Watch it again to complete it.'),
       ),
     );
+  }
+
+  /// Back to Home after a skipped video, without a tick or points.
+  Future<void> _leaveWithoutCredit() async {
+    if (_continuing) return;
+    _continuing = true;
+    await _leaveVideoPlayback();
+    if (mounted && ModalRoute.of(context)?.isCurrent == true && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _markLessonWatched() async {
@@ -453,7 +465,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                           if (duration.inSeconds > 0) {
                             totalSeconds = duration.inSeconds.toDouble();
                           }
-                          if (_watch.watchedEnough) _onVideoProgress();
+                          if (_watch.reachedEnd) _onVideoProgress(); // completes, or explains a skip
                         },
                         onEnded: () {
                           if (!mounted) return;

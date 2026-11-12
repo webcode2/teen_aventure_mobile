@@ -66,6 +66,7 @@ void main() {
             (family['children'] as List).add({
               'id': 'teen',
               'name': createdExplorer!['name'],
+              'birthYear': createdExplorer!['birthYear'],
               'ageBand': 'TEEN',
               'independentLogin': false,
             });
@@ -103,29 +104,25 @@ void main() {
     expect(family['description'], isNull);
     expect(find.text('Renamed family'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Add family admin'));
-    await tester.tap(find.text('Add family admin'));
+    // The action lives in the Family top bar.
+    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
     await tester.pumpAndSettle();
     final dialog = find.byType(AlertDialog);
     final add = find.descendant(
         of: dialog,
         matching: find.widgetWithText(FilledButton, 'Add family admin'));
-    await tester.tap(add);
-    await tester.pumpAndSettle();
-    expect(find.text('Select a family member'), findsOneWidget);
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Existing Adult').last);
-    await tester.pumpAndSettle();
+    // The iPhone-style picker lists family members; the adult is preselected.
+    expect(find.byKey(const ValueKey('admin-member-picker')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('admin-member-picker')), matching: find.textContaining('Existing Adult')), findsOneWidget);
     await tester.tap(add);
     await tester.pumpAndSettle();
     expect(guardianEmail, 'existing@example.com');
     expect((family['guardians'] as List).first['relation'], 'Admin');
 
-    await tester.ensureVisible(find.text('Add family admin'));
-    await tester.tap(find.text('Add family admin'));
+    // The action lives in the Family top bar.
+    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
     await tester.pumpAndSettle();
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(find.text('No family members aged 15 or over yet. Add an adult by email.'), findsOneWidget);
     await tester.tap(find.text('Add by email'));
     await tester.pumpAndSettle();
     await tester.tap(add);
@@ -186,6 +183,18 @@ void main() {
     expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear']));
     expect(createdExplorer?['name'], 'Maya');
     expect(find.text('Set PIN'), findsNWidgets(2));
+
+    // A 16-year-old appears in the admin picker but cannot be chosen.
+    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Teen · admins must be 20+'), findsOneWidget);
+    expect(find.text('Admins must be 20 or older.'), findsOneWidget);
+    final addTeen = tester.widget<FilledButton>(find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Add family admin')));
+    expect(addTeen.onPressed, isNull);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 }
