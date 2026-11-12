@@ -2,6 +2,8 @@
 
 This repo is one product. Order: database → backend → admin (or `/admin/` static) → Flutter.
 
+New computer? Start with [new-computer-setup.md](new-computer-setup.md).
+
 ## Local
 
 Preferred laptop stack (Postgres + API in Docker):
