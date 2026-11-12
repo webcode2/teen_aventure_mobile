@@ -276,9 +276,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     final firstEligible = members.indexWhere((member) => member.eligible);
     final service = context.read<FamilyService>();
     final form = GlobalKey<FormState>();
-    var email = '';
     var selected = firstEligible < 0 ? 0 : firstEligible;
-    var byEmail = false;
     var busy = false;
     String? error;
     final added = await showDialog<bool>(
@@ -298,18 +296,8 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 children: [
                   const Text('Family admins can manage the family and its explorers.'),
                   const SizedBox(height: 12),
-                  if (byEmail)
-                    TextFormField(
-                      initialValue: email,
-                      enabled: !busy,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      decoration: _fieldDecoration('Adult email'),
-                      onChanged: (value) => email = value,
-                      validator: (value) => validateEmail(value ?? ''),
-                    )
-                  else if (members.isEmpty)
-                    const Text('No family members aged 15 or over yet. Add an adult by email.')
+                  if (members.isEmpty)
+                    const Text('No family members aged 15 or over yet.')
                   else ...[
                     const Text(
                       'Choose a family member',
@@ -351,13 +339,6 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                         style: TextStyle(color: Theme.of(ctx).colorScheme.error),
                       ),
                   ],
-                  TextButton(
-                    onPressed: busy ? null : () => update(() {
-                      byEmail = !byEmail;
-                      error = null;
-                    }),
-                    child: Text(byEmail ? 'Choose a family member' : 'Add by email'),
-                  ),
                   if (error != null) ...[
                     const SizedBox(height: 8),
                     Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
@@ -371,14 +352,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                onPressed: busy || (!byEmail && (members.isEmpty || !members[selected].eligible)) ? null : () async {
+                onPressed: busy || members.isEmpty || !members[selected].eligible ? null : () async {
                   if (form.currentState?.validate() != true) return;
                   update(() {
                     busy = true;
                     error = null;
                   });
                   try {
-                    await service.addGuardian(byEmail ? email : members[selected].email!, asAdmin: true);
+                    await service.addGuardian(members[selected].email!, asAdmin: true);
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
@@ -853,12 +834,10 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               onManageTeen: canManage && kids[i]['canManageLogin'] != false
                   ? () => _explorerAccess(kids[i])
                   : null,
+              onRequestDeletion: ownsFamily && kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
+                  ? () => _changeDependentDeletion(kids[i])
+                  : null,
             ),
-            if (ownsFamily && kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null)
-              TextButton(
-                onPressed: () => _changeDependentDeletion(kids[i]),
-                child: Text('Request deletion of ${kids[i]['name']}'),
-              ),
             const SizedBox(height: 12),
           ],
         if (ownsFamily)
@@ -1107,6 +1086,7 @@ class _ChildCard extends StatelessWidget {
     this.cheers = const [],
     this.onPin,
     this.onManageTeen,
+    this.onRequestDeletion,
     this.askScore = 0,
     this.streakDays = 0,
   });
@@ -1117,8 +1097,39 @@ class _ChildCard extends StatelessWidget {
   final List<NudgeTemplate> cheers;
   final VoidCallback? onPin;
   final VoidCallback? onManageTeen;
+  final VoidCallback? onRequestDeletion;
   final int askScore;
   final int streakDays;
+
+  Future<void> _pickCheer(BuildContext context) async {
+    final id = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Send cheers to ${child['name'] ?? 'explorer'}'),
+        children: [
+          for (final n in cheers)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, n.id),
+              child: Text(n.message),
+            ),
+        ],
+      ),
+    );
+    if (id != null) onCheer(id);
+  }
+
+  void _onAction(BuildContext context, _ExplorerAction action) {
+    switch (action) {
+      case _ExplorerAction.cheer:
+        _pickCheer(context);
+      case _ExplorerAction.pin:
+        onPin?.call();
+      case _ExplorerAction.access:
+        onManageTeen?.call();
+      case _ExplorerAction.delete:
+        onRequestDeletion?.call();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1170,38 +1181,35 @@ class _ChildCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (cheers.isNotEmpty)
-                PopupMenuButton<String>(
-                  onSelected: onCheer,
-                  itemBuilder: (_) => [
-                    for (final n in cheers)
-                      PopupMenuItem(value: n.id, child: Text(n.message)),
+              PopupMenuButton<_ExplorerAction>(
+                tooltip: 'Options for $name',
+                icon: const Icon(Icons.more_vert, color: AppColors.navy),
+                onSelected: (action) => _onAction(context, action),
+                itemBuilder: (_) => [
+                  if (cheers.isNotEmpty)
+                    const PopupMenuItem(
+                      value: _ExplorerAction.cheer,
+                      child: _MenuRow(icon: Icons.favorite_outline, label: 'Send cheers'),
+                    ),
+                  if (onPin != null)
+                    const PopupMenuItem(
+                      value: _ExplorerAction.pin,
+                      child: _MenuRow(icon: Icons.pin, label: 'Set PIN'),
+                    ),
+                  if (onManageTeen != null)
+                    const PopupMenuItem(
+                      value: _ExplorerAction.access,
+                      child: _MenuRow(icon: Icons.manage_accounts_outlined, label: 'Access'),
+                    ),
+                  if (onRequestDeletion != null) ...[
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: _ExplorerAction.delete,
+                      child: _MenuRow(icon: Icons.delete_outline, label: 'Request deletion', danger: true),
+                    ),
                   ],
-                  child: const _MiniAction(
-                    icon: Icons.favorite_outline,
-                    label: 'Send cheers',
-                    emphasized: true,
-                  ),
-                ),
-              if (onPin != null)
-                _MiniAction(
-                  icon: Icons.pin,
-                  label: 'Set PIN',
-                  onTap: onPin,
-                ),
-              if (onManageTeen != null)
-                _MiniAction(
-                  icon: Icons.manage_accounts_outlined,
-                  label: 'Access',
-                  onTap: onManageTeen,
-                ),
+                ],
+              ),
             ],
           ),
         ],
@@ -1210,61 +1218,31 @@ class _ChildCard extends StatelessWidget {
   }
 }
 
-class _MiniAction extends StatelessWidget {
-  const _MiniAction({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.emphasized = false,
-  });
+enum _ExplorerAction { cheer, pin, access, delete }
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label, this.danger = false});
 
   final IconData icon;
   final String label;
-  final VoidCallback? onTap;
-  final bool emphasized;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
-    final bg = emphasized ? AppColors.terracottaContainer : Colors.white;
-    final fg = emphasized ? AppColors.orange : AppColors.navy;
-    final border = emphasized ? AppColors.orange.withValues(alpha: 0.45) : AppColors.borderDark;
-
-    final child = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.navy.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: fg),
-          const SizedBox(width: 6),
-          Text(
+    final color = danger ? Theme.of(context).colorScheme.error : AppColors.navy;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
             label,
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: fg),
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontWeight: FontWeight.w700, color: color),
           ),
-        ],
-      ),
-    );
-
-    if (onTap == null) return child;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: child,
-      ),
+        ),
+      ],
     );
   }
 }

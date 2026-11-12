@@ -122,23 +122,23 @@ void main() {
     // The action lives in the Family top bar.
     await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
     await tester.pumpAndSettle();
-    expect(find.text('No family members aged 15 or over yet. Add an adult by email.'), findsOneWidget);
-    await tester.tap(find.text('Add by email'));
+    // Only family members can be picked; there is no typing an email.
+    expect(find.text('No family members aged 15 or over yet.'), findsOneWidget);
+    expect(find.text('Add by email'), findsNothing);
+    expect(find.descendant(of: dialog, matching: find.byType(TextFormField)), findsNothing);
+    expect(tester.widget<FilledButton>(add).onPressed, isNull);
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    await tester.tap(add);
-    await tester.pumpAndSettle();
-    expect(find.text('Email is required'), findsOneWidget);
-    await tester.enterText(
-        find.descendant(of: dialog, matching: find.byType(TextFormField)),
-        ' Adult@Example.com ');
-    await tester.tap(add);
-    await tester.pumpAndSettle();
-    expect(guardianEmail, 'adult@example.com');
-    expect(find.text('Second Adult'), findsOneWidget);
 
-    final setPin = find.text('Set PIN');
-    await tester.ensureVisible(setPin);
-    await tester.tap(setPin);
+    // Explorer actions live in the card's vertical-ellipsis menu.
+    final options = find.byTooltip('Options for Rejoice');
+    await tester.ensureVisible(options);
+    await tester.tap(options);
+    await tester.pumpAndSettle();
+    expect(find.text('Request deletion of Rejoice'), findsNothing);
+    expect(find.text('Send cheers'), findsNothing); // no cheer templates in this fixture
+    expect(find.text('Request deletion'), findsOneWidget);
+    await tester.tap(find.text('Set PIN'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Generate PIN'));
     await tester.pumpAndSettle();
@@ -182,7 +182,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear']));
     expect(createdExplorer?['name'], 'Maya');
-    expect(find.text('Set PIN'), findsNWidgets(2));
+    expect(find.byIcon(Icons.more_vert), findsNWidgets(2));
 
     // A 16-year-old appears in the admin picker but cannot be chosen.
     await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
