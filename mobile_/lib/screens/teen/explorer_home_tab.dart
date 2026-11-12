@@ -265,6 +265,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                     declaration: current.quest.declarationText.trim(),
                     reference: _memoryVerse(current.quest.scripture),
                     refKey: 'word-declaration-${current.quest.id}',
+                    declaredAt: current.declarationLastAt,
                   ),
                 ),
               ],

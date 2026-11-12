@@ -121,6 +121,44 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  Widget declarationCard({DateTime? declaredAt}) => ChangeNotifierProvider(
+        create: (_) => GameController(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: WordDeclarationCard(
+              declaration: 'The Lord is my shepherd',
+              reference: 'Psalm 23:1',
+              refKey: 'psalm-23',
+              declaredAt: declaredAt,
+            ),
+          ),
+        ),
+      );
+
+  testWidgets('a declaration completed on another device today shows as done', (tester) async {
+    await tester.pumpWidget(declarationCard(declaredAt: DateTime.now().toUtc()));
+    expect(find.textContaining('Completed today'), findsOneWidget);
+    expect(find.textContaining('10/10'), findsWidgets);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a declaration from yesterday starts a fresh count today', (tester) async {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    await tester.pumpWidget(declarationCard(declaredAt: yesterday.toUtc()));
+    expect(find.textContaining('Completed today'), findsNothing);
+    expect(find.textContaining('0/10'), findsWidgets);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the server record arriving after the card shows still completes it', (tester) async {
+    await tester.pumpWidget(declarationCard());
+    expect(find.textContaining('Completed today'), findsNothing);
+    await tester.pumpWidget(declarationCard(declaredAt: DateTime.now().toUtc()));
+    await tester.pump();
+    expect(find.textContaining('Completed today'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('the first back warns and the second exits', (tester) async {
     var exited = false;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(

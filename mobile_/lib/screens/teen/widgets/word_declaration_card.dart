@@ -18,6 +18,7 @@ class WordDeclarationCard extends StatefulWidget {
     required this.refKey,
     this.title = 'Word Declaration',
     this.targetTaps = 10,
+    this.declaredAt,
   });
 
   final String title;
@@ -25,6 +26,9 @@ class WordDeclarationCard extends StatefulWidget {
   final String reference;
   final int targetTaps;
   final String refKey;
+
+  /// When the server last recorded this declaration as completed, from any device.
+  final DateTime? declaredAt;
 
   @override
   State<WordDeclarationCard> createState() => _WordDeclarationCardState();
@@ -68,9 +72,35 @@ class _WordDeclarationCardState extends State<WordDeclarationCard>
     } catch (_) {}
   }
 
+  /// Completed on another device today (local calendar day).
+  bool _declaredToday(DateTime now) {
+    final at = widget.declaredAt?.toLocal();
+    return at != null &&
+        DeclarationProgress.dayKey(at) == DeclarationProgress.dayKey(now);
+  }
+
+  @override
+  void didUpdateWidget(covariant WordDeclarationCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The server's record can arrive after the card first shows a cached week.
+    final now = DateTime.now();
+    if (!_complete && _declaredToday(now)) {
+      setState(() {
+        _tapCount = widget.targetTaps;
+        _awarded = true;
+      });
+      _saved?.save(_day, _tapCount);
+    }
+  }
+
   void _startDay(DateTime now) {
     _day = now;
     _tapCount = (_saved?.load(now) ?? 0).clamp(0, widget.targetTaps);
+    if (_declaredToday(now)) {
+      // Already recorded on the server today; nothing left to award.
+      _tapCount = widget.targetTaps;
+      _awarded = true;
+    }
     _saved?.save(now, _tapCount);
     if (_complete) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

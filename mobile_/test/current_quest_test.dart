@@ -47,6 +47,19 @@ void main() {
     expect(again.videoPoints, 7);
   });
 
+  test('keeps when the Word Declaration was last completed on the server', () {
+    final json = _response()..['declarationLastAt'] = '2026-11-12T09:30:00.000Z';
+    final current = CurrentQuest.fromJson(json);
+    expect(current.declarationLastAt, DateTime.utc(2026, 11, 12, 9, 30));
+    expect(CurrentQuest.fromJson(current.toJson()).declarationLastAt, current.declarationLastAt);
+
+    // A thinner refresh never loses the newer completion time.
+    final older = CurrentQuest.fromJson(_response()..['declarationLastAt'] = '2026-11-11T08:00:00.000Z');
+    expect(CurrentQuest.preferLocalProgress(current, older).declarationLastAt, current.declarationLastAt);
+    expect(CurrentQuest.preferLocalProgress(older, current).declarationLastAt, current.declarationLastAt);
+    expect(CurrentQuest.fromJson(_response()).declarationLastAt, isNull);
+  });
+
   test('parses Flutter web JSON where numbers arrive as doubles', () {
     final current = CurrentQuest.fromJson({
       'weekNumber': 1.0,

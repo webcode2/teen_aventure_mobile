@@ -152,6 +152,7 @@ class CurrentQuestProvider extends ChangeNotifier {
       prayerPoints: c.prayerPoints,
       awaitingNextWeek: c.awaitingNextWeek,
       nextWeekOpensAt: c.nextWeekOpensAt,
+      declarationLastAt: c.declarationLastAt,
     );
     if (_browsedWeek == null) _anchor = _current;
     notifyListeners();
@@ -251,6 +252,7 @@ class CurrentQuestProvider extends ChangeNotifier {
         prayerPoints: shown.prayerPoints,
         awaitingNextWeek: false,
         nextWeekOpensAt: null,
+        declarationLastAt: remoteProgress?.declarationLastAt,
       );
       _error = null;
     } catch (e) {
@@ -314,6 +316,8 @@ class CurrentQuestProvider extends ChangeNotifier {
               quizPoints: _anchor!.quizPoints,
               awaitingNextWeek: false,
               nextWeekOpensAt: null,
+              declarationLastAt: remoteProgress?.declarationLastAt ??
+                  (shown?.weekNumber == freshQuest.weekNumber ? shown!.declarationLastAt : null),
               puzzlePoints: _anchor!.puzzlePoints,
               prayerPoints: _anchor!.prayerPoints,
             );
@@ -370,6 +374,7 @@ class CurrentQuestProvider extends ChangeNotifier {
       prayerPoints: base.prayerPoints,
       awaitingNextWeek: base.awaitingNextWeek,
       nextWeekOpensAt: base.nextWeekOpensAt,
+      declarationLastAt: base.declarationLastAt,
     );
   }
 

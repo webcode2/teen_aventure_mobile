@@ -446,6 +446,7 @@ class WeekActivityProgress {
     required this.quizDone,
     required this.puzzleDone,
     required this.tracked,
+    this.declarationLastAt,
   });
 
   final int weekNumber;
@@ -453,6 +454,7 @@ class WeekActivityProgress {
   final bool quizDone;
   final bool puzzleDone;
   final bool tracked;
+  final DateTime? declarationLastAt;
 
   factory WeekActivityProgress.fromJson(Map<String, dynamic> json) {
     final progress = Map<String, dynamic>.from(json['progress'] as Map? ?? const {});
@@ -464,6 +466,9 @@ class WeekActivityProgress {
       quizDone: progress['quizDone'] == true,
       puzzleDone: progress['puzzleDone'] == true,
       tracked: json['tracked'] == true,
+      declarationLastAt: json['declarationLastAt'] is String
+          ? DateTime.tryParse(json['declarationLastAt'] as String)?.toUtc()
+          : null,
     );
   }
 }
@@ -486,6 +491,7 @@ class CurrentQuest {
     this.prayerPoints = 0,
     this.awaitingNextWeek = false,
     this.nextWeekOpensAt,
+    this.declarationLastAt,
   });
 
   final TeenQuest quest;
@@ -508,6 +514,15 @@ class CurrentQuest {
   final bool awaitingNextWeek;
   /// When the home default may advance (ISO from API).
   final DateTime? nextWeekOpensAt;
+
+  /// Server time this week's Word Declaration was last completed, for any device.
+  final DateTime? declarationLastAt;
+
+  static DateTime? _later(DateTime? a, DateTime? b) {
+    if (a == null) return b;
+    if (b == null) return a;
+    return a.isAfter(b) ? a : b;
+  }
 
   /// Week title without the "Week N:" prefix, e.g. "Genesis 1–8".
   String get passage => quest.title.replaceFirst(RegExp(r'^Week\s*\d+\s*[:\-–]\s*'), '');
@@ -533,6 +548,8 @@ class CurrentQuest {
     if (rawOpens is String && rawOpens.isNotEmpty) {
       opensAt = DateTime.tryParse(rawOpens)?.toUtc();
     }
+    final rawDeclared = json['declarationLastAt'];
+    final declaredAt = rawDeclared is String ? DateTime.tryParse(rawDeclared)?.toUtc() : null;
     return CurrentQuest(
       quest: TeenQuest.fromJson(Map<String, dynamic>.from(questRaw)),
       weekNumber: _jsonInt(json['weekNumber']) ?? 0,
@@ -551,6 +568,7 @@ class CurrentQuest {
       prayerPoints: points['PRAYER_DECLARATION'] ?? 0,
       awaitingNextWeek: json['awaitingNextWeek'] == true,
       nextWeekOpensAt: opensAt,
+      declarationLastAt: declaredAt,
     );
   }
 
@@ -562,6 +580,7 @@ class CurrentQuest {
         'tracked': tracked,
         'awaitingNextWeek': awaitingNextWeek,
         if (nextWeekOpensAt != null) 'nextWeekOpensAt': nextWeekOpensAt!.toIso8601String(),
+        if (declarationLastAt != null) 'declarationLastAt': declarationLastAt!.toIso8601String(),
         'quest': quest.toJson(),
         'progress': {
           'watchedVideoIds': watchedVideoIds,
@@ -606,6 +625,7 @@ class CurrentQuest {
       prayerPoints: remote.prayerPoints > 0 ? remote.prayerPoints : local.prayerPoints,
       awaitingNextWeek: remote.awaitingNextWeek,
       nextWeekOpensAt: remote.nextWeekOpensAt ?? local.nextWeekOpensAt,
+      declarationLastAt: _later(remote.declarationLastAt, local.declarationLastAt),
     );
   }
 
@@ -626,6 +646,7 @@ class CurrentQuest {
       prayerPoints: prayerPoints,
       awaitingNextWeek: awaitingNextWeek,
       nextWeekOpensAt: nextWeekOpensAt,
+      declarationLastAt: declarationLastAt,
     );
   }
 
@@ -651,6 +672,7 @@ class CurrentQuest {
       prayerPoints: prayerPoints ?? this.prayerPoints,
       awaitingNextWeek: awaitingNextWeek,
       nextWeekOpensAt: nextWeekOpensAt,
+      declarationLastAt: declarationLastAt,
     );
   }
 }
