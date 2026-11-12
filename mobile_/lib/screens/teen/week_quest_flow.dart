@@ -118,7 +118,7 @@ class WeekQuestFlow {
       final content = context.read<ContentService>();
       final puzzleId = quest?.puzzleId?.trim();
       if (puzzleId == null || puzzleId.isEmpty) {
-        game.markTechnicalIssue('This week has no puzzle attached yet.');
+        game.markTechnicalIssue('This week has no game attached yet.');
       } else {
         final samePuzzle = game.boundPuzzleId == puzzleId &&
             game.puzzleScreenState == PuzzleScreenState.ready;
@@ -177,11 +177,13 @@ class WeekQuestFlow {
   }
 
   /// Marks the week's game step done after a match game is fully solved.
-  static Future<void> recordMatchingIfSolved(
+  /// Records a solved match and returns the points newly awarded (0 when none).
+  static Future<int> recordMatchingIfSolved(
     BuildContext context,
     MatchingController match,
   ) async {
-    if (!match.isComplete) return;
+    if (!match.isComplete) return 0;
+    var earned = 0;
 
     final game = context.read<GameController>();
     final provider = _provider(context);
@@ -194,7 +196,7 @@ class WeekQuestFlow {
 
     if (serverDone) {
       game.completeWeekPuzzle();
-      return;
+      return 0;
     }
 
     if (provider?.current?.tracked == true) {
@@ -206,11 +208,15 @@ class WeekQuestFlow {
             versionId,
             childId: childId,
           );
-          if (award.awardedFresh) game.applyActivityPoints(award.points);
+          if (award.awardedFresh) {
+            game.applyActivityPoints(award.points);
+            earned = award.points;
+          }
         } catch (_) {}
       }
     }
     game.completeWeekPuzzle();
+    return earned;
   }
 
   static Future<void> openNext(

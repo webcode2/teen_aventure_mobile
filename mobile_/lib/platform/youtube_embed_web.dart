@@ -14,7 +14,7 @@ class YoutubeEmbed extends StatefulWidget {
   });
 
   final String videoId;
-  final void Function(Duration position, Duration duration)? onPosition;
+  final void Function(Duration position, Duration duration, bool playing)? onPosition;
   final VoidCallback? onEnded;
   final Duration? seekTo;
   final int seekGeneration;

@@ -34,7 +34,7 @@ String activityCaption(String type) {
     case 'TEEN_QUEST_OBJS':
       return 'Quiz';
     case 'PUZZLE_SOLVE':
-      return 'Puzzle';
+      return 'Game';
     case 'PRAYER_DECLARATION':
       return 'Prayer declaration';
     default:

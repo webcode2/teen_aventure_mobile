@@ -132,7 +132,7 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
     final content = context.read<ContentService>();
     final puzzleId = week.puzzleId?.trim();
     if (puzzleId == null || puzzleId.isEmpty) {
-      game.markTechnicalIssue('This week has no puzzle attached yet.');
+      game.markTechnicalIssue('This week has no game attached yet.');
     } else {
       try {
         await game.loadLiveFromDatabase(
@@ -166,7 +166,7 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
 
   String _lockCopy({required bool puzzle}) {
     return puzzle
-        ? 'Finish every video in this week to open the puzzle.'
+        ? 'Finish every video in this week to open ${widget.week.gameStepTitle}.'
         : 'Finish every video in this week to open the quiz.';
   }
 
@@ -226,14 +226,14 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
                     const SizedBox(height: 8),
                   ],
                 const SizedBox(height: 16),
-                const Text('Quiz & puzzle', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy)),
+                Text('Quiz & ${week.gameStepTitle}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy)),
                 const SizedBox(height: 6),
                 Text(
                   _onHome
-                      ? 'Quiz and puzzle are open for this week.'
+                      ? 'Quiz and ${week.gameStepTitle} are open for this week.'
                       : _selfLearn
                           ? 'Unlocked after you finished the last video.'
-                          : 'Finish every video to unlock quiz and puzzle.',
+                          : 'Finish every video to unlock the quiz and ${week.gameStepTitle}.',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 12),
@@ -261,7 +261,7 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
                   icon: const Icon(Icons.grid_view_rounded),
                   label: Text(
                     _puzzleOpen
-                        ? 'Start ${week.gameStepTitle.toLowerCase()}'
+                        ? 'Start ${week.gameStepTitle}'
                         : '${week.gameStepTitle} locked',
                   ),
                 ),

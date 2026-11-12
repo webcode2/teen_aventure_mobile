@@ -251,7 +251,11 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
     if (!mounted || _handledCatchUp) return;
     final week = WeekQuestFlow.progress(context);
-    if (!(week.videosFinished && week.quizDone)) return;
+    if (!(week.videosFinished && week.quizDone)) {
+      // Like Match: after the results, go back Home to the ticked step.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
     _handledCatchUp = true;
     await showDialog<void>(
       context: context,

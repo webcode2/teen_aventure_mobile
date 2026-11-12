@@ -20,7 +20,7 @@ class WelcomeCopy {
 
   static const fallback = WelcomeCopy(
     title: "Discover God's Story",
-    subtitle: 'Interactive Bible lessons, puzzles, and community for teens.',
+    subtitle: 'Interactive Bible lessons, games, and community for teens.',
     quote: 'Your word is a lamp to my feet and a light to my path. — Psalm 119:105',
   );
 

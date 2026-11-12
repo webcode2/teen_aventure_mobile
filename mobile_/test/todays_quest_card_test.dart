@@ -37,7 +37,7 @@ void main() {
     expect(find.byTooltip('Next week'), findsNothing);
   });
 
-  testWidgets('the next unwatched video leads the current stage', (tester) async {
+  testWidgets('each part keeps its place and the next one is the big card', (tester) async {
     int? opened;
     Future<void> show(Set<int> watched) => tester.pumpWidget(MaterialApp(
           home: Scaffold(
@@ -71,8 +71,8 @@ void main() {
       expect(find.descendant(of: row(next), matching: action), findsOneWidget);
       for (var i = 0; i < 3; i++) {
         expect(tick(i), i < next ? findsOneWidget : findsNothing);
-        if (i != next) {
-          expect(tester.getTopLeft(row(next)).dy, lessThan(tester.getTopLeft(row(i)).dy));
+        if (i > 0) {
+          expect(tester.getTopLeft(row(i - 1)).dy, lessThan(tester.getTopLeft(row(i)).dy));
         }
       }
       await tester.tap(action);

@@ -306,7 +306,7 @@ void main() {
     expect(three.videosFinished, isFalse);
     expect(three.nextVideoIndex, 3);
     expect(three.totalSessions, 6);
-    expect(three.marks.map((m) => m.label), ['V1', 'V2', 'V3', 'V4', 'Quiz', 'Puz']);
+    expect(three.marks.map((m) => m.label), ['V1', 'V2', 'V3', 'V4', 'Quiz', 'Game']);
 
     const done = WeekQuestProgress(videosDone: 4, quizDone: true, puzzleDone: true, videoCount: 4);
     expect(done.isCaughtUp, isTrue);

@@ -304,7 +304,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
               const SizedBox(height: 6),
               Text(
                 verse == null || verse.isEmpty
-                    ? '3 videos · 1 quiz · 1 puzzle'
+                    ? '3 videos · 1 quiz · 1 game'
                     : verse,
                 style: const TextStyle(
                   color: AppColors.textMuted,

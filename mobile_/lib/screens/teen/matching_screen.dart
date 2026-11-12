@@ -10,6 +10,7 @@ import '../../theme.dart';
 import 'week_quest_flow.dart';
 import 'widgets/puzzle_status_cards.dart';
 import 'widgets/puzzle_win_dialog.dart';
+import '../../models/api_models.dart' show TeenQuest;
 
 /// Drawable match-pairs game: drag (or tap) lines from left words to right words.
 class MatchingScreen extends StatefulWidget {
@@ -82,21 +83,40 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   Future<void> _onWin() async {
     if (!mounted) return;
+    // Record first, so the results show the points this match earned.
+    final points = await _record();
+    if (!mounted) return;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => PuzzleWinDialog(elapsed: _game.elapsed, buttonLabel: 'Well done'),
+      builder: (_) => PuzzleWinDialog(
+        elapsed: _game.elapsed,
+        points: points,
+        title: '${TeenQuest.matchGameTitle} complete!',
+        message: 'You matched every pair.',
+        buttonLabel: 'Well done',
+      ),
     );
     if (!mounted) return;
     await _goHome();
   }
 
+  bool _recorded = false;
+  int? _recordedPoints;
+
+  Future<int?> _record() async {
+    if (_recorded) return _recordedPoints;
+    _recorded = true;
+    try {
+      _recordedPoints = await WeekQuestFlow.recordMatchingIfSolved(context, _game);
+    } catch (_) {}
+    return _recordedPoints;
+  }
+
   Future<void> _goHome() async {
     if (_leaving) return;
     _leaving = true;
-    try {
-      await WeekQuestFlow.recordMatchingIfSolved(context, _game);
-    } catch (_) {}
+    await _record();
     if (!mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }

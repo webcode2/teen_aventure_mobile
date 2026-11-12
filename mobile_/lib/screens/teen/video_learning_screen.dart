@@ -40,7 +40,10 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   bool _continuing = false;
   final WatchProgress _watch = WatchProgress();
   final _watchClock = Stopwatch()..start();
-  Duration _lastWatchSample = Duration.zero;
+  Duration _lastTickAt = Duration.zero;
+  bool _lastTickPlaying = false;
+  // Time spent playing since the position last moved; paused time never counts.
+  Duration _playedSinceMove = Duration.zero;
   Duration _lastWatchPosition = Duration.zero;
   bool _skipNoticeShown = false;
 
@@ -110,19 +113,21 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
 
   void _onVideoProgress() {
     if (_continuing || !_watch.reachedEnd) return;
-    if (_watch.fullyWatched) {
+    if (_watch.watchedEnough) {
       _finishAndContinue();
     } else {
       _showSkipNotice();
     }
   }
 
-  /// Reaching the end by skipping ahead does not complete the lesson.
+  /// Reaching the end after skipping most of the video does not complete the lesson.
   void _showSkipNotice() {
     if (_skipNoticeShown || !mounted) return;
     _skipNoticeShown = true;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Watch the whole video to complete this lesson.')),
+      const SnackBar(
+        content: Text('Watch most of the video to complete this lesson. Go back to the parts you skipped.'),
+      ),
     );
   }
 
@@ -142,7 +147,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   Future<void> _finishAndContinue() async {
-    if (_continuing || !_watch.fullyWatched) return;
+    if (_continuing || !_watch.watchedEnough) return;
     _continuing = true;
     await Future.wait([_markLessonWatched(), _leaveVideoPlayback()]);
     if (mounted && ModalRoute.of(context)?.isCurrent == true && Navigator.canPop(context)) {
@@ -430,22 +435,25 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                         lesson: widget.lesson,
                         localFilePath: _localPath,
                         useLocalFile: _preferLocal,
-                        onPosition: (position, duration) {
-                          final sample = _watchClock.elapsed;
+                        onPosition: (position, duration, playing) {
+                          final now = _watchClock.elapsed;
+                          if (_lastTickPlaying) _playedSinceMove += now - _lastTickAt;
+                          _lastTickAt = now;
+                          _lastTickPlaying = playing;
                           _watch.update(
                             position,
                             duration,
-                            sampleInterval: sample - _lastWatchSample,
+                            sampleInterval: _playedSinceMove,
                           );
                           if (position != _lastWatchPosition) {
-                            _lastWatchSample = sample;
+                            _playedSinceMove = Duration.zero;
                             _lastWatchPosition = position;
                           }
                           progressSeconds = position.inSeconds.toDouble();
                           if (duration.inSeconds > 0) {
                             totalSeconds = duration.inSeconds.toDouble();
                           }
-                          if (_watch.fullyWatched) _onVideoProgress();
+                          if (_watch.watchedEnough) _onVideoProgress();
                         },
                         onEnded: () {
                           if (!mounted) return;

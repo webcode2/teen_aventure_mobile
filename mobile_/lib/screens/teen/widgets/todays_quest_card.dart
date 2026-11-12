@@ -1,6 +1,7 @@
 import '../../../providers/cms_text.dart';
 import 'package:flutter/material.dart';
 import '../../../models/week_quest_progress.dart';
+import '../../../models/api_models.dart' show TeenQuest;
 import '../../../theme.dart';
 import '../../shared/widgets/adventure_list_card.dart';
 
@@ -81,11 +82,8 @@ class TodaysQuestSlide extends StatelessWidget {
     final videosOpen = stepsOpen || progress.videosFinished;
     final active = progress.nextVideoIndex;
     final count = videoSubtitles.length < progress.videoCount ? videoSubtitles.length : progress.videoCount;
-    final videoOrder = [
-      if (active != null && active < count) active,
-      for (var index = 0; index < count; index++)
-        if (index != active) index,
-    ];
+    // Each part keeps its place; the next one to watch becomes the big card there.
+    final videoOrder = [for (var index = 0; index < count; index++) index];
     final rows = <Widget>[];
     for (final index in videoOrder) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
@@ -164,7 +162,7 @@ class TodaysQuestSlide extends StatelessWidget {
               )
             : AdventureListCard(
                 key: const ValueKey('home-puzzle'),
-                icon: gameStepTitle == 'Match'
+                icon: gameStepTitle == TeenQuest.matchGameTitle
                     ? Icons.timeline_rounded
                     : Icons.extension_rounded,
                 title: gameStepTitle,
@@ -194,7 +192,7 @@ class TodaysQuestSlide extends StatelessWidget {
       SnackBar(
         content: Text(
           puzzle
-              ? 'Finish all ${progress.videoCount} videos to open the puzzle.'
+              ? 'Finish all ${progress.videoCount} videos to open $gameStepTitle.'
               : 'Finish all ${progress.videoCount} videos to open the quiz.',
         ),
         backgroundColor: AppColors.navy,

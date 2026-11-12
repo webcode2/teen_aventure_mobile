@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../theme.dart';
 
+/// Light gray playback tracker, so it stays visible on dark and bright video frames.
+const _trackerColors = ProgressBarColors(
+  playedColor: Color(0xFFE0E0E0),
+  handleColor: Color(0xFFE0E0E0),
+  bufferedColor: Color(0x66FFFFFF),
+  backgroundColor: Color(0x33FFFFFF),
+);
+
 class YoutubeEmbed extends StatefulWidget {
   const YoutubeEmbed({
     super.key,
@@ -14,7 +22,7 @@ class YoutubeEmbed extends StatefulWidget {
   });
 
   final String videoId;
-  final void Function(Duration position, Duration duration)? onPosition;
+  final void Function(Duration position, Duration duration, bool playing)? onPosition;
   final VoidCallback? onEnded;
   final Duration? seekTo;
   final int seekGeneration;
@@ -28,6 +36,7 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
   late YoutubePlayerController _controller;
   Duration? _pendingSeek;
   bool _endedFired = false;
+  bool _startChecked = false;
 
   @override
   void initState() {
@@ -75,7 +84,17 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
       _controller.seekTo(pending, allowSeekAhead: true);
       _controller.play();
     }
-    widget.onPosition?.call(value.position, value.metaData.duration);
+    // YouTube can resume where this device last stopped, but the lesson's watch
+    // record starts empty each visit, so a resumed video could never complete.
+    // Start lessons from the beginning unless a seek was asked for explicitly.
+    if (!_startChecked && value.isReady && value.position > Duration.zero) {
+      _startChecked = true;
+      if (widget.seekTo == null && value.position > const Duration(seconds: 2)) {
+        _controller.seekTo(Duration.zero, allowSeekAhead: true);
+        return;
+      }
+    }
+    widget.onPosition?.call(value.position, value.metaData.duration, value.isPlaying);
     final ended = value.playerState == PlayerState.ended;
     if (ended == _endedFired) return;
     _endedFired = ended;
@@ -105,13 +124,10 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
                 width: size.width,
                 showVideoProgressIndicator: true,
                 progressIndicatorColor: AppColors.gold,
-                progressColors: const ProgressBarColors(
-                  playedColor: AppColors.orange,
-                  handleColor: AppColors.gold,
-                ),
+                progressColors: _trackerColors,
                 bottomActions: [
                   CurrentPosition(),
-                  ProgressBar(isExpanded: true),
+                  ProgressBar(isExpanded: true, colors: _trackerColors),
                   RemainingDuration(),
                 ],
               ),

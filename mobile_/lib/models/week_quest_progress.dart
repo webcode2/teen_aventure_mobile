@@ -72,6 +72,6 @@ class WeekQuestProgress {
         for (var i = 0; i < videoCount; i++)
           WeekSessionMark(label: 'V${i + 1}', done: watchedAt(i)),
         WeekSessionMark(label: 'Quiz', done: quizDone),
-        WeekSessionMark(label: 'Puz', done: puzzleDone),
+        WeekSessionMark(label: 'Game', done: puzzleDone),
       ];
 }

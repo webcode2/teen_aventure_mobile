@@ -331,7 +331,8 @@ class TeenQuest {
       gameType == QuestGameType.matching ||
       (matchingId != null && matchingId!.trim().isNotEmpty);
 
-  String get gameStepTitle => isMatchingGame ? 'Match' : 'Puzzle';
+  static const matchGameTitle = 'Match Word';
+  String get gameStepTitle => isMatchingGame ? matchGameTitle : 'Puzzle';
 
   factory TeenQuest.fromJson(Map<String, dynamic> json) {
     final weekNumber = _jsonInt(json['weekNumber']) ?? 0;

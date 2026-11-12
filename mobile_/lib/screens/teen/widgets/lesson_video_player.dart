@@ -23,7 +23,7 @@ class LessonVideoPlayer extends StatefulWidget {
   final bool useLocalFile;
   final Duration? seekTo;
   final int seekGeneration;
-  final void Function(Duration position, Duration duration)? onPosition;
+  final void Function(Duration position, Duration duration, bool playing)? onPosition;
   final VoidCallback? onEnded;
 
   @override
@@ -94,7 +94,7 @@ class LessonVideoPlayerState extends State<LessonVideoPlayer> {
     if (player == null || !player.value.isInitialized) return;
     final duration = player.value.duration;
     final position = player.value.position;
-    widget.onPosition?.call(position, duration);
+    widget.onPosition?.call(position, duration, player.value.isPlaying);
     final ended = duration > Duration.zero && player.value.isCompleted;
     if (ended == _endedFired) return;
     _endedFired = ended;

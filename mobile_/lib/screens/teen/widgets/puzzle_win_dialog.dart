@@ -13,11 +13,16 @@ class PuzzleWinDialog extends StatefulWidget {
       required this.elapsed,
       this.wordsSolved,
       this.points,
+      this.title,
+      this.message,
       this.buttonLabel = 'Continue'});
 
   final Duration elapsed;
   final int? wordsSolved;
   final int? points;
+  /// Overrides for games other than the crossword (e.g. Match).
+  final String? title;
+  final String? message;
   final String buttonLabel;
 
   @override
@@ -72,23 +77,13 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
       insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
       child: SizedBox(
         width: 340,
-        height: 360,
+        height: 470,
         child: Stack(
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            AnimatedBuilder(
-              animation: _burst,
-              builder: (context, _) {
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    for (final flower in _flowers)
-                      _FlowerBurst(flower: flower, t: _burst.value),
-                  ],
-                );
-              },
-            ),
+            // Half the flowers burst behind the card, half fly over it.
+            _flowerLayer(behind: true),
             Material(
               color: Colors.white,
               elevation: 8,
@@ -118,10 +113,10 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Puzzle complete!',
+                      Text(
+                        widget.title ?? 'Puzzle complete!',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 22,
                           color: AppColors.navy,
@@ -130,8 +125,9 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        cmsText(context, 'messages', 'puzzleSuccess',
-                            'Great work finishing this scripture puzzle.'),
+                        widget.message ??
+                            cmsText(context, 'messages', 'puzzleSuccess',
+                                'Great work finishing this scripture puzzle.'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 14,
@@ -176,8 +172,20 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                       ),
                       if (widget.wordsSolved != null)
                         Text('${widget.wordsSolved} words solved'),
-                      if (widget.points != null)
-                        Text('${widget.points} points earned'),
+                      if (widget.points != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          widget.points! > 0
+                              ? '+${widget.points} points earned'
+                              : 'No new points this time.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       SizedBox(
                         width: double.infinity,
@@ -202,8 +210,28 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                 ),
               ),
             ),
+            _flowerLayer(behind: false),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _flowerLayer({required bool behind}) {
+    // The front layer lets taps through to the card's button.
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _burst,
+        builder: (context, _) {
+          return Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < _flowers.length; i++)
+                if (i.isEven == behind) _FlowerBurst(flower: _flowers[i], t: _burst.value),
+            ],
+          );
+        },
       ),
     );
   }

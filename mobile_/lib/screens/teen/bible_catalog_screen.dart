@@ -71,7 +71,7 @@ class _BibleCatalogScreenState extends State<BibleCatalogScreen> {
     if (session.isParent) {
       return 'Add weeks for home. They stay in catalog order.';
     }
-    return 'Add weeks for yourself. Quiz and puzzle unlock after the last video.';
+    return 'Add weeks for yourself. Quiz and game unlock after the last video.';
   }
 
   Future<void> _toggle(TeenQuest week) async {
