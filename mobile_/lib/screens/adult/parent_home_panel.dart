@@ -755,19 +755,44 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               : null,
         ),
         if (guardians.isNotEmpty || canAddAdmin) ...[
-          const SizedBox(height: 12),
-          const Text(
-            'Guardians',
-            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.navy),
-          ),
-          for (final guardian in guardians)
-            if (guardian['user'] case final Map user)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.person_outline),
-                title: Text(user['name'] as String? ?? user['email'] as String? ?? 'Guardian'),
-                subtitle: Text(guardian['relation'] as String? ?? 'Guardian'),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Guardians',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
+                ),
               ),
+              Text(
+                '${guardians.length}',
+                style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Adults who look after this family.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          if (guardians.isNotEmpty)
+            _Surface(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Column(
+                children: [
+                  for (final (index, guardian) in guardians.indexed) ...[
+                    if (index > 0) const Divider(height: 1, color: AppColors.border),
+                    if (guardian['user'] case final Map user)
+                      _GuardianRow(
+                        name: user['name'] as String? ?? user['email'] as String? ?? 'Guardian',
+                        relation: guardian['relation'] as String? ?? 'Guardian',
+                        isYou: user['id'] != null && user['id'] == userId,
+                      ),
+                  ],
+                ],
+              ),
+            ),
           if (canAddAdmin && topBarAdmin == null)
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -1485,4 +1510,72 @@ class _AdminCandidate {
 int? _ageOf(Map<String, dynamic> child) {
   final birthYear = child['birthYear'];
   return birthYear is int ? DateTime.now().year - birthYear : null;
+}
+
+/// One guardian in the Guardians card: initial avatar, name and a role badge.
+class _GuardianRow extends StatelessWidget {
+  const _GuardianRow({required this.name, required this.relation, this.isYou = false});
+
+  final String name;
+  final String relation;
+  final bool isYou;
+
+  @override
+  Widget build(BuildContext context) {
+    final (badgeBg, badgeFg, icon) = switch (relation) {
+      'Owner' => (AppColors.navy, Colors.white, Icons.star_rounded),
+      'Admin' => (AppColors.teal.withValues(alpha: 0.14), AppColors.teal, Icons.shield_outlined),
+      _ => (AppColors.cream, AppColors.textSecondary, Icons.person_outline),
+    };
+    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: relation == 'Owner' ? AppColors.orange : AppColors.forestGreen,
+            child: Text(
+              initial,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                text: name,
+                children: [
+                  if (isYou)
+                    const TextSpan(
+                      text: '  (you)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textMuted, fontSize: 13),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.navy),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(99)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: badgeFg),
+                const SizedBox(width: 4),
+                Text(
+                  relation,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: badgeFg),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
