@@ -104,6 +104,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       MaterialPageRoute<void>(
         builder: (_) => ChildAchievementRecordScreen(
           child: child,
+          awards: _data?.awards ?? knownQuestMilestones,
           familyPoints: (_data?.familyPoints ?? 0) +
               (_data?.tracked == true ? _data!.self.points : 0),
         ),
@@ -123,10 +124,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final familyHub =
         explorers.isNotEmpty || (isFamilyAchievementsHub(session) && !tracked);
 
-    final ownWeeks = tracked ? self.weeksCompleted : 0;
-    final weeksCompleted = familyHub
-        ? explorers.fold<int>(ownWeeks, (max, e) => e.weeksCompleted > max ? e.weeksCompleted : max)
-        : self.weeksCompleted;
     final points = familyHub
         ? (data?.familyPoints ?? 0) + (tracked ? self.points : 0)
         : self.points;
@@ -160,7 +157,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             ..._achievementContent(
               streak: streak,
               points: points,
-              weeksCompleted: weeksCompleted,
+              weeksCompleted: self.weeksCompleted,
+              earned: self.earnedAwards,
+              showAwards: !familyHub,
               awards: awards,
               recent: self.recent,
               groups: familyHub && !tracked ? const [] : self.groups,
@@ -192,6 +191,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     required int points,
     required int weeksCompleted,
     required List<QuestMilestone> awards,
+    List<EarnedAward>? earned,
+    bool showAwards = true,
     List<FamilyActivity> recent = const [],
     List<GroupPlace> groups = const [],
     List<AchievementRecord> children = const [],
@@ -215,13 +216,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         iconColor: AppColors.orange,
         badgeLabel: '$streak',
       ),
-      const SizedBox(height: 22),
-      const Text(
-        'Awards',
-        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
-      ),
-      const SizedBox(height: 12),
-      _AwardsRow(weeksCompleted: weeksCompleted, awards: awards),
+      // Family view: each person keeps their own awards on their record.
+      if (showAwards) ...[
+        const SizedBox(height: 22),
+        const Text(
+          'Awards',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
+        ),
+        const SizedBox(height: 12),
+        AwardsRow(weeksCompleted: weeksCompleted, awards: awards, earned: earned),
+      ],
       if (recent.isNotEmpty) ...[
         const SizedBox(height: 22),
         const Text(
@@ -268,7 +272,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               subtitle: profileMilestoneLine(
                 name: child.firstName,
                 weeksCompleted: child.weeksCompleted,
-              ),
+              ) + _awardCountLabel(child, awards),
               icon: Icons.person_rounded,
               accent: AdventureListAccent.teal,
               onTap: () => onOpenChild(child),
@@ -389,25 +393,26 @@ class _RecordCard extends StatelessWidget {
   }
 }
 
-class _AwardsRow extends StatelessWidget {
-  const _AwardsRow({
+/// One person's awards: earned from their own saved record, locked ones say how to unlock.
+class AwardsRow extends StatelessWidget {
+  const AwardsRow({
+    super.key,
     required this.weeksCompleted,
     required this.awards,
+    this.earned,
   });
 
   final int weeksCompleted;
   final List<QuestMilestone> awards;
+  final List<EarnedAward>? earned;
 
   @override
   Widget build(BuildContext context) {
-    final current = latestMilestone(weeksCompleted, awards);
+    final states = awardStates(awards, weeksCompleted: weeksCompleted, earned: earned);
+    final latest = states.where((s) => s.earned).lastOrNull?.milestone;
     final unique = <({QuestMilestone milestone, bool earned, bool isNew})>[
-      for (final m in awards)
-        (
-          milestone: m,
-          earned: weeksCompleted >= m.weekComplete,
-          isNew: current != null && current.title == m.title && weeksCompleted >= m.weekComplete,
-        ),
+      for (final s in states)
+        (milestone: s.milestone, earned: s.earned, isNew: identical(s.milestone, latest)),
     ];
 
     return SizedBox(
@@ -424,13 +429,20 @@ class _AwardsRow extends StatelessWidget {
             (AppColors.puzzleTealTint, AppColors.teal),
             (AppColors.surfaceVariant, AppColors.gold),
           ][i % 4];
-          return _AwardBadge(
-            title: award.milestone.title,
-            earned: award.earned,
-            isNew: award.isNew,
-            tint: colors.$1,
-            accent: colors.$2,
-            week: award.milestone.weekComplete,
+          final week = award.milestone.weekComplete;
+          return Tooltip(
+            triggerMode: TooltipTriggerMode.tap,
+            message: award.earned
+                ? 'Earned: ${award.milestone.title}'
+                : 'Complete week $week in order to unlock',
+            child: _AwardBadge(
+              title: award.milestone.title,
+              earned: award.earned,
+              isNew: award.isNew,
+              tint: colors.$1,
+              accent: colors.$2,
+              week: week,
+            ),
           );
         },
       ),
@@ -602,4 +614,12 @@ class _LoadError extends StatelessWidget {
       ),
     );
   }
+}
+
+/// " · 2 awards" for an explorer tile, from that person's own record.
+String _awardCountLabel(AchievementRecord record, List<QuestMilestone> awards) {
+  final count = awardStates(awards, weeksCompleted: record.weeksCompleted, earned: record.earnedAwards)
+      .where((s) => s.earned)
+      .length;
+  return ' · $count award${count == 1 ? '' : 's'}';
 }

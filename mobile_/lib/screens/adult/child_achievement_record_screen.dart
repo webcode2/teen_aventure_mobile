@@ -11,10 +11,12 @@ class ChildAchievementRecordScreen extends StatelessWidget {
     super.key,
     required this.child,
     required this.familyPoints,
+    this.awards = knownQuestMilestones,
   });
 
   final AchievementRecord child;
   final int familyPoints;
+  final List<QuestMilestone> awards;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +68,13 @@ class ChildAchievementRecordScreen extends StatelessWidget {
             icon: Icons.flag_rounded,
             accent: AdventureListAccent.teal,
           ),
+          const SizedBox(height: 20),
+          const Text(
+            'Awards',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
+          ),
+          const SizedBox(height: 10),
+          AwardsRow(weeksCompleted: child.weeksCompleted, awards: awards, earned: child.earnedAwards),
           const SizedBox(height: 20),
           const Text(
             'Group positions',

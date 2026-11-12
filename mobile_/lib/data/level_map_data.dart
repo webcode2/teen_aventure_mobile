@@ -106,11 +106,11 @@ String? jumpAheadPointsNotice({
     return 'You are still on Quest $sequentialWeek. '
         'Finish its activities first if you want points.\n\n'
         'You can open Quest $tappedWeek, but jumping or skipping the order '
-        'earns no points when you complete those activities.';
+        'earns no points or awards when you complete those activities.';
   }
   return 'For points, continue with Quest $sequentialWeek next.\n\n'
       'You can open Quest $tappedWeek, but jumping or skipping the order '
-      'earns no points when you complete those activities.';
+      'earns no points or awards when you complete those activities.';
 }
 
 /// Level spots from the sea (level 1) up to the house (last level): always

@@ -302,6 +302,8 @@ class AchievementRecord {
   final int totalWeeks;
   final List<FamilyActivity> recent;
   final List<GroupPlace> groups;
+  /// Awards saved for this person on the server; null when the API is older.
+  final List<EarnedAward>? earnedAwards;
 
   const AchievementRecord({
     this.childId,
@@ -313,6 +315,7 @@ class AchievementRecord {
     this.totalWeeks = 0,
     this.recent = const [],
     this.groups = const [],
+    this.earnedAwards,
   });
 
   String get firstName => name.trim().split(' ').first;
@@ -332,6 +335,12 @@ class AchievementRecord {
       groups: (json['groups'] as List? ?? [])
           .map((e) => GroupPlace.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      earnedAwards: json['earnedAwards'] is List
+          ? [
+              for (final e in json['earnedAwards'] as List)
+                if (e is Map) EarnedAward.fromJson(Map<String, dynamic>.from(e)),
+            ]
+          : null,
     );
   }
 }
@@ -377,6 +386,7 @@ class Achievements {
         title: title.trim(),
         criteria: item['criteria'] as String? ?? '',
         weekComplete: week,
+        id: item['id'] as String?,
       ));
     }
     if (awards.isEmpty) return knownQuestMilestones;
