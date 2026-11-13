@@ -12,7 +12,6 @@ import '../../family/family_account_rules.dart';
 import '../../models/auth_session.dart';
 import '../shared/widgets/adventure_header.dart';
 import '../shared/widgets/adventure_bottom_nav.dart';
-import '../shared/widgets/adventure_logo.dart';
 import '../shared/widgets/double_back_exit.dart';
 import '../account/account_screen.dart';
 import '../account/legal_screen.dart';
@@ -26,6 +25,7 @@ import '../teen/quest_journey_screen.dart';
 import '../teen/bible_catalog_screen.dart';
 import '../teen/what_to_learn_screen.dart';
 import 'notifications_screen.dart';
+import 'widgets/side_menu.dart';
 import '../../models/api_models.dart';
 import '../../services/engagement_service.dart';
 import '../../services/family_service.dart';
@@ -378,195 +378,184 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildRoleDrawer(AuthSession session) {
     final unread = _unreadInboxCount;
+    // accountKindLabel is empty for parents; name them so the header tag never sits blank.
+    final kind = session.accountKindLabel.isNotEmpty
+        ? session.accountKindLabel
+        : (session.isParent ? 'Parent' : '');
+    final name = session.displayName?.trim().isNotEmpty == true
+        ? session.displayName!.trim()
+        : kind;
+
+    void push(Widget screen) {
+      Navigator.pop(context);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    }
+
     return Drawer(
+      width: 300,
       backgroundColor: AppColors.cream,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                children: [
-                  const AdventureLogo(height: 68),
-                  const SizedBox(height: 16),
-                  Text(
-                    session.displayName?.trim().isNotEmpty == true
-                        ? session.displayName!
-                        : session.accountKindLabel,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w900, color: AppColors.navy),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          SideMenuProfileHeader(
+            name: name,
+            accountKind: kind,
+            onTap: () => _goTab(AdventureTab.account),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
+              children: [
+                const SideMenuSectionLabel('Explore'),
+                SideMenuItem(
+                  icon: Icons.home_rounded,
+                  color: AppColors.navy,
+                  label: 'Home',
+                  selected: _tab == AdventureTab.home,
+                  onTap: () => _goTab(AdventureTab.home),
+                ),
+                SideMenuItem(
+                  icon: Icons.explore_rounded,
+                  color: AppColors.orange,
+                  label: 'Quest',
+                  selected: _tab == AdventureTab.quests,
+                  onTap: () => _goTab(AdventureTab.quests),
+                ),
+                SideMenuItem(
+                  icon: Icons.emoji_events_rounded,
+                  color: AppColors.gold,
+                  label: 'Achievements',
+                  selected: _tab == AdventureTab.rewards,
+                  onTap: () => _goTab(AdventureTab.rewards),
+                ),
+                SideMenuItem(
+                  icon: Icons.groups_rounded,
+                  color: AppColors.teal,
+                  label: session.isTeacher ? 'Classes' : 'Groups',
+                  selected: _tab == AdventureTab.groups,
+                  onTap: () => _goTab(AdventureTab.groups),
+                ),
+                SideMenuItem(
+                  icon: Icons.notifications_rounded,
+                  color: AppColors.orange,
+                  label: 'Notifications',
+                  badge: unread,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openBell();
+                  },
+                ),
+                const SizedBox(height: 10),
+                const SideMenuSectionLabel('You'),
+                if (session.isParent)
+                  SideMenuItem(
+                    icon: Icons.family_restroom_rounded,
+                    color: AppColors.teal,
+                    label: 'Family',
+                    onTap: () => push(const FamilyScreen()),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    session.accountKindLabel,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textMuted),
-                  ),
-                  const Divider(height: 28),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading:
-                        const Icon(Icons.home_rounded, color: AppColors.navy),
-                    title: const Text('Home'),
-                    onTap: () => _goTab(AdventureTab.home),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.explore_rounded,
-                        color: AppColors.orange),
-                    title: const Text('Quest'),
-                    onTap: () => _goTab(AdventureTab.quests),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.emoji_events_rounded,
-                        color: AppColors.gold),
-                    title: const Text('Achievements'),
-                    onTap: () => _goTab(AdventureTab.rewards),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.groups_rounded,
-                        color: AppColors.orange),
-                    title: Text(session.isTeacher ? 'Classes' : 'Groups'),
-                    onTap: () => _goTab(AdventureTab.groups),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Badge(
-                      isLabelVisible: unread > 0,
-                      label: Text('$unread'),
-                      child: const Icon(Icons.favorite_outline,
-                          color: AppColors.orange),
-                    ),
-                    title: const Text('Notifications'),
-                    onTap: () {
+                SideMenuItem(
+                  icon: Icons.person_rounded,
+                  color: AppColors.navy,
+                  label: 'Account',
+                  selected: _tab == AdventureTab.account,
+                  onTap: () => _goTab(AdventureTab.account),
+                ),
+                if ((session.isParent && session.children.isNotEmpty) ||
+                    session.canRestoreParent)
+                  SideMenuItem(
+                    icon: Icons.switch_account_rounded,
+                    color: AppColors.teal,
+                    label: 'Switch account',
+                    subtitle: session.canRestoreParent
+                        ? 'Back to parent / change profile'
+                        : 'Change who is watching',
+                    onTap: () async {
                       Navigator.pop(context);
-                      _openBell();
+                      try {
+                        await context
+                            .read<AuthSession>()
+                            .switchWatchingProfile();
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not switch account.'),
+                            backgroundColor: AppColors.navy,
+                          ),
+                        );
+                      }
                     },
                   ),
-                  if (session.isParent)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.family_restroom_rounded,
-                          color: AppColors.teal),
-                      title: const Text('Family'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const FamilyScreen()),
-                        );
-                      },
-                    ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline_rounded,
-                        color: AppColors.navy),
-                    title: const Text('Account'),
-                    onTap: () => _goTab(AdventureTab.account),
+                if (StoreConfig.showOfflineDownload)
+                  SideMenuItem(
+                    icon: Icons.download_for_offline_rounded,
+                    color: AppColors.forestGreen,
+                    label: 'Offline Videos',
+                    onTap: () => push(const OfflineVideosScreen()),
                   ),
-                  if ((session.isParent && session.children.isNotEmpty) ||
-                      session.canRestoreParent)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.switch_account_rounded,
-                          color: AppColors.teal),
-                      title: const Text('Switch account'),
-                      subtitle: Text(
-                        session.canRestoreParent
-                            ? 'Back to parent / change profile'
-                            : 'Change who is watching',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        try {
-                          await context
-                              .read<AuthSession>()
-                              .switchWatchingProfile();
-                        } catch (_) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Could not switch account.'),
-                              backgroundColor: AppColors.navy,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  if (StoreConfig.showOfflineDownload)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.download_for_offline,
-                          color: AppColors.navy),
-                      title: const Text('Offline Videos'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const OfflineVideosScreen()),
-                        );
-                      },
-                    ),
-                ],
-              ),
+              ],
             ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: const Icon(Icons.logout, color: AppColors.navy),
-                    title: const Text('Sign out'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<AuthSession>().logout();
-                    },
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SideMenuFooterLink(
+                          icon: Icons.flag_outlined,
+                          label: 'Report an issue',
+                          onTap: () => push(const ReportIssueScreen()),
+                        ),
+                      ),
+                      Expanded(
+                        child: SideMenuFooterLink(
+                          icon: Icons.description_outlined,
+                          label: 'Terms',
+                          onTap: () =>
+                              push(const LegalScreen(doc: LegalDoc.terms)),
+                        ),
+                      ),
+                    ],
                   ),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading:
-                        const Icon(Icons.flag_outlined, color: AppColors.navy),
-                    title: const Text('Report an issue'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ReportIssueScreen()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    leading: const Icon(Icons.description_outlined,
-                        color: AppColors.textMuted),
-                    title: const Text(
-                      'Terms & Conditions',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: const Key('drawer-sign-out'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.read<AuthSession>().logout();
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: const Text('Sign out'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.navy,
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                const LegalScreen(doc: LegalDoc.terms)),
-                      );
-                    },
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

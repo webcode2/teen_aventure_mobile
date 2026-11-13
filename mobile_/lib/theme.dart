@@ -27,8 +27,9 @@ class AppColors {
   static const Color background = cream;
   static const Color surface = Color(0xFFFFFDF7);
   static const Color surfaceVariant = Color(0xFFF6E7C8);
-  static const Color border = Color(0xFFE6D7B8);
-  static const Color borderDark = Color(0xFFD9C7A0);
+  /// Soft neutral grays: card outlines and dividers stay quiet on the cream background.
+  static const Color border = Color(0xFFE6E8EB);
+  static const Color borderDark = Color(0xFFD3D7DC);
   static const Color textPrimary = navy;
   static const Color textSecondary = Color(0xFF3E5A73);
   static const Color textMuted = Color(0xFF6B7C8A);
