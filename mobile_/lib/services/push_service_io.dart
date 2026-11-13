@@ -80,14 +80,13 @@ PushNotice _notice(RemoteMessage message) => PushNotice.fromParts(
 
 Future<void> identifyPushUser(String? externalId) async {}
 
+/// Drop this phone's FCM token so the old account stops receiving pushes.
+///
+/// The message and token-refresh listeners stay attached: [startPush] runs once
+/// per app process, so cancelling them here meant the next sign-in in the same
+/// run never showed foreground pushes, routed taps, or re-registered a rotated
+/// token. The token handler already ignores tokens while signed out.
 Future<void> logoutPush() async {
-  await _receivedSub?.cancel();
-  await _openedSub?.cancel();
-  _receivedSub = null;
-  _openedSub = null;
-  await _tokenRefreshSub?.cancel();
-  _tokenRefreshSub = null;
-  _onToken = null;
   if (Firebase.apps.isEmpty) return;
   await FirebaseMessaging.instance.deleteToken();
 }

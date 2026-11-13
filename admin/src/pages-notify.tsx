@@ -13,8 +13,34 @@ type Notice = {
   error?: string | null;
   createdAt?: string;
   queued?: number;
+  sent?: number;
+  pending?: number;
+  failed?: number;
   audience?: string | null;
 };
+
+/** Mirrors the API caps: FCM rejects payloads over 4 KB. */
+const PUSH_TITLE_MAX = 150;
+const PUSH_BODY_MAX = 1000;
+const EMAIL_SUBJECT_MAX = 200;
+const EMAIL_BODY_MAX = 20000;
+
+function sendSummary(row: Notice, group: string) {
+  const total = row.queued ?? 1;
+  const sent = row.sent ?? (row.status === 'SENT' ? total : 0);
+  const pending = row.pending ?? (row.status === 'PENDING' ? total : 0);
+  const failed = row.failed ?? (row.status === 'FAILED' ? total : 0);
+  if (total === 1) {
+    if (sent) return 'Delivered.';
+    if (pending) return `Queued${row.error ? ` — ${row.error}` : ''}. It will retry automatically.`;
+    return `Not delivered${row.error ? ` — ${row.error}` : ''}.`;
+  }
+  const parts = [`${sent} delivered`];
+  if (pending) parts.push(`${pending} queued for retry`);
+  if (failed) parts.push(`${failed} failed`);
+  const reason = row.error && (pending || failed) ? ` First issue: ${row.error}.` : '';
+  return `${total} recipients${group}: ${parts.join(', ')}.${reason}`;
+}
 
 type Channel = 'PUSH' | 'EMAIL';
 type PreviewPlatform = 'android' | 'ios' | 'web';
@@ -332,19 +358,8 @@ export function NotificationsPage() {
         }),
       });
       pendingSend.current = null;
-      const count = row.queued ?? 1;
-      const group = audience ? ` to ${audienceLabel(audience).toLowerCase()}` : '';
-      setSendNote(
-        row.status === 'SENT'
-          ? count > 1
-            ? `Delivered to ${count}${group}.`
-            : 'Delivered.'
-          : row.status === 'PENDING'
-            ? row.error
-              ? `Queued ${count}${group} (${row.error}).`
-              : `Queued ${count}${group}. Delivery runs when the channel keys are set.`
-            : `Status: ${row.status}${row.error ? ` — ${row.error}` : ''}`,
-      );
+      const group = audience ? ` (${audienceLabel(audience).toLowerCase()})` : '';
+      setSendNote(sendSummary(row, group));
       setSubject('');
       setBody('');
       setImageUrl('');
@@ -357,11 +372,15 @@ export function NotificationsPage() {
     }
   }
 
-  const toPlaceholder = channel === 'PUSH' ? 'user-uuid or child-uuid' : 'name@example.com';
-  const toHint = channel === 'PUSH' ? 'From People — the id on the device session' : 'Recipient email';
+  const toPlaceholder = channel === 'PUSH' ? 'user id, explorer id, or account email' : 'name@example.com';
+  const toHint = channel === 'PUSH' ? 'From People — an id or the email they sign in with' : 'Recipient email';
   const audienceHint = AUDIENCES.find((a) => a.id === audience)?.hint ?? '';
+  const subjectMax = channel === 'PUSH' ? PUSH_TITLE_MAX : EMAIL_SUBJECT_MAX;
+  const bodyMax = channel === 'PUSH' ? PUSH_BODY_MAX : EMAIL_BODY_MAX;
+  const tooLong = subject.trim().length > subjectMax || body.trim().length > bodyMax;
   const canSend =
     Boolean(subject.trim() && body.trim()) &&
+    !tooLong &&
     !sending &&
     (audience ? true : Boolean(to.trim()));
   const previewTo = audience ? audienceLabel(audience) : to;
@@ -431,20 +450,22 @@ export function NotificationsPage() {
                 )}
               </div>
             </Field>
-            <Field label="Subject">
+            <Field label="Subject" hint={subject.length > subjectMax * 0.8 ? `${subject.trim().length}/${subjectMax}` : undefined}>
               <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 required
+                maxLength={subjectMax}
                 placeholder={channel === 'PUSH' ? 'Title on the device' : 'Subject line'}
                 className={inputClass}
               />
             </Field>
-            <Field label="Message">
+            <Field label="Message" hint={body.length > bodyMax * 0.8 ? `${body.trim().length}/${bodyMax}` : undefined}>
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 required
+                maxLength={bodyMax}
                 rows={5}
                 placeholder="What should they read?"
                 className={`${inputClass} min-h-[120px] resize-y`}
@@ -465,7 +486,7 @@ export function NotificationsPage() {
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Action label" hint="Button on the notification">
+                <Field label="Action label" hint="In-app banner button while the app is open">
                   <input
                     value={actionLabel}
                     onChange={(e) => setActionLabel(e.target.value)}
@@ -475,7 +496,7 @@ export function NotificationsPage() {
                   />
                 </Field>
                 <div className="sm:col-span-2">
-                  <Field label="Action URL" hint="Opened when the action is used">
+                  <Field label="Action URL" hint="Opened when they tap the notification or the banner button">
                     <input
                       value={actionUrl}
                       onChange={(e) => setActionUrl(e.target.value)}
@@ -494,7 +515,9 @@ export function NotificationsPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <p className="m-0 text-[11px] text-muted">
-              {channel === 'PUSH' ? 'Sends to the registered device for that id.' : 'Queued for delivery when keys are set.'}
+              {channel === 'PUSH'
+                ? 'Sends now to every signed-in device; anything undelivered retries for 24 hours.'
+                : 'Sends now; large groups finish in the background over the next scheduled runs.'}
             </p>
             <Button size="lg" className="disabled:opacity-45" type="submit"
               disabled={!canSend}>
