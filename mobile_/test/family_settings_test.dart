@@ -13,7 +13,7 @@ import 'package:teen_aventure/services/family_service.dart';
 
 void main() {
   testWidgets(
-      'family owner edits details, adds a guardian, and generates a PIN',
+      'family owner edits details, adds a guardian, sets a PIN and adds explorers',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final api = await ApiClient.create();
@@ -104,13 +104,19 @@ void main() {
     expect(family['description'], isNull);
     expect(find.text('Renamed family'), findsOneWidget);
 
-    // The action lives in the Family top bar.
-    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
-    await tester.pumpAndSettle();
+    // Owners see "My family" as the title and a ⋮ options menu instead of "Add admin".
+    expect(find.text('My family'), findsOneWidget);
+    expect(find.text('Add admin'), findsNothing);
+    Future<void> menu(String item) async {
+      await tester.tap(find.byKey(const ValueKey('family-options')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(item).last);
+      await tester.pumpAndSettle();
+    }
+
+    await menu('Add guardian');
     final dialog = find.byType(AlertDialog);
-    final add = find.descendant(
-        of: dialog,
-        matching: find.widgetWithText(FilledButton, 'Add family admin'));
+    final add = find.descendant(of: dialog, matching: find.widgetWithText(FilledButton, 'Add guardian'));
     // The iPhone-style picker lists family members; the adult is preselected.
     expect(find.byKey(const ValueKey('admin-member-picker')), findsOneWidget);
     expect(find.descendant(of: find.byKey(const ValueKey('admin-member-picker')), matching: find.textContaining('Existing Adult')), findsOneWidget);
@@ -119,79 +125,65 @@ void main() {
     expect(guardianEmail, 'existing@example.com');
     expect((family['guardians'] as List).first['relation'], 'Admin');
 
-    // The action lives in the Family top bar.
-    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
-    await tester.pumpAndSettle();
+    await menu('Add guardian');
     // Only family members can be picked; there is no typing an email.
     expect(find.text('No family members aged 15 or over yet.'), findsOneWidget);
-    expect(find.text('Add by email'), findsNothing);
     expect(find.descendant(of: dialog, matching: find.byType(TextFormField)), findsNothing);
     expect(tester.widget<FilledButton>(add).onPressed, isNull);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    // Explorer actions live in the card's vertical-ellipsis menu.
+    // Explorer actions live in the card's vertical-ellipsis menu; the PIN is set on its own screen.
     final options = find.byTooltip('Options for Rejoice');
     await tester.ensureVisible(options);
     await tester.tap(options);
     await tester.pumpAndSettle();
-    expect(find.text('Request deletion of Rejoice'), findsNothing);
     expect(find.text('Send cheers'), findsNothing); // no cheer templates in this fixture
     expect(find.text('Request deletion'), findsOneWidget);
     await tester.tap(find.text('Set PIN'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Generate PIN'));
+    expect(find.text('PIN for Rejoice'), findsOneWidget);
+    expect(find.text('Generate PIN'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextFormField, '4-digit PIN'), '2468');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Confirm PIN'), '2468');
+    await tester.tap(find.text('Save PIN'));
     await tester.pumpAndSettle();
-    final field = tester.widget<EditableText>(
-      find.descendant(of: dialog, matching: find.byType(EditableText)),
-    );
-    final generated = field.controller.text;
-    expect(generated, matches(RegExp(r'^\d{4}$')));
-    expect(field.obscureText, isFalse);
-    expect(savedPin, isNull);
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(savedPin, generated);
+    expect(savedPin, '2468');
 
-    final next = find.widgetWithText(FilledButton, 'Next');
-    await tester.ensureVisible(find.widgetWithText(TextField, 'Child/teen name'));
-    await tester.enterText(find.widgetWithText(TextField, 'Child/teen name'), 'Maya');
-    await tester.ensureVisible(next);
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-    final age = find.widgetWithText(TextField, 'Age');
-    await tester.ensureVisible(age);
-    await tester.tap(age);
-    await tester.pumpAndSettle();
-    await tester.enterText(age, '16');
-    expect(tester.testTextInput.isVisible, isTrue);
-    await tester.ensureVisible(next);
-    await tester.tap(next);
-    await tester.pumpAndSettle();
-    final teenEmail = find.widgetWithText(TextField, 'Email (optional)');
-    expect(tester.testTextInput.isVisible, isFalse);
-    await tester.ensureVisible(teenEmail);
+    // Add explorer opens a full screen.
+    await menu('Add explorer');
+    await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Maya');
+    await tester.enterText(find.byKey(const ValueKey('explorer-age')), '16');
+    await tester.pump();
+    final teenEmail = find.widgetWithText(TextFormField, 'Email (optional)');
     await tester.tap(teenEmail);
     await tester.pumpAndSettle();
-    expect(tester.testTextInput.isVisible, isTrue);
     expect(tester.testTextInput.setClientArgs?['inputType'],
         containsPair('name', 'TextInputType.emailAddress'));
-    final create = find.widgetWithText(FilledButton, 'Create explorer');
-    await tester.ensureVisible(create);
-    await tester.tap(create);
+    await tester.tap(find.byKey(const ValueKey('save-explorer')));
     await tester.pumpAndSettle();
     expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear']));
     expect(createdExplorer?['name'], 'Maya');
-    expect(find.byIcon(Icons.more_vert), findsNWidgets(2));
+    expect(find.text('My family'), findsOneWidget);
 
-    // A 16-year-old appears in the admin picker but cannot be chosen.
-    await tester.tap(find.widgetWithText(TextButton, 'Add admin'));
+    // Under-15s are saved with the PIN the creator typed.
+    await menu('Add explorer');
+    await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Tobi');
+    await tester.enterText(find.byKey(const ValueKey('explorer-age')), '7');
+    await tester.pump();
+    await tester.enterText(find.widgetWithText(TextFormField, '4-digit PIN'), '1357');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Confirm PIN'), '1357');
+    await tester.tap(find.byKey(const ValueKey('save-explorer')));
     await tester.pumpAndSettle();
+    expect(createdExplorer, containsPair('pin', '1357'));
+
+    // A 16-year-old appears in the guardian picker but cannot be chosen.
+    await menu('Add guardian');
     expect(find.textContaining('Teen · admins must be 20+'), findsOneWidget);
     expect(find.text('Admins must be 20 or older.'), findsOneWidget);
     final addTeen = tester.widget<FilledButton>(find.descendant(
         of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, 'Add family admin')));
+        matching: find.widgetWithText(FilledButton, 'Add guardian')));
     expect(addTeen.onPressed, isNull);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();

@@ -1,5 +1,6 @@
 import 'individual_account_deletion_screen.dart';
 import 'package:flutter/material.dart';
+import '../shared/widgets/hero_banner.dart';
 import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
@@ -240,14 +241,6 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (session.canEditProfile)
-            _SettingsTile(
-              icon: Icons.person_outline_rounded,
-              title: 'Personal info',
-              actionLabel: 'Edit',
-              onTap: () => _openPersonalInfo(session),
-            ),
-          if (session.canEditProfile) const SizedBox(height: 12),
           _SettingsTile(
             icon: Icons.devices_rounded,
             title: 'Devices',
@@ -264,6 +257,7 @@ class _AccountScreenState extends State<AccountScreen> {
             _SettingsTile(
               icon: Icons.family_restroom_rounded,
               title: session.needsFamilySetup ? 'Create or join a family' : 'Family',
+              subtitle: 'Manage family',
               onTap: () {
                 Navigator.push(
                   context,
@@ -312,10 +306,10 @@ class _ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = milestoneLine ?? name;
+    final initial = name.isEmpty ? '?' : name[0].toUpperCase();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: AppRadii.cardRadius,
@@ -328,97 +322,59 @@ class _ProfileHeroCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 96,
-            height: 96,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.orange.withValues(alpha: 0.16),
-                  ),
-                ),
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: AppColors.navy,
-                  child: Text(
-                    name.isEmpty ? '?' : name[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.cream,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 28,
+          HeroBanner(
+            avatar: Text(
+              initial,
+              style: const TextStyle(color: AppColors.cream, fontWeight: FontWeight.w900, fontSize: 32),
+            ),
+            title: name,
+            badge: role,
+            trailing: onPersonalInfo == null
+                ? null
+                : Material(
+                    color: AppColors.cream,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      key: const ValueKey('edit-personal-info'),
+                      customBorder: const CircleBorder(),
+                      onTap: onPersonalInfo,
+                      child: const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(Icons.edit_outlined, color: AppColors.navy, size: 18),
+                      ),
                     ),
                   ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (milestoneLine != null) ...[
+                  Text(
+                    milestoneLine!,
+                    style: const TextStyle(
+                      color: AppColors.navy,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                _ProfileAchievementsRow(
+                  weeksCompleted: weeksCompleted,
+                  points: points,
+                  onViewAll: onViewAllAchievements,
                 ),
+                const SizedBox(height: 28),
+                const _ProfileStatsPanel(),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 44),
-                child: Column(
-                  children: [
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.navy,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        height: 1.15,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      role,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: onPersonalInfo == null
-                    ? const SizedBox(width: 40, height: 40)
-                    : Material(
-                        color: AppColors.cream,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: onPersonalInfo,
-                          child: const SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Icon(Icons.edit_outlined, color: AppColors.navy, size: 18),
-                          ),
-                        ),
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
-          _ProfileAchievementsRow(
-            weeksCompleted: weeksCompleted,
-            points: points,
-            onViewAll: onViewAllAchievements,
-          ),
-          const SizedBox(height: 28),
-          const _ProfileStatsPanel(),
         ],
       ),
     );
@@ -865,12 +821,14 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.actionLabel,
+    this.subtitle,
   });
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
   final String? actionLabel;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -879,6 +837,7 @@ class _SettingsTile extends StatelessWidget {
         : AdventureListAccent.navy;
     return AdventureListCard(
       title: title,
+      subtitle: subtitle,
       icon: icon,
       accent: accent,
       onTap: onTap,

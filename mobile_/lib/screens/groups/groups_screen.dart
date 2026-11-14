@@ -13,6 +13,8 @@ import '../../services/family_service.dart';
 import '../../theme.dart';
 import 'invite_share_screen.dart';
 import 'family_invite_card.dart';
+import '../shared/widgets/hero_banner.dart';
+import '../family/invite_guardian_dialog.dart';
 import 'join_invite_screen.dart';
 import '../shared/report_issue_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
@@ -26,6 +28,13 @@ bool _isGroupAdmin(Map<String, dynamic>? item) {
   if (item['canAdmin'] == true) return true;
   final role = (item['role'] as String? ?? '').toLowerCase();
   return role == 'owner' || role == 'admin' || role == 'teacher';
+}
+
+/// The family you own reads as "My Family"; every other group keeps its name.
+String membershipDisplayName(Map<String, dynamic>? item, String fallback) {
+  final isFamily = (item?['kind'] as String? ?? '').toUpperCase() == 'FAMILY';
+  if (isFamily && item?['role'] == 'Owner') return 'My Family';
+  return item?['name'] as String? ?? fallback;
 }
 
 bool _isTeachingGroup(Map<String, dynamic>? item) {
@@ -358,7 +367,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
           canNudge: !isFamily && _isGroupAdmin(item),
           ranksOverride: widget.ranksOverride,
           onLeave: item == null || item['canLeave'] != true ? null : () => _leave(item),
-          onInvite: item == null || !_isGroupAdmin(item) ? null : () => _openInvite(item),
+          onInvite: item == null || !_isGroupAdmin(item)
+              ? null
+              : isFamily
+                  ? () => showInviteGuardianDialog(context, familyId: cls.id, familyName: item['name'] as String?)
+                  : () => _openInvite(item),
           onDelete: item == null || !_isGroupAdmin(item) || (isFamily && item['role'] != 'Owner')
               ? null : () => _deleteGroup(item),
           canManageFamily: isFamily && _isGroupAdmin(item),
@@ -794,7 +807,6 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
                       canLeave: widget.canLeave,
                       canDelete: widget.canDelete,
                       onLeave: widget.onLeave == null ? null : () => _confirmLeave(context),
-                      onInvite: canInvite ? onInvite : null,
                       onDelete: widget.onDelete,
                     ),
                   ),
@@ -802,20 +814,18 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        if (widget.canManageFamily)
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                await Navigator.push<void>(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => FamilyScreen(familyId: widget.cls.id)),
-                                );
-                                if (mounted) await _load();
-                              },
-                              icon: const Icon(Icons.family_restroom_rounded),
-                              label: const Text('Manage family'),
-                            ),
+                        if (widget.canManageFamily || (canInvite && onInvite != null))
+                          _GroupDetailActions(
+                            onManageFamily: widget.canManageFamily
+                                ? () async {
+                                    await Navigator.push<void>(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => FamilyScreen(familyId: widget.cls.id)),
+                                    );
+                                    if (mounted) await _load();
+                                  }
+                                : null,
+                            onInvite: canInvite ? onInvite : null,
                           ),
                         _GroupDetailBody(
                           cls: widget.cls,
@@ -835,17 +845,6 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
               ),
             ),
           ),
-          if (canInvite && onInvite != null)
-            ColoredBox(
-              color: AppColors.cream,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: _GroupDetailActions(onInvite: onInvite),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -859,7 +858,6 @@ class _GroupHeroHeader extends StatelessWidget {
     this.canLeave = false,
     this.canDelete = false,
     this.onLeave,
-    this.onInvite,
     this.onDelete,
   });
 
@@ -868,7 +866,6 @@ class _GroupHeroHeader extends StatelessWidget {
   final bool canLeave;
   final bool canDelete;
   final VoidCallback? onLeave;
-  final VoidCallback? onInvite;
   final VoidCallback? onDelete;
 
   IconData get _kindIcon {
@@ -895,20 +892,11 @@ class _GroupHeroHeader extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          height: top + 132,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.navy,
-                Color(0xFF0A3A5C),
-                Color(0xFF0E5A6A),
-              ],
-            ),
-          ),
+        HeroBanner(
+          topInset: top,
+          avatar: Icon(_kindIcon, size: 40, color: AppColors.cream),
+          title: membershipDisplayName(membership, cls.name),
+          badge: _statusLabel,
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(8, top + 4, 16, 0),
@@ -930,9 +918,12 @@ class _GroupHeroHeader extends StatelessWidget {
                   child: const Text('Leave', style: TextStyle(fontWeight: FontWeight.w700)),
                 )
               else
-                const Text(
-                  'Group details',
-                  style: TextStyle(
+                Text(
+                  cls.kind.toUpperCase() == 'FAMILY' ||
+                          (membership?['kind'] as String? ?? '').toUpperCase() == 'FAMILY'
+                      ? 'Family details'
+                      : 'Group details',
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                     color: AppColors.cream,
@@ -977,92 +968,6 @@ class _GroupHeroHeader extends StatelessWidget {
                     child: const Text('Report'),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, top + 56, 20, 0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: AppColors.orange,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.cream, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.navy.withValues(alpha: 0.28),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(_kindIcon, size: 40, color: AppColors.cream),
-                  ),
-                  if (onInvite != null)
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: Material(
-                        color: AppColors.teal,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: onInvite,
-                          child: const Padding(
-                            padding: EdgeInsets.all(7),
-                            child: Icon(Icons.edit_rounded, size: 14, color: AppColors.cream),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        cls.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 24,
-                          height: 1.15,
-                          color: AppColors.cream,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.sageContainer,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _statusLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.forestGreen,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
@@ -1513,23 +1418,52 @@ class _DashedRRectPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.radius != radius;
 }
 
+/// "Manage family" and "Invite member", side by side under the group avatar.
 class _GroupDetailActions extends StatelessWidget {
-  const _GroupDetailActions({required this.onInvite});
+  const _GroupDetailActions({this.onManageFamily, this.onInvite});
 
+  final VoidCallback? onManageFamily;
   final VoidCallback? onInvite;
+
+  static final _style = OutlinedButton.styleFrom(
+    foregroundColor: AppColors.navy,
+    side: const BorderSide(color: AppColors.borderDark),
+    backgroundColor: AppColors.surface,
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+    shape: RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
+    textStyle: const TextStyle(fontWeight: FontWeight.w800),
+  );
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onInvite,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.navy,
-        side: const BorderSide(color: AppColors.borderDark),
-        backgroundColor: AppColors.surface,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: AppRadii.cardRadius),
+    final buttons = [
+      if (onManageFamily != null)
+        OutlinedButton.icon(
+          key: const Key('manage-family'),
+          onPressed: onManageFamily,
+          style: _style,
+          icon: const Icon(Icons.family_restroom_rounded, size: 18),
+          label: const Text('Manage family'),
+        ),
+      if (onInvite != null)
+        OutlinedButton.icon(
+          key: const Key('invite-member'),
+          onPressed: onInvite,
+          style: _style,
+          icon: const Icon(Icons.person_add_alt_1, size: 18),
+          label: const Text('Invite member'),
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          for (final (index, button) in buttons.indexed) ...[
+            if (index > 0) const SizedBox(width: 10),
+            Expanded(child: button),
+          ],
+        ],
       ),
-      child: const Text('Invite member', style: TextStyle(fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -1562,7 +1496,7 @@ class _MembershipTile extends StatelessWidget {
     }
 
     return AdventureListCard(
-      title: item['name'] as String? ?? 'Group',
+      title: membershipDisplayName(item, 'Group'),
       subtitle: item['underReview'] == true
           ? '$label · Under review'
           : pending

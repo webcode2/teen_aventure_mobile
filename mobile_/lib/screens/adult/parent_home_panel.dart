@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/cupertino.dart' show CupertinoPicker;
 import 'package:flutter/material.dart';
@@ -8,13 +7,13 @@ import '../../models/auth_session.dart';
 import '../../models/api_models.dart';
 import '../auth/auth_chrome.dart';
 import '../../services/api_client.dart';
-import '../../services/auth_service.dart';
 import '../../services/engagement_service.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
 import '../../family/family_account_rules.dart';
 import '../groups/groups_screen.dart';
-import '../groups/invite_share_screen.dart';
+import '../family/add_explorer_screen.dart';
+import '../family/invite_guardian_dialog.dart';
 import '../shared/widgets/adventure_list_card.dart';
 import '../../services/error_text.dart';
 
@@ -25,12 +24,32 @@ const _avatarPalette = [
   AppColors.teal,
 ];
 
+/// What the Family screen's title and options menu show; null entries are hidden.
+class FamilyPanelActions {
+  const FamilyPanelActions({
+    required this.title,
+    required this.allGroups,
+    this.addExplorer,
+    this.inviteGuardian,
+    this.addGuardian,
+    this.updateFamily,
+  });
+
+  final String title;
+  final VoidCallback allGroups;
+  final VoidCallback? addExplorer;
+  final VoidCallback? inviteGuardian;
+  final VoidCallback? addGuardian;
+  final VoidCallback? updateFamily;
+}
+
 class ParentHomePanel extends StatefulWidget {
-  const ParentHomePanel({super.key, this.addAdminAction});
+  const ParentHomePanel({super.key, this.actions});
 
   /// When set, the "Add family admin" action is published here for the host's
   /// top bar (null when the viewer may not add admins) instead of shown inline.
-  final ValueNotifier<VoidCallback?>? addAdminAction;
+  /// Filled by the panel so the Family screen can show its title and options menu.
+  final ValueNotifier<FamilyPanelActions?>? actions;
 
   @override
   State<ParentHomePanel> createState() => _ParentHomePanelState();
@@ -43,24 +62,11 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
   List<NudgeTemplate> _cheers = const [];
   String? _error;
   bool _loading = true;
-  final _childName = TextEditingController();
-  final _childAge = TextEditingController();
-  final _teenEmail = TextEditingController();
-  final _teenPassword = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _childName.dispose();
-    _childAge.dispose();
-    _teenEmail.dispose();
-    _teenPassword.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -118,52 +124,24 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     await session.refreshProfile();
   }
 
-  Future<void> _addChild() async {
-    final name = _childName.text.trim();
-    if (name.isEmpty) return;
-    final age = int.tryParse(_childAge.text.trim());
-    final kind = age == null ? null : explorerKindFromAge(age);
-    if (!mounted) return;
-    if (age == null || kind == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(explorerAgeHint)),
-      );
-      return;
-    }
+  Future<void> _openAddExplorer() async {
+    final added = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AddExplorerScreen(beforeAdd: _ensureOwnedFamily)),
+    );
+    if (added != true || !mounted) return;
+    await context.read<AuthSession>().refreshProfile();
+    await _load();
+  }
 
-    String? email;
-    String? password;
-    if (kind == ExplorerAgeKind.teen && _teenEmail.text.trim().isNotEmpty) {
-      email = _teenEmail.text.trim();
-      password = _teenPassword.text;
-      final error = validateEmail(email) ?? validatePassword(password);
-      if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-        return;
-      }
-    }
+  Future<void> _inviteGuardian() async {
+    final id = _family?['id'] as String?;
+    if (id == null) return;
+    await showInviteGuardianDialog(context, familyId: id, familyName: _family?['name'] as String?);
+  }
 
-    try {
-      await _ensureOwnedFamily();
-      if (!mounted) return;
-      await context.read<FamilyService>().addChild(
-            name: name,
-            birthYear: DateTime.now().year - age,
-            email: email,
-            password: password,
-          );
-      _childName.clear();
-      _childAge.clear();
-      _teenEmail.clear();
-      _teenPassword.clear();
-      if (!mounted) return;
-      await context.read<AuthSession>().refreshProfile();
-      await _load();
-    } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
-    }
+  void _openAllGroups() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const GroupsScreen(showRanks: true)));
   }
 
   Future<void> _editFamily() async {
@@ -287,7 +265,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         builder: (ctx, update) => PopScope(
           canPop: !busy,
           child: AlertDialog(
-            title: const Text('Add family admin'),
+            title: const Text('Add guardian'),
             scrollable: true,
             content: Form(
               key: form,
@@ -295,7 +273,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Family admins can manage the family and its explorers.'),
+                  const Text('Guardians you add here can manage the family and its explorers.'),
                   const SizedBox(height: 12),
                   if (members.isEmpty)
                     const Text('No family members aged 15 or over yet.')
@@ -371,7 +349,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                     }
                   }
                 },
-                child: Text(busy ? 'Adding…' : 'Add family admin'),
+                child: Text(busy ? 'Adding…' : 'Add guardian'),
               ),
             ],
           ),
@@ -380,21 +358,10 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     );
     if (added == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Family admin added.')),
+        const SnackBar(content: Text('Guardian added.')),
       );
       await _load();
     }
-  }
-
-  Future<void> _inviteToFamily() async {
-    final id = _family?['id'] as String?;
-    if (id == null) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InviteShareScreen(kind: 'FAMILY', familyId: id, groupName: _family?['name'] as String?),
-      ),
-    );
   }
 
   /// Removes an adult (by account) or a teen who joined with their own account.
@@ -483,81 +450,19 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
   }
 
   Future<void> _setPin(Map<String, dynamic> child) async {
-    final form = GlobalKey<FormState>();
-    var pin = '';
-    var generatedPin = '';
-    var generation = 0;
-    var visible = false;
-    final saved = await showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, update) => AlertDialog(
-          title: Text('Set PIN for ${child['name']}'),
-          scrollable: true,
-          content: Form(
-            key: form,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  key: ValueKey(generation),
-                  initialValue: generatedPin,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  obscureText: !visible,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (value) => pin = value,
-                  validator: (value) => validatePin(value ?? ''),
-                  decoration: InputDecoration(
-                    labelText: '4-digit PIN',
-                    counterText: '',
-                    suffixIcon: IconButton(
-                      tooltip: visible ? 'Hide PIN' : 'Show PIN',
-                      onPressed: () => update(() => visible = !visible),
-                      icon: Icon(visible ? Icons.visibility_off : Icons.visibility),
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () => update(() {
-                    generatedPin = Random.secure().nextInt(10000).toString().padLeft(4, '0');
-                    pin = generatedPin;
-                    generation++;
-                    visible = true;
-                  }),
-                  icon: const Icon(Icons.autorenew),
-                  label: const Text('Generate PIN'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                if (form.currentState?.validate() == true) Navigator.pop(ctx, pin);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExplorerPinScreen(
+          childId: child['id'] as String,
+          childName: child['name'] as String? ?? 'explorer',
         ),
       ),
     );
-    if (saved == null || !mounted) return;
-    try {
-      await context.read<AuthService>().setChildPin(
-            childId: child['id'] as String,
-            pin: saved,
-            familyId: context.read<FamilyService>().familyId,
-          );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PIN saved for ${child['name']}'), backgroundColor: AppColors.navy),
-        );
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PIN saved for ${child['name']}'), backgroundColor: AppColors.navy),
+      );
     }
   }
 
@@ -733,8 +638,8 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         children: [
           const _FamilyCircleStats(
             explorers: 0,
+            guardians: 0,
             points: 0,
-            familyJar: 0,
           ),
           const SizedBox(height: 20),
           const Text(
@@ -743,16 +648,16 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Only explorers you create under this parent account belong here. No join or invite.',
+            'Add your first explorer to start your family.',
             style: TextStyle(color: AppColors.textMuted, height: 1.35, fontSize: 13),
           ),
           const SizedBox(height: 16),
-          _AddChildCard(
-            name: _childName,
-            age: _childAge,
-            email: _teenEmail,
-            password: _teenPassword,
-            onAdd: () => _addChild(),
+          FilledButton.icon(
+            key: const ValueKey('add-first-explorer'),
+            onPressed: _openAddExplorer,
+            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Add explorer'),
           ),
         ],
       );
@@ -768,25 +673,31 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     final canAddAdmin = canManage && (ownsFamily || guardians.any(
       (guardian) => guardian['userId'] == userId && userId != null && guardian['relation'] == 'Admin',
     ));
-    final topBarAdmin = widget.addAdminAction;
-    if (topBarAdmin != null) {
-      final action = canAddAdmin ? () => _addGuardian(guardians) : null;
+    final topBar = widget.actions;
+    if (topBar != null) {
+      final actions = FamilyPanelActions(
+        title: ownsFamily ? 'My family' : familyName,
+        addExplorer: canManage ? _openAddExplorer : null,
+        inviteGuardian: canAddAdmin ? _inviteGuardian : null,
+        addGuardian: canAddAdmin ? () => _addGuardian(guardians) : null,
+        updateFamily: canManage ? _editFamily : null,
+        allGroups: _openAllGroups,
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Always refresh, so the dialog sees the current guardian list.
-        if (mounted) topBarAdmin.value = action;
+        // Always refresh, so the dialogs see the current guardian list.
+        if (mounted) topBar.value = actions;
       });
     }
     final pending = (_family?['dependentDeletions'] as List?) ?? const [];
     final points = _summary?.familyAskScore ?? 0;
-    final jar = _summary?.familyJar ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _FamilyCircleStats(
-          explorers: kids.length,
+          explorers: kids.where((kid) => kid['isAdult'] != true).length,
+          guardians: guardians.length,
           points: points,
-          familyJar: jar,
           groupJar: _groupJar?.groupJarTotal,
           contributingFamilies: _groupJar?.contributingFamilies,
         ),
@@ -866,25 +777,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 ],
               ),
             ),
-          if (canAddAdmin && topBarAdmin == null)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton.icon(
-                onPressed: () => _addGuardian(guardians),
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Add family admin'),
-              ),
-            ),
-          if (canAddAdmin)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: TextButton.icon(
-                key: const ValueKey('invite-to-family'),
-                onPressed: _inviteToFamily,
-                icon: const Icon(Icons.qr_code_2_rounded),
-                label: const Text('Invite someone with their own account'),
-              ),
-            ),
+
         ],
         if (_family?['deletionStage'] == 'recoverable') ...[
           const SizedBox(height: 12),
@@ -958,21 +851,6 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               title: Text('${child['name']} · Deletion requested'),
               trailing: TextButton(onPressed: () => _changeDependentDeletion(child, restore: true), child: const Text('Restore')),
             ),
-        const SizedBox(height: 8),
-        _AddChildCard(
-          name: _childName,
-          age: _childAge,
-          email: _teenEmail,
-          password: _teenPassword,
-          onAdd: () => _addChild(),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const GroupsScreen(showRanks: true)));
-          },
-          child: const Text('View all groups'),
-        ),
       ],
     );
   }
@@ -1014,15 +892,15 @@ class _Surface extends StatelessWidget {
 class _FamilyCircleStats extends StatelessWidget {
   const _FamilyCircleStats({
     required this.explorers,
+    required this.guardians,
     required this.points,
-    required this.familyJar,
     this.groupJar,
     this.contributingFamilies,
   });
 
   final int explorers;
+  final int guardians;
   final int points;
-  final int familyJar;
   final int? groupJar;
   final int? contributingFamilies;
 
@@ -1106,19 +984,19 @@ class _FamilyCircleStats extends StatelessWidget {
                 Container(width: 1, height: 48, color: AppColors.border),
                 Expanded(
                   child: _CircleStatCell(
-                    icon: Icons.star_rounded,
-                    iconColor: AppColors.gold,
-                    value: '$points',
-                    label: 'Points',
+                    icon: Icons.shield_outlined,
+                    iconColor: AppColors.teal,
+                    value: '$guardians',
+                    label: guardians == 1 ? 'Guardian' : 'Guardians',
                   ),
                 ),
                 Container(width: 1, height: 48, color: AppColors.border),
                 Expanded(
                   child: _CircleStatCell(
-                    icon: Icons.savings_outlined,
-                    iconColor: AppColors.teal,
-                    value: '$familyJar',
-                    label: 'Family Points',
+                    icon: Icons.star_rounded,
+                    iconColor: AppColors.gold,
+                    value: '$points',
+                    label: 'Points',
                   ),
                 ),
               ],
@@ -1366,197 +1244,6 @@ class _MenuRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AddChildCard extends StatefulWidget {
-  const _AddChildCard({
-    required this.name,
-    required this.age,
-    required this.email,
-    required this.password,
-    required this.onAdd,
-  });
-
-  final TextEditingController name;
-  final TextEditingController age;
-  final TextEditingController email;
-  final TextEditingController password;
-  final VoidCallback onAdd;
-
-  @override
-  State<_AddChildCard> createState() => _AddChildCardState();
-}
-
-class _AddChildCardState extends State<_AddChildCard> {
-  /// 0 = name, 1 = age, 2 = email/password (15+ only)
-  int _step = 0;
-
-  void _resetSteps() {
-    setState(() => _step = 0);
-  }
-
-  void _next() {
-    if (_step == 0) {
-      if (widget.name.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter a name for this explorer.')),
-        );
-        return;
-      }
-      setState(() => _step = 1);
-      return;
-    }
-
-    if (_step == 1) {
-      final age = int.tryParse(widget.age.text.trim());
-      final kind = age == null ? null : explorerKindFromAge(age);
-      if (kind == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(explorerAgeHint)),
-        );
-        return;
-      }
-      FocusScope.of(context).unfocus();
-      if (kind == ExplorerAgeKind.child) {
-        widget.onAdd();
-        _resetSteps();
-        return;
-      }
-      setState(() => _step = 2);
-      return;
-    }
-
-    // Step 3: email + password for 15+
-    widget.onAdd();
-    // Parent clears fields on success; reset step after a short delay isn't needed —
-    // if validation fails fields stay. Reset step when fields are cleared.
-    if (widget.name.text.trim().isEmpty) _resetSteps();
-  }
-
-  void _back() {
-    if (_step > 0) setState(() => _step -= 1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // If parent cleared controllers after success, snap back to step 0.
-    if (_step != 0 && widget.name.text.isEmpty && widget.age.text.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _step != 0) setState(() => _step = 0);
-      });
-    }
-
-
-    return _Surface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Add an explorer',
-            style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _step == 0
-                ? 'Step 1 — name'
-                : _step == 1
-                    ? 'Step 2 — age'
-                    : 'Step 3 — optional login (ages 15+)',
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
-          ),
-          const SizedBox(height: 14),
-          if (_step == 0) ...[
-            TextField(
-              controller: widget.name,
-              decoration: _fieldDecoration('Child/teen name'),
-              textCapitalization: TextCapitalization.words,
-              onSubmitted: (_) => _next(),
-            ),
-          ] else if (_step == 1) ...[
-            Text(
-              widget.name.text.trim(),
-              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              key: const ValueKey('explorer-age'),
-              controller: widget.age,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: _fieldDecoration('Age'),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _next(),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Ages 0–14 stay under your account. Ages 15–19 can have their own login with email and password. Ages 20+ need their own adult account.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
-            ),
-          ] else ...[
-            Text(
-              '${widget.name.text.trim()} · age ${widget.age.text.trim()}',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              key: const ValueKey('explorer-email'),
-              controller: widget.email,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              textInputAction: TextInputAction.next,
-              decoration: _fieldDecoration('Email (optional)'),
-              onChanged: (_) => setState(() {}),
-            ),
-            if (widget.email.text.trim().isNotEmpty) ...[
-              const SizedBox(height: 10),
-              TextField(
-                controller: widget.password,
-                obscureText: true,
-                decoration: _fieldDecoration('Password (8+ characters)'),
-              ),
-            ],
-            const SizedBox(height: 8),
-            const Text(
-              'Leave email blank to use a PIN on your device. Set the PIN after creating the explorer.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.35),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              if (_step > 0) ...[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _back,
-                    child: const Text('Back'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                flex: _step > 0 ? 1 : 1,
-                child: FilledButton(
-                  onPressed: _next,
-                  child: Text(
-                    () {
-                      if (_step == 0) return 'Next';
-                      if (_step == 1) {
-                        final age = int.tryParse(widget.age.text.trim());
-                        final kind = age == null ? null : explorerKindFromAge(age);
-                        if (kind == ExplorerAgeKind.child) return 'Create explorer';
-                        return 'Next';
-                      }
-                      return widget.email.text.trim().isEmpty ? 'Create explorer' : 'Create with login';
-                    }(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

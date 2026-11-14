@@ -81,12 +81,13 @@ class FamilyService {
     }
   }
 
-  /// Pass both [email] and [password] for an independent teen login.
+  /// Pass both [email] and [password] for an independent teen login; under-15s need a [pin].
   Future<Map<String, dynamic>> addChild({
     required String name,
     required int birthYear,
     String? email,
     String? password,
+    String? pin,
   }) async {
     try {
       final response = await _apiClient.dio.post('/api/families/children', queryParameters: _familyQuery, data: {
@@ -94,6 +95,7 @@ class FamilyService {
         'birthYear': birthYear,
         if (email != null && email.isNotEmpty) 'email': email,
         if (password != null && password.isNotEmpty) 'password': password,
+        if (pin != null && pin.isNotEmpty) 'pin': pin,
       });
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
@@ -255,6 +257,15 @@ class FamilyService {
       final response = await _apiClient.dio.get('/api/invites/pending');
       final items = (response.data as Map)['items'];
       return items is List ? items.map((e) => Map<String, dynamic>.from(e as Map)).toList() : const [];
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// The invited person saw the invite (opened the push or their inbox).
+  Future<void> markInviteRead(String id) async {
+    try {
+      await _apiClient.dio.post('/api/invites/$id/read');
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

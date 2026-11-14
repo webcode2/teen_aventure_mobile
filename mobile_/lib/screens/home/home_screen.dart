@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _groupsEpoch = 0;
   List<Nudge> _nudges = const [];
   List<Map<String, dynamic>> _deletionNotices = const [];
+  List<Map<String, dynamic>> _familyInvites = const [];
   StreamSubscription<PushNotice>? _pushReceived;
   StreamSubscription<PushNotice>? _pushOpened;
   bool _bellOpen = false;
@@ -147,6 +148,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       var deletions = const <Map<String, dynamic>>[];
       if (!mounted) return;
+      // Saved family invites: pulled on every refresh so a missed push still shows up here.
+      var invites = const <Map<String, dynamic>>[];
+      try {
+        invites = await context.read<FamilyService>().pendingInvites();
+      } catch (_) {}
+      if (!mounted) return;
       try {
         final memberships =
             await context.read<FamilyService>().getMemberships();
@@ -175,11 +182,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _nudges = nudges;
         _deletionNotices = deletions;
+        _familyInvites = invites;
       });
     } catch (_) {}
   }
 
-  int get _unreadInboxCount => _nudges.where((n) => n.readAt == null).length;
+  int get _unreadInboxCount =>
+      _nudges.where((n) => n.readAt == null).length +
+      _familyInvites.where((invite) => invite['readAt'] == null).length;
 
   Future<void> _openBell() async {
     if (_bellOpen) return;
@@ -199,6 +209,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unawaited(engagement.markNudgesRead().catchError((_) => null));
       }
     }
+    // Opening the inbox means the person has seen their family invites; they stay until answered.
+    final familyService = context.read<FamilyService>();
+    final unseen = [for (final invite in _familyInvites) if (invite['readAt'] == null) invite['id'] as String];
+    if (unseen.isNotEmpty) {
+      final seenAt = DateTime.now().toIso8601String();
+      setState(() {
+        _familyInvites = [
+          for (final invite in _familyInvites) invite['readAt'] == null ? {...invite, 'readAt': seenAt} : invite,
+        ];
+      });
+      for (final id in unseen) {
+        unawaited(familyService.markInviteRead(id).catchError((_) {}));
+      }
+    }
 
     _bellOpen = true;
     final result = await Navigator.push<NotificationsResult>(
@@ -207,6 +231,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (_) => NotificationsScreen(
           nudges: _nudges,
           deletionNotices: _deletionNotices,
+          familyInvites: _familyInvites,
         ),
       ),
     );
@@ -216,9 +241,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         _nudges = result.nudges;
       });
-    } else {
-      await _loadInbox();
     }
+    // Invites may have been answered in the inbox; reload them (and the rest).
+    await _loadInbox();
   }
 
   Future<void> _loadAskScore({bool reset = false}) async {

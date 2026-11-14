@@ -14,8 +14,9 @@ class FamilyInviteCard extends StatelessWidget {
 
   final String name;
   final String? invitedBy;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
+  /// Null while an answer is being sent.
+  final VoidCallback? onAccept;
+  final VoidCallback? onDecline;
 
   @override
   Widget build(BuildContext context) {

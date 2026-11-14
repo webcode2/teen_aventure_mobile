@@ -13,7 +13,7 @@ class PushNotice {
 
   final String? title;
   final String? body;
-  /// `nudge`, `class_message`, `group_deletion`, `family_deletion`, `account`, `safeguarding`.
+  /// `nudge`, `class_message`, `group_deletion`, `family_deletion`, `family_invite`, `account`, `safeguarding`.
   final String? type;
   final String? imageUrl;
   final String? actionLabel;

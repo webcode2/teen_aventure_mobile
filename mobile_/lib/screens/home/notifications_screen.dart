@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../family/family_account_rules.dart';
 import '../../models/api_models.dart';
 import '../../nudge_copy.dart';
+import '../../models/auth_session.dart';
 import '../../services/engagement_service.dart';
+import '../../services/error_text.dart';
+import '../../services/family_service.dart';
+import '../groups/family_invite_card.dart';
 import '../../theme.dart';
 
 /// Result popped back to home so the badge and list stay in sync after clear/dismiss.
@@ -19,10 +23,13 @@ class NotificationsScreen extends StatefulWidget {
     super.key,
     this.nudges = const [],
     this.deletionNotices = const [],
+    this.familyInvites = const [],
   });
 
   final List<Nudge> nudges;
   final List<Map<String, dynamic>> deletionNotices;
+  /// Saved family invites waiting for an answer (from `/invites/pending`).
+  final List<Map<String, dynamic>> familyInvites;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -30,12 +37,39 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   late List<Nudge> _nudges;
+  late List<Map<String, dynamic>> _invites;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
     _nudges = List<Nudge>.from(widget.nudges);
+    _invites = List<Map<String, dynamic>>.from(widget.familyInvites);
+  }
+
+  Future<void> _answerInvite(Map<String, dynamic> invite, {required bool accept}) async {
+    final service = context.read<FamilyService>();
+    final session = context.read<AuthSession>();
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      if (accept) {
+        await service.acceptInvite(invite['payload'] as String);
+        await session.refreshProfile();
+      } else {
+        await service.declineInvite(invite['id'] as String);
+      }
+      if (!mounted) return;
+      setState(() => _invites = [for (final i in _invites) if (i['id'] != invite['id']) i]);
+      messenger.showSnackBar(SnackBar(
+        content: Text(accept ? 'You joined ${invite['name']}.' : 'Invite declined.'),
+        backgroundColor: AppColors.navy,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   bool get _canClear => _nudges.isNotEmpty;
@@ -133,6 +167,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
           children: [
+            if (_invites.isNotEmpty) ...[
+              const _SectionLabel('Family invites'),
+              const SizedBox(height: 8),
+              for (var i = 0; i < _invites.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                FamilyInviteCard(
+                  name: _invites[i]['name'] as String? ?? 'Family',
+                  invitedBy: _invites[i]['invitedByName'] as String?,
+                  onAccept: _busy ? null : () => _answerInvite(_invites[i], accept: true),
+                  onDecline: _busy ? null : () => _answerInvite(_invites[i], accept: false),
+                ),
+              ],
+              const SizedBox(height: 20),
+            ],
             if (deletions.isNotEmpty) ...[
               const _SectionLabel('Group deletion'),
               const SizedBox(height: 8),
@@ -152,11 +200,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   onDismiss: _busy ? null : () => _dismissNudge(_nudges[i]),
                 ),
               ],
-            ] else if (deletions.isEmpty)
+            ] else if (deletions.isEmpty && _invites.isEmpty)
               const _EmptyCard(
                 icon: Icons.notifications_none_rounded,
                 title: 'No notifications yet',
-                body: 'Approved encouragements and group deletion notices appear here.',
+                body: 'Family invites, approved encouragements and group deletion notices appear here.',
               ),
           ],
         ),
