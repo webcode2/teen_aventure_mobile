@@ -249,6 +249,37 @@ class FamilyService {
     }
   }
 
+  /// Family invites sent to this account's email.
+  Future<List<Map<String, dynamic>>> pendingInvites() async {
+    try {
+      final response = await _apiClient.dio.get('/api/invites/pending');
+      final items = (response.data as Map)['items'];
+      return items is List ? items.map((e) => Map<String, dynamic>.from(e as Map)).toList() : const [];
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<void> declineInvite(String id) async {
+    try {
+      await _apiClient.dio.post('/api/invites/$id/decline');
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Owner or family admin removes an adult (by [userId]) or a joined teen (by [childId]).
+  Future<void> removeFamilyMember({String? userId, String? childId}) async {
+    try {
+      await _apiClient.dio.post('/api/families/members/remove', queryParameters: _familyQuery, data: {
+        if (userId != null) 'userId': userId,
+        if (childId != null) 'childId': childId,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> previewInvite(String raw) async {
     final token = parseJoinToken(raw) ?? raw.trim();
     try {

@@ -12,6 +12,7 @@ import '../../providers/cms_text.dart';
 import '../../services/family_service.dart';
 import '../../theme.dart';
 import 'invite_share_screen.dart';
+import 'family_invite_card.dart';
 import 'join_invite_screen.dart';
 import '../shared/report_issue_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
@@ -53,6 +54,7 @@ class GroupsScreen extends StatefulWidget {
 
 class _GroupsScreenState extends State<GroupsScreen> {
   Map<String, dynamic>? _data;
+  List<Map<String, dynamic>> _invites = const [];
   GroupJar? _jar;
   String? _error;
   bool _loading = true;
@@ -85,10 +87,12 @@ class _GroupsScreenState extends State<GroupsScreen> {
       _loading = true;
       _error = null;
     });
+    final familyService = context.read<FamilyService>();
+    final engagement = context.read<EngagementService>();
     try {
-      final data = await context.read<FamilyService>().getMemberships();
+      final data = await familyService.getMemberships();
       try {
-        final family = await context.read<FamilyService>().getMyFamily();
+        final family = await familyService.getMyFamily();
         final deletionAt = family['deletionAt'];
         final items = data['items'];
         if (deletionAt != null && items is List) {
@@ -101,14 +105,21 @@ class _GroupsScreenState extends State<GroupsScreen> {
       } catch (_) {}
       GroupJar? jar;
       try {
-        jar = await context.read<EngagementService>().getGroupJar();
+        jar = await engagement.getGroupJar();
       } catch (_) {
         jar = null;
+      }
+      var invites = const <Map<String, dynamic>>[];
+      try {
+        invites = await familyService.pendingInvites();
+      } catch (_) {
+        // Invites are optional on this screen; the memberships list still loads.
       }
       if (mounted) {
         setState(() {
           _data = data;
           _jar = jar;
+          _invites = invites;
         });
       }
     } on ApiException catch (e) {
@@ -143,6 +154,31 @@ class _GroupsScreenState extends State<GroupsScreen> {
             kind: item['kind'] as String? ?? 'CLASS',
           ),
     ];
+  }
+
+  Future<void> _answerInvite(Map<String, dynamic> invite, {required bool accept}) async {
+    final service = context.read<FamilyService>();
+    final session = context.read<AuthSession>();
+    try {
+      if (accept) {
+        await service.acceptInvite(invite['payload'] as String);
+        await session.refreshProfile();
+      } else {
+        await service.declineInvite(invite['id'] as String);
+      }
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(accept ? 'You joined ${invite['name']}.' : 'Invite declined.'),
+          backgroundColor: AppColors.navy,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e)), backgroundColor: AppColors.navy));
+      }
+    }
   }
 
   Future<void> _join() async {
@@ -263,15 +299,19 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
   Future<bool> _leave(Map<String, dynamic> item) async {
     final name = item['name'] as String? ?? 'this group';
-    final isChurch = (item['kind'] as String? ?? '').toUpperCase() == 'CHURCH';
+    final kind = (item['kind'] as String? ?? '').toUpperCase();
+    final isChurch = kind == 'CHURCH';
+    final isFamily = kind == 'FAMILY';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isChurch ? 'Leave church?' : 'Leave group?'),
+        title: Text(isChurch ? 'Leave church?' : isFamily ? 'Leave family?' : 'Leave group?'),
         content: Text(
           isChurch
               ? 'You are about to leave $name. You will also be removed from all of its church groups. You can join again later with a new invite.'
-              : 'You are about to leave $name. Your standing and points in this group will no longer be available here. You can join again later with a new invite.',
+              : isFamily
+                  ? 'You are about to leave $name. Your own points and awards go with you. You can join again later with a new invite.'
+                  : 'You are about to leave $name. Your standing and points in this group will no longer be available here. You can join again later with a new invite.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
@@ -312,13 +352,13 @@ class _GroupsScreenState extends State<GroupsScreen> {
         builder: (_) => _GroupStandingScreen(
           cls: cls,
           membership: item,
-          canLeave: !isFamily && item?['canLeave'] == true,
-          canInvite: !isFamily && _isGroupAdmin(item),
+          canLeave: item?['canLeave'] == true,
+          canInvite: _isGroupAdmin(item),
           canDelete: _isGroupAdmin(item) && (!isFamily || item?['role'] == 'Owner'),
           canNudge: !isFamily && _isGroupAdmin(item),
           ranksOverride: widget.ranksOverride,
-          onLeave: isFamily || item == null ? null : () => _leave(item),
-          onInvite: isFamily || item == null || !_isGroupAdmin(item) ? null : () => _openInvite(item),
+          onLeave: item == null || item['canLeave'] != true ? null : () => _leave(item),
+          onInvite: item == null || !_isGroupAdmin(item) ? null : () => _openInvite(item),
           onDelete: item == null || !_isGroupAdmin(item) || (isFamily && item['role'] != 'Owner')
               ? null : () => _deleteGroup(item),
           canManageFamily: isFamily && _isGroupAdmin(item),
@@ -551,6 +591,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
                     ),
                   ],
                 ),
+                for (final invite in _invites) ...[
+                  const SizedBox(height: 12),
+                  FamilyInviteCard(
+                    name: invite['name'] as String? ?? 'Family',
+                    invitedBy: invite['invitedByName'] as String?,
+                    onAccept: () => _answerInvite(invite, accept: true),
+                    onDecline: () => _answerInvite(invite, accept: false),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _yourGroupsHeader(session),
                 const SizedBox(height: 12),

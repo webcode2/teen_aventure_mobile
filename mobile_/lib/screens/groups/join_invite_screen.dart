@@ -49,8 +49,12 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     }
   }
 
+  /// Family invites are accepted by the person themselves, never on an explorer's behalf.
+  bool get _isFamilyInvite => (_preview?['kind'] as String?)?.toUpperCase() == 'FAMILY';
+
   /// Parent on the adult shell joining an explorer into a group.
   bool get _parentJoiningForExplorer {
+    if (_isFamilyInvite) return false;
     try {
       final session = context.read<AuthSession>();
       return session.isParent && !session.isChild && session.children.isNotEmpty;
@@ -427,6 +431,14 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                               height: 1.4,
                               fontSize: 14,
                             ),
+                          ),
+                        ],
+                        if (_isFamilyInvite) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'You join as yourself. Your points and awards count for this family, '
+                            'family admins can see your progress, and you can leave at any time.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
                           ),
                         ],
                         if (_parentJoiningForExplorer) ...[

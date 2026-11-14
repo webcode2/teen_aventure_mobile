@@ -14,6 +14,7 @@ import '../../services/family_service.dart';
 import '../../theme.dart';
 import '../../family/family_account_rules.dart';
 import '../groups/groups_screen.dart';
+import '../groups/invite_share_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
 import '../../services/error_text.dart';
 
@@ -382,6 +383,65 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         const SnackBar(content: Text('Family admin added.')),
       );
       await _load();
+    }
+  }
+
+  Future<void> _inviteToFamily() async {
+    final id = _family?['id'] as String?;
+    if (id == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InviteShareScreen(kind: 'FAMILY', familyId: id, groupName: _family?['name'] as String?),
+      ),
+    );
+  }
+
+  /// Removes an adult (by account) or a teen who joined with their own account.
+  Future<void> _removeMember(String name, {String? userId, String? childId}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Remove $name?'),
+        content: const Text('They keep their own account, points and awards. You can invite them again later.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await context.read<FamilyService>().removeFamilyMember(userId: userId, childId: childId);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
+    }
+  }
+
+  Future<void> _leaveFamily() async {
+    final id = _family?['id'] as String?;
+    if (id == null) return;
+    final name = _family?['name'] as String? ?? 'this family';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Leave family?'),
+        content: Text('You are about to leave $name. Your own points and awards go with you.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Leave')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final session = context.read<AuthSession>();
+    try {
+      await context.read<FamilyService>().leaveMembership(kind: 'FAMILY', id: id);
+      await session.refreshProfile();
+      if (mounted) await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     }
   }
 
@@ -788,6 +848,19 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                         name: user['name'] as String? ?? user['email'] as String? ?? 'Guardian',
                         relation: guardian['relation'] as String? ?? 'Guardian',
                         isYou: user['id'] != null && user['id'] == userId,
+                        onLeave: canManage && user['id'] == userId && guardian['relation'] != 'Owner'
+                            ? _leaveFamily
+                            : null,
+                        onRemove: canManage &&
+                                canAddAdmin &&
+                                user['id'] != userId &&
+                                guardian['relation'] != 'Owner' &&
+                                (ownsFamily || guardian['relation'] != 'Admin')
+                            ? () => _removeMember(
+                                  user['name'] as String? ?? 'this adult',
+                                  userId: user['id'] as String?,
+                                )
+                            : null,
                       ),
                   ],
                 ],
@@ -800,6 +873,16 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                 onPressed: () => _addGuardian(guardians),
                 icon: const Icon(Icons.person_add_alt_1),
                 label: const Text('Add family admin'),
+              ),
+            ),
+          if (canAddAdmin)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                key: const ValueKey('invite-to-family'),
+                onPressed: _inviteToFamily,
+                icon: const Icon(Icons.qr_code_2_rounded),
+                label: const Text('Invite someone with their own account'),
               ),
             ),
         ],
@@ -833,7 +916,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Created under this parent account only.',
+          'Everyone who plays and earns points for this family.',
           style: TextStyle(color: AppColors.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 12),
@@ -861,6 +944,10 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                   : null,
               onRequestDeletion: ownsFamily && kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
                   ? () => _changeDependentDeletion(kids[i])
+                  : null,
+              // Adults are removed from the Guardians list; joined teens from here.
+              onRemove: canManage && canAddAdmin && kids[i]['selfOwned'] == true && kids[i]['isAdult'] != true
+                  ? () => _removeMember(kids[i]['name'] as String? ?? 'this teen', childId: kids[i]['id'] as String?)
                   : null,
             ),
             const SizedBox(height: 12),
@@ -1112,11 +1199,13 @@ class _ChildCard extends StatelessWidget {
     this.onPin,
     this.onManageTeen,
     this.onRequestDeletion,
+    this.onRemove,
     this.askScore = 0,
     this.streakDays = 0,
   });
 
   final Map<String, dynamic> child;
+  final VoidCallback? onRemove;
   final Color color;
   final ValueChanged<String> onCheer;
   final List<NudgeTemplate> cheers;
@@ -1153,6 +1242,8 @@ class _ChildCard extends StatelessWidget {
         onManageTeen?.call();
       case _ExplorerAction.delete:
         onRequestDeletion?.call();
+      case _ExplorerAction.remove:
+        onRemove?.call();
     }
   }
 
@@ -1161,7 +1252,7 @@ class _ChildCard extends StatelessWidget {
     final name = child['name'] as String? ?? 'Explorer';
     final ageBand = child['ageBand'] as String? ?? 'CHILD';
     final initial = name.isEmpty ? '?' : name[0].toUpperCase();
-    final ageLabel = ageBand == 'TEEN' ? 'Teen' : 'Explorer';
+    final ageLabel = child['isAdult'] == true ? 'Adult' : ageBand == 'TEEN' ? 'Teen' : 'Explorer';
 
     return _Surface(
       padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
@@ -1233,6 +1324,13 @@ class _ChildCard extends StatelessWidget {
                       child: _MenuRow(icon: Icons.delete_outline, label: 'Request deletion', danger: true),
                     ),
                   ],
+                  if (onRemove != null) ...[
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: _ExplorerAction.remove,
+                      child: _MenuRow(icon: Icons.person_remove_outlined, label: 'Remove from family', danger: true),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -1243,7 +1341,7 @@ class _ChildCard extends StatelessWidget {
   }
 }
 
-enum _ExplorerAction { cheer, pin, access, delete }
+enum _ExplorerAction { cheer, pin, access, delete, remove }
 
 class _MenuRow extends StatelessWidget {
   const _MenuRow({required this.icon, required this.label, this.danger = false});
@@ -1514,11 +1612,19 @@ int? _ageOf(Map<String, dynamic> child) {
 
 /// One guardian in the Guardians card: initial avatar, name and a role badge.
 class _GuardianRow extends StatelessWidget {
-  const _GuardianRow({required this.name, required this.relation, this.isYou = false});
+  const _GuardianRow({
+    required this.name,
+    required this.relation,
+    this.isYou = false,
+    this.onRemove,
+    this.onLeave,
+  });
 
   final String name;
   final String relation;
   final bool isYou;
+  final VoidCallback? onRemove;
+  final VoidCallback? onLeave;
 
   @override
   Widget build(BuildContext context) {
@@ -1574,6 +1680,18 @@ class _GuardianRow extends StatelessWidget {
               ],
             ),
           ),
+          if (onRemove != null)
+            IconButton(
+              tooltip: 'Remove $name from family',
+              onPressed: onRemove,
+              icon: const Icon(Icons.person_remove_outlined, color: AppColors.textMuted),
+            ),
+          if (onLeave != null)
+            IconButton(
+              tooltip: 'Leave family',
+              onPressed: onLeave,
+              icon: const Icon(Icons.logout_rounded, color: AppColors.textMuted),
+            ),
         ],
       ),
     );
