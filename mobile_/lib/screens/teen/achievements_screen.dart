@@ -226,25 +226,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         const SizedBox(height: 12),
         AwardsRow(weeksCompleted: weeksCompleted, awards: awards, earned: earned),
       ],
-      if (recent.isNotEmpty) ...[
-        const SizedBox(height: 22),
-        const Text(
-          'Recent activity',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
-        ),
-        const SizedBox(height: 12),
-        for (final activity in recent)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: AdventureListCard(
-              title: activityCaption(activity.activityType),
-              subtitle: compactWhen(activity.createdAt),
-              icon: Icons.check_circle_rounded,
-              accent: AdventureListAccent.green,
-              trailing: Text('+${activity.points} pts'),
-            ),
-          ),
-      ],
       if (groups.isNotEmpty) ...[
         const SizedBox(height: 22),
         const Text(
@@ -297,9 +278,32 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             ),
           ),
       ],
+      // Last on the screen: the five newest entries only.
+      if (recent.isNotEmpty) ...[
+        const SizedBox(height: 22),
+        const Text(
+          'Recent activity',
+          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.navy),
+        ),
+        const SizedBox(height: 12),
+        for (final activity in recent.take(maxRecentActivity))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: AdventureListCard(
+              dense: true,
+              title: activityCaption(activity.activityType),
+              subtitle: compactWhen(activity.createdAt),
+              icon: Icons.check_circle_rounded,
+              accent: AdventureListAccent.green,
+              trailing: Text('+${activity.points} pts'),
+            ),
+          ),
+      ],
     ];
   }
 }
+
+const maxRecentActivity = 5;
 
 class _RecordCard extends StatelessWidget {
   const _RecordCard({

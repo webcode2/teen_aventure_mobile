@@ -39,13 +39,6 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   bool _lessonMarked = false;
   bool _continuing = false;
   final WatchProgress _watch = WatchProgress();
-  final _watchClock = Stopwatch()..start();
-  Duration _lastTickAt = Duration.zero;
-  bool _lastTickPlaying = false;
-  // Time spent playing since the position last moved; paused time never counts.
-  Duration _playedSinceMove = Duration.zero;
-  Duration _lastWatchPosition = Duration.zero;
-  bool _skipNoticeShown = false;
 
   double progressSeconds = 0;
   // Download state
@@ -111,38 +104,6 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
     }
   }
 
-  void _onVideoProgress() {
-    if (_continuing || !_watch.reachedEnd) return;
-    if (_watch.watchedEnough) {
-      _finishAndContinue();
-    } else {
-      _showSkipNotice();
-      _leaveWithoutCredit();
-    }
-  }
-
-  /// Reaching the end after skipping most of the video does not complete the lesson.
-  /// The note stays visible on Home after this screen closes.
-  void _showSkipNotice() {
-    if (_skipNoticeShown || !mounted) return;
-    _skipNoticeShown = true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Too much of this video was skipped, so it isn\'t ticked yet. Watch it again to complete it.'),
-      ),
-    );
-  }
-
-  /// Back to Home after a skipped video, without a tick or points.
-  Future<void> _leaveWithoutCredit() async {
-    if (_continuing) return;
-    _continuing = true;
-    await _leaveVideoPlayback();
-    if (mounted && ModalRoute.of(context)?.isCurrent == true && Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-  }
-
   Future<void> _markLessonWatched() async {
     if (_lessonMarked) return;
     setState(() => _lessonMarked = true);
@@ -159,7 +120,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
   }
 
   Future<void> _finishAndContinue() async {
-    if (_continuing || !_watch.watchedEnough) return;
+    if (_continuing || !_watch.reachedEnd) return;
     _continuing = true;
     await Future.wait([_markLessonWatched(), _leaveVideoPlayback()]);
     if (mounted && ModalRoute.of(context)?.isCurrent == true && Navigator.canPop(context)) {
@@ -448,29 +409,17 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
                         localFilePath: _localPath,
                         useLocalFile: _preferLocal,
                         onPosition: (position, duration, playing) {
-                          final now = _watchClock.elapsed;
-                          if (_lastTickPlaying) _playedSinceMove += now - _lastTickAt;
-                          _lastTickAt = now;
-                          _lastTickPlaying = playing;
-                          _watch.update(
-                            position,
-                            duration,
-                            sampleInterval: _playedSinceMove,
-                          );
-                          if (position != _lastWatchPosition) {
-                            _playedSinceMove = Duration.zero;
-                            _lastWatchPosition = position;
-                          }
+                          _watch.update(position, duration);
                           progressSeconds = position.inSeconds.toDouble();
                           if (duration.inSeconds > 0) {
                             totalSeconds = duration.inSeconds.toDouble();
                           }
-                          if (_watch.reachedEnd) _onVideoProgress(); // completes, or explains a skip
+                          _finishAndContinue();
                         },
                         onEnded: () {
                           if (!mounted) return;
                           _watch.markEnded();
-                          _onVideoProgress();
+                          _finishAndContinue();
                         },
                       ),
                     ),
