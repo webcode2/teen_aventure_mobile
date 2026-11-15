@@ -227,135 +227,143 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         children: [
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              padding: const EdgeInsets.only(bottom: 20),
               children: [
+                // Full width, flush with the app bar above it.
                 _ProfileIdentityHeader(
                   initial: initial,
                   name: displayName,
                   email: _email.text.trim().isEmpty ? _originalEmail : _email.text.trim(),
                 ),
-                const SizedBox(height: 20),
-                if (_formError != null) ...[
-                  _FormBanner(message: _formError!),
-                  const SizedBox(height: 16),
-                ],
-                _FormSection(
-                  title: 'About you',
-                  subtitle: 'How your name appears across the adventure.',
-                  children: [
-                    TextField(
-                      controller: _name,
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      decoration: _fieldDecoration(
-                        label: 'Name',
-                        prefix: Icons.person_outline_rounded,
-                        error: _nameError,
-                      ),
-                    ),
-                    if (askBirthYear) ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _birthYear,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(4),
-                        ],
-                        decoration: _fieldDecoration(
-                          label: 'Birth year',
-                          hint: 'e.g. 1990',
-                          helper: 'Can only be set once',
-                          prefix: Icons.cake_outlined,
-                          error: _birthYearError,
-                        ),
-                      ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                    if (_formError != null) ...[
+                      _FormBanner(message: _formError!),
+                      const SizedBox(height: 16),
                     ],
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.next,
-                      decoration: _fieldDecoration(
-                        label: 'Email',
-                        prefix: Icons.mail_outline_rounded,
-                        error: _emailError,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _FormSection(
-                  title: 'Sign-in security',
-                  subtitle: 'Leave password blank to keep the one you already use.',
-                  children: [
-                    TextField(
-                      controller: _secret,
-                      obscureText: _obscure,
-                      keyboardType: TextInputType.visiblePassword,
-                      textInputAction: TextInputAction.next,
-                      decoration: _fieldDecoration(
-                        label: secretLabel,
-                        hint: 'Optional',
-                        prefix: Icons.lock_outline_rounded,
-                        error: _secretError,
-                        suffix: IconButton(
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(
-                            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            color: AppColors.textMuted,
+                    _FormSection(
+                      title: 'About you',
+                      subtitle: 'How your name appears across the adventure.',
+                      children: [
+                        TextField(
+                          controller: _name,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          decoration: _fieldDecoration(
+                            label: 'Name',
+                            prefix: Icons.person_outline_rounded,
+                            error: _nameError,
                           ),
                         ),
-                      ),
+                        if (askBirthYear) ...[
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _birthYear,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
+                            ],
+                            decoration: _fieldDecoration(
+                              label: 'Birth year',
+                              hint: 'e.g. 1990',
+                              helper: 'Can only be set once',
+                              prefix: Icons.cake_outlined,
+                              error: _birthYearError,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          textInputAction: TextInputAction.next,
+                          decoration: _fieldDecoration(
+                            label: 'Email',
+                            prefix: Icons.mail_outline_rounded,
+                            error: _emailError,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 14),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      padding: _credentialChange
-                          ? const EdgeInsets.all(12)
-                          : EdgeInsets.zero,
-                      decoration: BoxDecoration(
-                        color: _credentialChange
-                            ? AppColors.puzzleTealTint.withValues(alpha: 0.55)
-                            : Colors.transparent,
-                        borderRadius: AppRadii.cardRadius,
-                        border: _credentialChange
-                            ? Border.all(color: AppColors.teal.withValues(alpha: 0.25))
-                            : null,
-                      ),
-                      child: TextField(
-                        controller: _current,
-                        obscureText: _obscureCurrent,
-                        keyboardType: TextInputType.visiblePassword,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) {
-                          if (!_busy) _save();
-                        },
-                        decoration: _fieldDecoration(
-                          label: currentLabel,
-                          helper: _credentialChange
-                              ? 'Required to confirm your email or password change'
-                              : 'Only needed when changing email or password',
-                          prefix: Icons.verified_user_outlined,
-                          error: _currentError,
-                          suffix: IconButton(
-                            tooltip: _obscureCurrent ? 'Show password' : 'Hide password',
-                            onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
-                            icon: Icon(
-                              _obscureCurrent
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: AppColors.textMuted,
+                    const SizedBox(height: 16),
+                    _FormSection(
+                      title: 'Sign-in security',
+                      subtitle: 'Leave password blank to keep the one you already use.',
+                      children: [
+                        TextField(
+                          controller: _secret,
+                          obscureText: _obscure,
+                          keyboardType: TextInputType.visiblePassword,
+                          textInputAction: TextInputAction.next,
+                          decoration: _fieldDecoration(
+                            label: secretLabel,
+                            hint: 'Optional',
+                            prefix: Icons.lock_outline_rounded,
+                            error: _secretError,
+                            suffix: IconButton(
+                              tooltip: _obscure ? 'Show password' : 'Hide password',
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                              icon: Icon(
+                                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 14),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          padding: _credentialChange
+                              ? const EdgeInsets.all(12)
+                              : EdgeInsets.zero,
+                          decoration: BoxDecoration(
+                            color: _credentialChange
+                                ? AppColors.puzzleTealTint.withValues(alpha: 0.55)
+                                : Colors.transparent,
+                            borderRadius: AppRadii.cardRadius,
+                            border: _credentialChange
+                                ? Border.all(color: AppColors.teal.withValues(alpha: 0.25))
+                                : null,
+                          ),
+                          child: TextField(
+                            controller: _current,
+                            obscureText: _obscureCurrent,
+                            keyboardType: TextInputType.visiblePassword,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) {
+                              if (!_busy) _save();
+                            },
+                            decoration: _fieldDecoration(
+                              label: currentLabel,
+                              helper: _credentialChange
+                                  ? 'Required to confirm your email or password change'
+                                  : 'Only needed when changing email or password',
+                              prefix: Icons.verified_user_outlined,
+                              error: _currentError,
+                              suffix: IconButton(
+                                tooltip: _obscureCurrent ? 'Show password' : 'Hide password',
+                                onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                                icon: Icon(
+                                  _obscureCurrent
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -412,8 +420,8 @@ class _ProfileIdentityHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -421,14 +429,7 @@ class _ProfileIdentityHeader extends StatelessWidget {
             Color(0xFF0A3A5C),
           ],
         ),
-        borderRadius: AppRadii.cardRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.navy.withValues(alpha: 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Row(
         children: [

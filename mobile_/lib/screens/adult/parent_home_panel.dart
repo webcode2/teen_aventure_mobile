@@ -14,8 +14,8 @@ import '../../family/family_account_rules.dart';
 import '../groups/groups_screen.dart';
 import '../family/add_explorer_screen.dart';
 import '../family/invite_guardian_dialog.dart';
-import '../shared/widgets/adventure_list_card.dart';
 import '../../services/error_text.dart';
+import '../shared/widgets/points_total.dart';
 
 const _avatarPalette = [
   AppColors.navy,
@@ -664,7 +664,6 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
 
     final familyName = _family?['name'] as String? ?? 'Your family';
-    final description = (_family?['description'] as String?)?.trim() ?? '';
     final guardians = (_family?['guardians'] as List?)?.whereType<Map>() ?? const [];
     final canManage = _family?['deletionStage'] == null;
     final kids = _children;
@@ -700,30 +699,6 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
           points: points,
           groupJar: _groupJar?.groupJarTotal,
           contributingFamilies: _groupJar?.contributingFamilies,
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Your family',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.navy),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Home circle for explorers on this account.',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-        ),
-        const SizedBox(height: 12),
-        AdventureListCard(
-          title: familyName,
-          subtitle: description.isEmpty ? null : description,
-          icon: Icons.home_rounded,
-          accent: AdventureListAccent.orange,
-          trailing: canManage
-              ? IconButton(
-                  tooltip: 'Edit family',
-                  onPressed: _editFamily,
-                  icon: const Icon(Icons.edit_outlined),
-                )
-              : null,
         ),
         if (guardians.isNotEmpty || canAddAdmin) ...[
           const SizedBox(height: 20),
@@ -1007,8 +982,8 @@ class _FamilyCircleStats extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
               child: Text(
                 contributingFamilies == null
-                    ? 'Group points: $groupJar pts'
-                    : 'Group points $groupJar pts · $contributingFamilies families contributing',
+                    ? 'Group points: ${pointsLabel(groupJar!)}'
+                    : 'Group points ${pointsLabel(groupJar!)} · $contributingFamilies families contributing',
                 style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
             ),
@@ -1169,7 +1144,7 @@ class _ChildCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$askScore pts · $streakDays day streak',
+                      '${pointsLabel(askScore)} · $streakDays day streak',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textMuted),
                     ),
                   ],

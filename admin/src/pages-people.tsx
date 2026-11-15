@@ -417,7 +417,7 @@ function UserAccountPanel({
 
   async function remove() {
     if (!user) return;
-    const ok = await askConfirm(`Request deletion of ${user.name} (${user.email}) and linked resources? Access is suspended immediately. Recovery is available for 30 days and purge is eligible after 90 days.`, {
+    const ok = await askConfirm(`Request deletion of ${user.name} (${user.email}) and linked resources? Access is suspended immediately. Recovery is available for 30 days, then it is permanently deleted.`, {
       title: 'Request account deletion',
       confirmLabel: 'Request deletion',
       tone: 'danger',

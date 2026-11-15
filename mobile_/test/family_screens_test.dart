@@ -17,7 +17,8 @@ void main() {
 
   testWidgets('Add explorer asks the creator for a PIN for under-15s', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AddExplorerScreen()));
-    expect(find.text('4-digit PIN'), findsNothing);
+    // The PIN shows by default, before any age is entered.
+    expect(find.text('4-digit PIN'), findsOneWidget);
 
     await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Sam');
     await tester.enterText(find.byKey(const ValueKey('explorer-age')), '8');
@@ -37,12 +38,24 @@ void main() {
     expect(find.text('The PINs do not match'), findsOneWidget);
   });
 
-  testWidgets('teens get optional login fields instead of a PIN', (tester) async {
+  testWidgets('an age of 15+ swaps the PIN for required email and password, and back', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AddExplorerScreen()));
+    await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Maya');
     await tester.enterText(find.byKey(const ValueKey('explorer-age')), '16');
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('4-digit PIN'), findsNothing);
-    expect(find.text('Email (optional)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('explorer-email')), findsOneWidget);
+    expect(find.byKey(const ValueKey('explorer-password')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('save-explorer')));
+    await tester.pump();
+    expect(find.text('Email is required'), findsOneWidget);
+    expect(find.text('Password is required'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('explorer-age')), '9');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('explorer-email')), findsNothing);
+    expect(find.text('4-digit PIN'), findsOneWidget);
   });
 
   testWidgets('family options menu lists only the allowed actions', (tester) async {

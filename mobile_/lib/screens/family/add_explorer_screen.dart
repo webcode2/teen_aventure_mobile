@@ -112,10 +112,12 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
     return age == null ? null : explorerKindFromAge(age);
   }
 
+  /// Teens (15–19) sign in with their own email and password; everyone younger uses a PIN.
+  bool get _isTeen => _kind == ExplorerAgeKind.teen;
+
   Future<void> _save() async {
     if (_form.currentState?.validate() != true) return;
-    final kind = _kind!;
-    final email = _email.text.trim();
+    final teen = _isTeen;
     setState(() {
       _busy = true;
       _error = null;
@@ -126,9 +128,9 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
       await context.read<FamilyService>().addChild(
             name: _name.text.trim(),
             birthYear: DateTime.now().year - int.parse(_age.text.trim()),
-            pin: kind == ExplorerAgeKind.child ? _pin.text : null,
-            email: kind == ExplorerAgeKind.teen && email.isNotEmpty ? email : null,
-            password: kind == ExplorerAgeKind.teen && email.isNotEmpty ? _password.text : null,
+            pin: teen ? null : _pin.text,
+            email: teen ? _email.text.trim() : null,
+            password: teen ? _password.text : null,
           );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -140,7 +142,7 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final kind = _kind;
+    final teen = _isTeen;
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
@@ -172,36 +174,50 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
                 validator: (_) => _kind == null ? explorerAgeHint : null,
                 decoration: _decoration('Age'),
               ),
-              if (kind == ExplorerAgeKind.child) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Choose a PIN. Your explorer uses it to open their profile on this device.',
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.35),
-                ),
-                const SizedBox(height: 12),
-                _PinFields(pin: _pin, confirm: _confirm),
-              ],
-              if (kind == ExplorerAgeKind.teen) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Optional: give them their own login. Leave blank to manage them from your account.',
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.35),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => (v ?? '').trim().isEmpty ? null : validateEmail(v!),
-                  decoration: _decoration('Email (optional)'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _password,
-                  obscureText: true,
-                  validator: (v) => _email.text.trim().isEmpty ? null : validatePassword(v ?? ''),
-                  decoration: _decoration('Password'),
-                ),
-              ],
+              const SizedBox(height: 8),
+              // The PIN shows by default; an age of 15+ swaps it for the teen's own login.
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: teen
+                    ? Column(
+                        key: const ValueKey('teen-login-fields'),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Teens sign in with their own email and password.',
+                            style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            key: const ValueKey('explorer-email'),
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) => validateEmail(v ?? ''),
+                            decoration: _decoration('Email'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            key: const ValueKey('explorer-password'),
+                            controller: _password,
+                            obscureText: true,
+                            validator: (v) => validatePassword(v ?? ''),
+                            decoration: _decoration('Password'),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        key: const ValueKey('child-pin-fields'),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Choose a PIN. Your explorer uses it to open their profile on this device.',
+                            style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+                          ),
+                          const SizedBox(height: 12),
+                          _PinFields(pin: _pin, confirm: _confirm),
+                        ],
+                      ),
+              ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

@@ -50,11 +50,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   StreamSubscription<PushNotice>? _pushReceived;
   StreamSubscription<PushNotice>? _pushOpened;
   bool _bellOpen = false;
+  GameController? _game;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // After any award, every points display re-reads the server total.
+    _game = context.read<GameController>()..refreshScore = _loadAskScore;
     _pushReceived = PushHooks.received.listen(_onPushReceived);
     _pushOpened = PushHooks.opened.listen(_onPushOpened);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (_game?.refreshScore == _loadAskScore) _game!.refreshScore = null;
     WidgetsBinding.instance.removeObserver(this);
     _pushReceived?.cancel();
     _pushOpened?.cancel();
@@ -89,9 +93,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .where((t) => t.trim().isNotEmpty)
         .join(' — ');
     if (text.isEmpty || _bellOpen) return;
+    final isAward = notice.type == 'award';
     final actionLabel = (notice.actionLabel?.trim().isNotEmpty ?? false)
         ? notice.actionLabel!.trim()
-        : (notice.hasActionUrl ? 'Open' : 'View');
+        : (notice.hasActionUrl ? 'Open' : (isAward ? 'View award' : 'View'));
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
         content: Text(text, maxLines: 3, overflow: TextOverflow.ellipsis),
@@ -101,6 +106,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onPressed: () {
             if (notice.hasActionUrl) {
               unawaited(_openPushAction(notice));
+            } else if (isAward) {
+              _openAchievements();
             } else {
               _openBell();
             }
@@ -116,9 +123,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _openPushAction(notice);
       return;
     }
+    if (notice.type == 'award') {
+      _openAchievements();
+      return;
+    }
     if (_bellOpen) return;
     await _loadInbox();
     if (mounted) await _openBell();
+  }
+
+  /// Award notices open the explorer's Achievements, where the award is shown.
+  void _openAchievements() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    setState(() => _tab = AdventureTab.rewards);
   }
 
   Future<void> _openPushAction(PushNotice notice) async {

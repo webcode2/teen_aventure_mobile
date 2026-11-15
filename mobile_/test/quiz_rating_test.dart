@@ -33,5 +33,8 @@ void main() {
   test('a quiz with no questions does not divide by zero', () {
     expect(QuizRating(0, 0).label, '0/10');
     expect(QuizRating(0, 0).band, QuizBand.keepGoing);
+    expect(QuizRating(0, 10).band, QuizBand.zero);
+    expect(QuizRating(0, 10).message, contains('No correct answers'));
+    expect(QuizRating(1, 10).band, QuizBand.keepGoing);
   });
 }

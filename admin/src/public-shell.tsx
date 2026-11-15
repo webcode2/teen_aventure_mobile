@@ -414,3 +414,14 @@ export function PublicLayout({ children, activeTab, stacked = false, content }: 
     </div>
   </PublicCopy.Provider>;
 }
+
+/**
+ * Standalone pages (Terms, account deletion) — also opened inside the app — show
+ * only the logo, without the site's navigation header and footer.
+ */
+export function StandalonePageLayout({ children }: { children: ReactNode }) {
+  return <div className="min-h-screen bg-cream font-sans text-navy">
+    <div className="flex justify-center px-4 pt-6"><Brand size="sm" /></div>
+    <main>{children}</main>
+  </div>;
+}

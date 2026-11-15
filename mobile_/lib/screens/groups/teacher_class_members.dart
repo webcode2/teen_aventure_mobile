@@ -9,6 +9,7 @@ import '../../services/service_locator.dart';
 import '../../theme.dart';
 import '../../utils/classroom_name.dart';
 import '../../services/error_text.dart';
+import '../shared/widgets/points_total.dart';
 
 /// Roster for a church-assigned teacher: teen members, points, cheer all or selected.
 class TeacherClassMembers extends StatefulWidget {
@@ -384,7 +385,7 @@ class _MemberTile extends StatelessWidget {
               ],
             )
           : Text(
-              '${row.points} pts',
+              pointsLabel(row.points),
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 color: AppColors.teal,

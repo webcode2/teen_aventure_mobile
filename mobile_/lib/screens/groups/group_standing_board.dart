@@ -7,6 +7,7 @@ import '../../services/content_service.dart';
 import '../../services/engagement_service.dart';
 import '../../theme.dart';
 import '../../services/error_text.dart';
+import '../shared/widgets/points_total.dart';
 
 /// Rankings for a single group, shown inside group detail only.
 class GroupStandingBoard extends StatefulWidget {
@@ -437,7 +438,7 @@ class _StandingActivityRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  isBlurred ? '••• pts' : '${item.points} pts',
+                  isBlurred ? '••• pts' : pointsLabel(item.points),
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,

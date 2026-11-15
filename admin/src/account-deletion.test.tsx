@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { AccountDeletionPage } from './pages-account-deletion';
-vi.mock('./public-shell', () => ({ PublicLayout: ({ children }: { children: ReactNode }) => <>{children}</> }));
+vi.mock('./public-shell', () => ({ StandalonePageLayout: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock('./api', () => ({ API_BASE: '', clearPastorSession: vi.fn(), setApplicantToken: vi.fn() }));
 const fetcher = vi.fn();
 beforeEach(() => { vi.stubGlobal('fetch', fetcher); fetcher.mockReset(); });
@@ -12,15 +12,18 @@ function fill() {
   fireEvent.change(screen.getByLabelText('Account email'), { target: { value: 'owner@example.org' } });
   fireEvent.change(screen.getByLabelText('Confirm your password'), { target: { value: 'test-password' } });
 }
-it('requires confirmation and posts credentials only in the body of a lifecycle request', async () => {
+it('requires the typed phrase and posts credentials only in the body of a lifecycle request', async () => {
   fetcher.mockResolvedValue({ ok: true, json: async () => ({ stage: 'recoverable', recoverableUntil: '2026-11-17T12:00:00Z', purgeAfter: '2027-01-16T12:00:00Z' }) });
   render(<MemoryRouter><AccountDeletionPage /></MemoryRouter>); fill();
   expect((screen.getByRole('button', { name: 'Verify password & request deletion' }) as HTMLButtonElement).disabled).toBe(true);
-  fireEvent.click(screen.getByRole('checkbox'));
+  const phrase = screen.getByLabelText(/to confirm/);
+  fireEvent.change(phrase, { target: { value: 'delete' } });
+  expect((screen.getByRole('button', { name: 'Verify password & request deletion' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(phrase, { target: { value: 'delete my account' } });
   fireEvent.click(screen.getByRole('button', { name: 'Verify password & request deletion' }));
   await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
   expect(fetcher.mock.calls[0][0]).toBe('/api/accounts/request-deletion');
-  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ email: 'owner@example.org', password: 'test-password', confirmation: 'REQUEST DELETION' });
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ email: 'owner@example.org', password: 'test-password', confirmation: 'Delete my Account' });
   expect(await screen.findByText('Stage: recoverable')).toBeTruthy();
   expect((screen.getByLabelText('Confirm your password') as HTMLInputElement).value).toBe('');
 });

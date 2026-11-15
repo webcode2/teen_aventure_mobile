@@ -1,5 +1,5 @@
 /// A quiz result shown out of 10, whatever the quiz length (15 of 30 → 5/10).
-enum QuizBand { keepGoing, average, good, excellent, perfect }
+enum QuizBand { zero, keepGoing, average, good, excellent, perfect }
 
 class QuizRating {
   QuizRating(this.correct, this.total);
@@ -22,6 +22,7 @@ class QuizRating {
 
   QuizBand get band {
     if (total > 0 && correct >= total) return QuizBand.perfect;
+    if (total > 0 && correct <= 0) return QuizBand.zero;
     final percent = fraction * 100;
     if (percent >= 90) return QuizBand.excellent;
     if (percent >= 70) return QuizBand.good;
@@ -30,6 +31,8 @@ class QuizRating {
   }
 
   String get message => switch (band) {
+        QuizBand.zero =>
+          "No correct answers this time, and that's okay. Watch this week's videos again, then give the quiz another go!",
         QuizBand.keepGoing =>
           "Don't give up! Every question teaches you something new. Rewatch the videos and try again.",
         QuizBand.average =>

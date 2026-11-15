@@ -17,6 +17,7 @@ import '../family/family_screen.dart';
 import '../groups/groups_screen.dart';
 import '../teen/achievements_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
+import '../shared/widgets/points_total.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -116,9 +117,8 @@ class _AccountScreenState extends State<AccountScreen> {
     return Material(
       color: AppColors.cream,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         children: [
-  const SizedBox(height: 22),
           _ProfileHeroCard(
             name: name,
             role: session.accountKindLabel,
@@ -136,7 +136,7 @@ class _AccountScreenState extends State<AccountScreen> {
             },
           ),
           if (session.canRestoreParent) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
             FilledButton.icon(
               onPressed: _busy ? null : _restoreParent,
               icon: const Icon(Icons.switch_account_rounded),
@@ -147,7 +147,7 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -164,7 +164,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: _FeatureTile(
                   title: session.isAdult ? 'Family' : 'Achievements',
@@ -192,19 +192,18 @@ class _AccountScreenState extends State<AccountScreen> {
             ],
           ),
           if (session.isParent && session.children.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            // TODO: one child  then call it child profile, and if 2 orr more then call it children profiles
-            const Text(
-              'Children profiles',
-              style: TextStyle(
+            const SizedBox(height: 20),
+            Text(
+              session.children.where((child) => !child.loginDeactivated).length == 1
+                  ? 'Child profile'
+                  : 'Children profiles',
+              style: const TextStyle(
                 color: AppColors.navy,
                 fontWeight: FontWeight.w900,
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 10),
-          
-            const SizedBox(height: 16),
             for (final child in session.children.where((child) => !child.loginDeactivated)) ...[
               _ChildSwitchTile(
                 child: child,
@@ -228,10 +227,10 @@ class _AccountScreenState extends State<AccountScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
             ],
           ],
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           const Text(
             'Settings',
             style: TextStyle(
@@ -240,7 +239,7 @@ class _AccountScreenState extends State<AccountScreen> {
               fontSize: 18,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _SettingsTile(
             icon: Icons.devices_rounded,
             title: 'Devices',
@@ -253,7 +252,7 @@ class _AccountScreenState extends State<AccountScreen> {
             },
           ),
           if (session.isAdult) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _SettingsTile(
               icon: Icons.family_restroom_rounded,
               title: session.needsFamilySetup ? 'Create or join a family' : 'Family',
@@ -267,7 +266,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ],
           if (!session.isUnderAgeExplorer) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _SettingsTile(
               icon: Icons.delete_forever_outlined,
               title: 'Account deletion & recovery',
@@ -349,7 +348,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -363,14 +362,14 @@ class _ProfileHeroCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
                 ],
                 _ProfileAchievementsRow(
                   weeksCompleted: weeksCompleted,
                   points: points,
                   onViewAll: onViewAllAchievements,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 const _ProfileStatsPanel(),
               ],
             ),
@@ -403,7 +402,7 @@ class _ProfileAchievementsRow extends StatelessWidget {
           earned: weeksCompleted >= m.weekComplete,
         ),
       (
-        label: points >= 1000 ? '1,000 pts' : '$points pts',
+        label: pointsLabel(points),
         icon: Icons.stars_rounded,
         color: AppColors.gold,
         earned: points > 0,
@@ -496,6 +495,21 @@ class _ProfileStatsPanelState extends State<_ProfileStatsPanel> {
   final Map<String, ActivitySeries> _loaded = {};
   bool _loading = true;
   String? _error;
+  int? _seenScore;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // New points (from any screen) make the saved bars stale; read them again.
+    final score = context.watch<GameController>().score;
+    if (_seenScore != null && score != _seenScore) {
+      _loaded.clear();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
+    _seenScore = score;
+  }
 
   @override
   void initState() {
@@ -604,7 +618,7 @@ class _ProfileStatsPanelState extends State<_ProfileStatsPanel> {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            'Total: $total pts',
+            'Total: ${pointsLabel(total)}',
             style: const TextStyle(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w700,

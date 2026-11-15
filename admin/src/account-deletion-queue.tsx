@@ -14,19 +14,19 @@ export function AccountDeletionQueue({ archiveScope }: { archiveScope?: 'ACCOUNT
   async function action(row: Row, kind: 'restore' | 'archive' | 'purge') {
     if (kind === 'purge' && !await askConfirm(`Permanently delete ${row.label} and its ${row.accounts} accounts, ${row.profiles ?? 0} explorer profiles, ${row.families} families and ${row.groups} groups now? This bypasses the remaining recovery window and cannot be undone. Safeguarding/legal holds still apply.`, { title: 'Delete completely now', confirmLabel: 'Delete permanently', tone: 'danger' })) return;
     if (kind === 'archive' && !await askConfirm('Archiving ends self-service recovery. An administrator can restore within the original 30-day window if the email has not been reused. The purge date stays the same.', { title: 'Move to archive', confirmLabel: 'Archive' })) return;
-    const password = await askPrompt('Confirm your password', { inputType: 'password', title: kind === 'purge' ? 'Verify permanent deletion' : kind === 'archive' ? 'Archive entry; personal data still purges after 90 days' : 'Restore linked resources' });
+    const password = await askPrompt('Confirm your password', { inputType: 'password', title: kind === 'purge' ? 'Verify permanent deletion' : kind === 'archive' ? 'Archive entry; personal data still purges after 30 days' : 'Restore linked resources' });
     if (!password) return;
     setBusy(true); setError(''); setFeedback('');
     try {
       const result = await api<{ pending?: boolean }>(`/api/admin/account-deletions/${row.id}/${kind}`, { method: 'POST', body: JSON.stringify({ password, ...(kind === 'purge' ? { confirmation: 'PURGE PERMANENTLY' } : {}) }) });
-      setFeedback(kind === 'archive' ? 'Moved to archive. The 90-day personal-data purge deadline is unchanged.' : kind === 'restore' ? 'Account and linked resources restored.' : result?.pending ? 'Permanent deletion has started. The worker will finish the remaining records and private files; restoration is no longer available.' : 'Personal account data permanently deleted.');
+      setFeedback(kind === 'archive' ? 'Moved to archive. The 30-day personal-data purge deadline is unchanged.' : kind === 'restore' ? 'Account and linked resources restored.' : result?.pending ? 'Permanent deletion has started. The worker will finish the remaining records and private files; restoration is no longer available.' : 'Personal account data permanently deleted.');
       await load();
     } catch (err) { setError(err instanceof Error ? err.message : 'Action failed.'); }
     finally { setBusy(false); }
   }
   return <section className="rounded-2xl border border-border bg-surface p-5">
     <h2 className="font-bold text-navy">{archiveScope === 'ACCOUNT' ? 'Users archive' : archiveScope === 'MINISTRY' ? 'Ministry archive audit entries' : 'Account & ministry deletion requests'}</h2>
-    <p className="mt-1 text-xs text-muted">Scheduled deletion: 0–30 days recoverable · 30–90 days backend-only · purge after 90 days. Use Delete completely now for an immediate permanent purge. Archive retains an audit entry, not personal data indefinitely. Admins can verify their password to purge earlier.</p>
+    <p className="mt-1 text-xs text-muted">Scheduled deletion: pending and recoverable for 30 days · permanently deleted after 30 days. Use Delete completely now for an immediate permanent purge. Archive retains an audit entry, not personal data indefinitely. Admins can verify their password to purge earlier.</p>
     {error && <Alert kind="error">{error}</Alert>}{feedback && <Alert kind="ok">{feedback}</Alert>}
     <div className="mt-4 space-y-3">{rows.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border p-4">
       <div><strong className="text-sm">{row.label} · {row.stage.replaceAll('_', ' ')}</strong>{!!row.archivedEmails?.length && <p className="mt-1 text-xs text-muted">Archived emails: {row.archivedEmails.join(', ')}</p>}<p className="mt-1 text-xs text-muted">{row.accounts} accounts · {row.profiles ?? 0} explorer profiles · {row.families} families · {row.groups} groups</p><p className="text-xs text-muted">Requested {new Date(row.requestedAt).toLocaleDateString()} · Recovery closes {new Date(row.recoverableUntil).toLocaleString()} · Purge eligible {new Date(row.purgeAfter).toLocaleDateString()}</p>{row.stage === 'purged' && <p className="text-xs text-muted">Personal data purged; anonymized audit entry retained.</p>}{row.error && <p className="text-xs text-error">{row.error}</p>}</div>

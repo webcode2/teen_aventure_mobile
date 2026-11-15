@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { publicApi } from './api';
-import { PublicLayout } from './public-shell';
+import { PublicLayout, StandalonePageLayout } from './public-shell';
 import { safePageHtml } from './safe-html';
 import { Spinner } from './ui';
 
@@ -33,7 +33,7 @@ const SLUG_ALIASES: Record<string, string> = {
   terms: 'terms-of-service',
 };
 
-function SitePageView({ slug }: { slug: string }) {
+function SitePageView({ slug, standalone = false }: { slug: string; standalone?: boolean }) {
   const navigate = useNavigate();
   const resolved = SLUG_ALIASES[slug] || slug;
   const [doc, setDoc] = useState<SitePage | null>(null);
@@ -67,8 +67,8 @@ function SitePageView({ slug }: { slug: string }) {
       ? 'privacy'
       : undefined;
 
-  return (
-    <PublicLayout activeTab={activeTab}>
+  const body = (
+    <>
       <section className="border-b border-border/60 bg-gradient-to-br from-teal/8 via-cream to-surface-2/20 px-4 py-14 sm:px-8 sm:py-16">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-teal">Published page</p>
@@ -85,13 +85,15 @@ function SitePageView({ slug }: { slug: string }) {
               </span>
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="cursor-pointer text-xs font-semibold text-teal underline-offset-2 hover:underline"
-          >
-            Back to home
-          </button>
+          {standalone ? null : (
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="cursor-pointer text-xs font-semibold text-teal underline-offset-2 hover:underline"
+            >
+              Back to home
+            </button>
+          )}
         </div>
       </section>
 
@@ -111,8 +113,11 @@ function SitePageView({ slug }: { slug: string }) {
           ) : null}
         </div>
       </section>
-    </PublicLayout>
+    </>
   );
+  return standalone
+    ? <StandalonePageLayout>{body}</StandalonePageLayout>
+    : <PublicLayout activeTab={activeTab}>{body}</PublicLayout>;
 }
 
 export function PrivacyPage() {
@@ -120,7 +125,7 @@ export function PrivacyPage() {
 }
 
 export function TermsPage() {
-  return <SitePageView slug="terms" />;
+  return <SitePageView slug="terms" standalone />;
 }
 
 export function PublicSitePage() {

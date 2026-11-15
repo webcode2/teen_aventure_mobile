@@ -58,9 +58,17 @@ class _DoubleBackExitState extends State<DoubleBackExit> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(widget.warningMessage),
+          content: Text(
+            widget.warningMessage,
+            style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700),
+          ),
           duration: widget.window,
-          backgroundColor: AppColors.navy,
+          backgroundColor: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.border),
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );

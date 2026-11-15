@@ -21,6 +21,7 @@ void main() {
         AuthSession.test(authenticated: true, shell: AppShell.parent)
           ..userId = 'owner';
     final family = <String, dynamic>{
+      'id': 'family-1',
       'name': 'Original family',
       'description': 'Old description',
       'ownerUserId': 'owner',
@@ -37,6 +38,7 @@ void main() {
     String? savedPin;
     String? guardianEmail;
     Map<String, dynamic>? createdExplorer;
+    Map<String, dynamic>? sentInvite;
     api.dio.interceptors.add(InterceptorsWrapper(
       onRequest: (request, handler) {
         final route = '${request.method} ${request.path}';
@@ -70,6 +72,9 @@ void main() {
               'ageBand': 'TEEN',
               'independentLogin': false,
             });
+          case 'POST /api/v1/invites':
+            sentInvite = Map<String, dynamic>.from(request.data as Map);
+            data = {'id': 'invite-1', 'kind': 'FAMILY', 'email': sentInvite!['email']};
           case 'PUT /api/v1/auth/children/explorer/pin':
             savedPin = (request.data as Map)['pin'] as String;
         }
@@ -90,7 +95,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Edit family'));
+    // The family card is gone; editing lives only in the ⋮ menu.
+    expect(find.byTooltip('Edit family'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('family-options')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Update family'));
     await tester.pumpAndSettle();
     final editFields = find.descendant(
       of: find.byType(AlertDialog),
@@ -102,7 +111,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(family['name'], 'Renamed family');
     expect(family['description'], isNull);
-    expect(find.text('Renamed family'), findsOneWidget);
 
     // Owners see "My family" as the title and a ⋮ options menu instead of "Add admin".
     expect(find.text('My family'), findsOneWidget);
@@ -154,15 +162,17 @@ void main() {
     await menu('Add explorer');
     await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Maya');
     await tester.enterText(find.byKey(const ValueKey('explorer-age')), '16');
-    await tester.pump();
-    final teenEmail = find.widgetWithText(TextFormField, 'Email (optional)');
+    await tester.pumpAndSettle();
+    final teenEmail = find.byKey(const ValueKey('explorer-email'));
     await tester.tap(teenEmail);
     await tester.pumpAndSettle();
     expect(tester.testTextInput.setClientArgs?['inputType'],
         containsPair('name', 'TextInputType.emailAddress'));
+    await tester.enterText(teenEmail, 'maya@example.com');
+    await tester.enterText(find.byKey(const ValueKey('explorer-password')), 'teen-pass-123');
     await tester.tap(find.byKey(const ValueKey('save-explorer')));
     await tester.pumpAndSettle();
-    expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear']));
+    expect(createdExplorer?.keys, unorderedEquals(['name', 'birthYear', 'email', 'password']));
     expect(createdExplorer?['name'], 'Maya');
     expect(find.text('My family'), findsOneWidget);
 
@@ -176,6 +186,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('save-explorer')));
     await tester.pumpAndSettle();
     expect(createdExplorer, containsPair('pin', '1357'));
+
+    // Invite guardian sends a family invite for this family to that account's email.
+    await menu('Invite guardian');
+    await tester.enterText(find.byKey(const ValueKey('invite-guardian-email')), 'auntie@example.com');
+    await tester.tap(find.text('Send invite'));
+    await tester.pumpAndSettle();
+    expect(sentInvite, {'kind': 'FAMILY', 'familyId': 'family-1', 'email': 'auntie@example.com'});
 
     // A 16-year-old appears in the guardian picker but cannot be chosen.
     await menu('Add guardian');

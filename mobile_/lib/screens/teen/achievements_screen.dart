@@ -8,6 +8,7 @@ import '../../services/engagement_service.dart';
 import '../../theme.dart';
 import '../adult/child_achievement_record_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
+import '../shared/widgets/points_total.dart';
 
 bool isFamilyAchievementsHub(AuthSession session) =>
     session.isAdult && session.familyId != null;
@@ -200,7 +201,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   }) {
     return [
       _RecordCard(
-        value: '$points pts',
+        value: pointsLabel(points),
         title: 'Victory points',
         tint: AppColors.surfaceVariant,
         icon: Icons.emoji_events_rounded,
@@ -250,10 +251,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               title: child.childId == null && child.name.isEmpty
                   ? 'Your record'
                   : child.firstName,
-              subtitle: profileMilestoneLine(
-                name: child.firstName,
-                weeksCompleted: child.weeksCompleted,
-              ) + _awardCountLabel(child, awards),
+              subtitle: _explorerSubtitle(child, awards),
               icon: Icons.person_rounded,
               accent: AdventureListAccent.teal,
               onTap: () => onOpenChild(child),
@@ -261,7 +259,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '${child.points} pts',
+                    pointsLabel(child.points),
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: AppColors.textSecondary,
@@ -295,7 +293,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               subtitle: compactWhen(activity.createdAt),
               icon: Icons.check_circle_rounded,
               accent: AdventureListAccent.green,
-              trailing: Text('+${activity.points} pts'),
+              trailing: Text(pointsLabel(activity.points, signed: true)),
             ),
           ),
       ],
@@ -580,7 +578,7 @@ class GroupPlaceTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: AdventureListCard(
         title: place.name,
-        subtitle: '${groupKindLabel(place.kind)} · ${ordinalRank(place.rank)}$of · ${place.points} pts',
+        subtitle: '${groupKindLabel(place.kind)} · ${ordinalRank(place.rank)}$of · ${pointsLabel(place.points)}',
         icon: Icons.emoji_events_rounded,
         accent: AdventureListAccent.gold,
         trailing: Text(
@@ -620,10 +618,27 @@ class _LoadError extends StatelessWidget {
   }
 }
 
-/// " · 2 awards" for an explorer tile, from that person's own record.
-String _awardCountLabel(AchievementRecord record, List<QuestMilestone> awards) {
+/// "New Quester · 1 award" for an explorer tile, or "Explorer · 0 awards" before
+/// the first award, so the tile never repeats the name shown as its title.
+String _explorerSubtitle(AchievementRecord record, List<QuestMilestone> awards) {
   final count = awardStates(awards, weeksCompleted: record.weeksCompleted, earned: record.earnedAwards)
       .where((s) => s.earned)
       .length;
-  return ' · $count award${count == 1 ? '' : 's'}';
+  return '${latestAwardTitle(record, awards) ?? 'Explorer'} · $count award${count == 1 ? '' : 's'}';
+}
+
+/// The award this person earned most recently (highest week breaks ties), or null.
+String? latestAwardTitle(AchievementRecord record, List<QuestMilestone> awards) {
+  final saved = [...?record.earnedAwards];
+  if (saved.isEmpty) {
+    final earned = awardStates(awards, weeksCompleted: record.weeksCompleted, earned: record.earnedAwards)
+        .where((s) => s.earned);
+    return earned.isEmpty ? null : earned.last.milestone.title;
+  }
+  final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+  saved.sort((a, b) {
+    final byTime = (a.earnedAt ?? epoch).compareTo(b.earnedAt ?? epoch);
+    return byTime != 0 ? byTime : a.weekNumber.compareTo(b.weekNumber);
+  });
+  return saved.last.title;
 }

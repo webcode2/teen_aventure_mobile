@@ -5,6 +5,7 @@ import '../../theme.dart';
 import '../teen/achievements_screen.dart';
 import '../shared/widgets/adventure_list_card.dart';
 import '../shared/widgets/circle_stats_card.dart';
+import '../shared/widgets/points_total.dart';
 
 class ChildAchievementRecordScreen extends StatelessWidget {
   const ChildAchievementRecordScreen({
@@ -36,7 +37,7 @@ class ChildAchievementRecordScreen extends StatelessWidget {
         children: [
           CircleStatsCard(
             title: child.firstName.isEmpty ? 'Your journey' : '$first’s Journey',
-            subtitle: profileMilestoneLine(name: first, weeksCompleted: child.weeksCompleted),
+            subtitle: latestAwardTitle(child, awards) ?? 'Explorer',
             stats: [
               CircleStat(
                 icon: Icons.pie_chart_rounded,
@@ -63,7 +64,7 @@ class ChildAchievementRecordScreen extends StatelessWidget {
           AdventureListCard(
             title: child.totalWeeks > 0
                 ? '${child.weeksCompleted} of ${child.totalWeeks} weeks complete'
-                : '${child.weeksCompleted} weeks complete',
+                : '${child.weeksCompleted} week${child.weeksCompleted == 1 ? '' : 's'} complete',
             subtitle: nextMilestoneLine(child.weeksCompleted),
             icon: Icons.flag_rounded,
             accent: AdventureListAccent.teal,
@@ -111,12 +112,13 @@ class ChildAchievementRecordScreen extends StatelessWidget {
           else
             for (final activity in child.recent) ...[
               AdventureListCard(
+                dense: true,
                 title: activityCaption(activity.activityType),
                 subtitle: compactWhen(activity.createdAt),
                 icon: Icons.check_circle_rounded,
                 accent: AdventureListAccent.green,
                 trailing: Text(
-                  '+${activity.points}',
+                  pointsLabel(activity.points, signed: true),
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     color: AppColors.forestGreen,
@@ -124,7 +126,7 @@ class ChildAchievementRecordScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
             ],
         ],
       ),

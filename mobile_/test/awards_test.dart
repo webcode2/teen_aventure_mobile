@@ -76,7 +76,8 @@ void main() {
       ),
     ));
     expect(find.text('Awards'), findsOneWidget);
-    expect(find.text('New Quester'), findsOneWidget);
+    // Once as the latest award under the journey title, once as the badge.
+    expect(find.text('New Quester'), findsNWidgets(2));
     expect(find.byTooltip('Earned: New Quester'), findsOneWidget);
     expect(find.byTooltip('Complete week 6 in order to unlock'), findsOneWidget);
   });

@@ -13,7 +13,7 @@ it('files a request in archive with password verification and explains that purg
   fireEvent.click(await screen.findByRole('button', { name: 'Move to archive' }));
   await waitFor(() => expect(apiMock).toHaveBeenCalledWith('/api/admin/account-deletions/job-1/archive', { method: 'POST', body: JSON.stringify({ password: 'actor-password' }) }));
   expect(promptMock).toHaveBeenCalledWith('Confirm your password', expect.objectContaining({ inputType: 'password' }));
-  expect(await screen.findByText('Moved to archive. The 90-day personal-data purge deadline is unchanged.')).toBeTruthy();
+  expect(await screen.findByText('Moved to archive. The 30-day personal-data purge deadline is unchanged.')).toBeTruthy();
 });
 it('requires explicit destructive confirmation and a password before immediate purge', async () => {
   apiMock.mockResolvedValueOnce([row]).mockResolvedValueOnce({ purged: true }).mockResolvedValueOnce([]);

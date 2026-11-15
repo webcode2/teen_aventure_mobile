@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../theme.dart';
 import 'auth_chrome.dart';
 import '../../services/error_text.dart';
+import 'account_deletion_pending_screen.dart';
 
 /// Switch into a family teen who has independent login.
 /// Signs them in with email/password and ends the parent session on this device.
@@ -84,6 +85,7 @@ class _ChildTeenLoginScreenState extends State<ChildTeenLoginScreen> {
       if (!mounted) return;
       await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
     } on ApiException catch (e) {
+      if (mounted && showIfPendingDeletion(context, e)) return;
       setState(() => _formError = e.message);
     } catch (e) {
       setState(() => _formError = errorText(e));

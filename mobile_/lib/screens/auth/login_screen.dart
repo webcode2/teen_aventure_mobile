@@ -6,6 +6,7 @@ import '../shared/widgets/double_back_exit.dart';
 import 'auth_chrome.dart';
 import 'register_adult_screen.dart';
 import '../../services/error_text.dart';
+import 'account_deletion_pending_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.onAuthenticated, this.auth});
@@ -61,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       await completeAuthFlow(context, onAuthenticated: widget.onAuthenticated);
     } on ApiException catch (e) {
+      if (mounted && showIfPendingDeletion(context, e)) return;
       setState(() => _formError = e.message);
     } catch (e) {
       setState(() => _formError = errorText(e));

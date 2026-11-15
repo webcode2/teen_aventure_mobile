@@ -6,7 +6,6 @@ import 'puzzle.dart';
 import 'progress_store.dart';
 import 'puzzle_contract.dart';
 import 'puzzle_contract_loader.dart';
-import '../data/quest_points.dart';
 import 'week_quest_progress.dart';
 import '../services/content_service.dart';
 import '../services/service_locator.dart';
@@ -240,11 +239,16 @@ class GameController extends ChangeNotifier {
     _persistLocalWeek();
   }
 
-  /// Applies admin ledger points after a server award (video, quiz, puzzle, prayer).
+  /// Re-reads the server points total; the home screen sets it for the signed-in explorer.
+  Future<void> Function()? refreshScore;
+
+  /// Applies admin ledger points after a server award (video, quiz, puzzle, prayer),
+  /// then replaces the total with the server's so every screen shows the same number.
   void applyActivityPoints(int points) {
     if (points <= 0) return;
     score += points;
     notifyListeners();
+    refreshScore?.call();
   }
 
   void completeWeekPuzzle() {
@@ -354,12 +358,6 @@ class GameController extends ChangeNotifier {
         puzzleDone: weekPuzzleDone || isPuzzleComplete,
         watchedIndexes: Set<int>.of(_watchedVideoParts),
       );
-
-  void addScoreAndGems(int addedScore, int addedGems) {
-    score += addedScore;
-    gems += addedGems;
-    notifyListeners();
-  }
 
   void loadEpisode(PuzzleEpisode ep) {
     episode = ep;
@@ -543,8 +541,8 @@ class GameController extends ChangeNotifier {
         _puzzleElapsedAtComplete ??=
             DateTime.now().difference(_puzzleStartedAt ?? DateTime.now());
         if (_scoringEnabled && !weekPuzzleDone) {
-          // First finish of the week only — later solves are practice.
-          score += QuestPoints.puzzle;
+          // First finish of the week only — later solves are practice. Points
+          // come from the server's puzzle reward, never a local guess.
           weekPuzzleDone = true;
           _persistLocalWeek();
         }

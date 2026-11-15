@@ -22,6 +22,7 @@ import '../shared/widgets/circle_stats_card.dart';
 import 'group_standing_board.dart';
 import 'teacher_class_members.dart';
 import '../../services/error_text.dart';
+import '../shared/widgets/points_total.dart';
 
 bool _isGroupAdmin(Map<String, dynamic>? item) {
   if (item == null) return false;
@@ -1105,7 +1106,7 @@ class _GroupDetailBody extends StatelessWidget {
         ],
         if (points != null) ...[
           Text(
-            '$points pts',
+            pointsLabel(points),
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 32,

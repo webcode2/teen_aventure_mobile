@@ -475,7 +475,7 @@ export function ChurchDetailPage() {
     if (!churchId) return;
     const impact = detail?.deletionImpact;
     const ok = await askConfirm(
-      'Request deletion of this ministry, its pastor account, all groups, and staff accounts tied only to this ministry with no family responsibilities? Workers with other ministry or family ties keep their accounts; their access to this ministry ends. Recovery is available for 30 days; purge is eligible after 90 days.' +
+      'Request deletion of this ministry, its pastor account, all groups, and staff accounts tied only to this ministry with no family responsibilities? Workers with other ministry or family ties keep their accounts; their access to this ministry ends. Recovery is available for 30 days; it is then permanently deleted.' +
         (impact ? `
 
 Accounts included: ${impact.closeAccounts.join(', ') || 'None'}
@@ -3034,7 +3034,7 @@ export function DeletionsPage() {
     <div className="flex flex-col gap-6">
       <AccountDeletionQueue />
       <div className="bg-surface border border-border rounded-card p-6 shadow-xs flex flex-col gap-4">
-        <h3 className="text-base font-bold text-navy">Deletion lifecycle (0-30d recoverable · 30-90d backend-only · 90+d purge)</h3>
+        <h3 className="text-base font-bold text-navy">Deletion lifecycle (0-30d pending and recoverable · 30d+ permanent deletion)</h3>
         <p className="m-0 text-xs text-muted">Open a row to review who started deletion, their reason, and restore if still recoverable.</p>
         {error ? <Alert kind="error">{error}</Alert> : null}
         {feedback ? <Alert kind="ok">{feedback}</Alert> : null}
