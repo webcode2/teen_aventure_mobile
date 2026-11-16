@@ -106,10 +106,18 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         builder: (_) => ChildAchievementRecordScreen(
           child: child,
           awards: _data?.awards ?? knownQuestMilestones,
-          familyPoints: (_data?.familyPoints ?? 0) +
-              (_data?.tracked == true ? _data!.self.points : 0),
+          familyPoints: _familyPoints,
         ),
       ),
+    );
+  }
+
+  int get _familyPoints {
+    final data = _data;
+    if (data == null) return 0;
+    return data.explorers.fold(
+      data.tracked ? data.self.points : 0,
+      (total, explorer) => total + explorer.points,
     );
   }
 
@@ -125,9 +133,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final familyHub =
         explorers.isNotEmpty || (isFamilyAchievementsHub(session) && !tracked);
 
-    final points = familyHub
-        ? (data?.familyPoints ?? 0) + (tracked ? self.points : 0)
-        : self.points;
+    final points = familyHub ? _familyPoints : self.points;
     final streak = familyHub
         ? explorers.fold<int>(tracked ? self.streak : 0, (max, e) => e.streak > max ? e.streak : max)
         : self.streak;

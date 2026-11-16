@@ -79,15 +79,31 @@ test('separates admin pages from the public and workers.dev hostnames', async ()
   assert.equal(response.headers.get('cache-control'), 'no-store');
 });
 
-test('join pass links go straight to Google Play with the code as install referrer', async () => {
+test('join fallback opens the Android package and offers Google Play', async () => {
   const { default: worker } = await import('./worker.mjs');
   const response = await worker.fetch(new Request('https://tba.example.com/join/church/m10ghy'), {});
-  assert.equal(response.status, 302);
-  const location = new URL(response.headers.get('location'));
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.match(body, /intent:\/\/join\/church\/M10GHY#Intent;scheme=tba;package=com\.elasctroclud\.teen_aventure;/);
+  const location = new URL(decodeURIComponent(body.match(/S\.browser_fallback_url=([^;]+);/)[1]));
   assert.equal(location.origin + location.pathname, 'https://play.google.com/store/apps/details');
   assert.equal(location.searchParams.get('id'), 'com.elasctroclud.teen_aventure');
   assert.equal(location.searchParams.get('referrer'), 'join=church:M10GHY');
   let served = false;
   await worker.fetch(new Request('https://tba.example.com/join/church/<script>'), { ASSETS: { fetch: async () => { served = true; return new Response('spa'); } } });
   assert.ok(served, 'malformed join links fall through to the site');
+});
+
+test('Android link verification uses the configured certificate', async () => {
+  const { default: worker } = await import('./worker.mjs');
+  const request = new Request('https://tba.example.com/.well-known/assetlinks.json');
+  const fingerprint = Array(32).fill('AB').join(':');
+  const response = await worker.fetch(request, { ANDROID_APP_LINK_SHA256: fingerprint });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json())[0].target, {
+    namespace: 'android_app',
+    package_name: 'com.elasctroclud.teen_aventure',
+    sha256_cert_fingerprints: [fingerprint],
+  });
+  assert.equal((await worker.fetch(request, {})).status, 404);
 });

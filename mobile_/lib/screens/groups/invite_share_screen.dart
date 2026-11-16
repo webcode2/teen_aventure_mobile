@@ -39,6 +39,9 @@ class InviteShareScreen extends StatefulWidget {
 }
 
 class _InviteShareScreenState extends State<InviteShareScreen> {
+  static final _emailPattern = RegExp(
+    r"^[a-zA-Z0-9_+'%-]+(?:\.[a-zA-Z0-9_+'%-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$",
+  );
   final _email = TextEditingController();
   final _durableQrKey = GlobalKey();
   final _inviteQrKey = GlobalKey();
@@ -46,9 +49,17 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
   String? _error;
   bool _busy = false;
 
+  bool get _canCreateInvite {
+    final email = _email.text.trim();
+    return !_busy &&
+        (_emailPattern.hasMatch(email) ||
+            (email.isEmpty && _durablePayload == null));
+  }
+
   @override
   void initState() {
     super.initState();
+    if (_durablePayload != null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _create();
     });
@@ -61,6 +72,8 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
   }
 
   Future<void> _create() async {
+    if (!_canCreateInvite) return;
+    final email = _email.text.trim();
     setState(() {
       _busy = true;
       _error = null;
@@ -71,7 +84,7 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
             familyId: widget.familyId,
             churchId: widget.churchId,
             classId: widget.classId,
-            email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+            email: email.isEmpty ? null : email,
           );
       if (mounted) {
         setState(() => _invite = invite);
@@ -162,7 +175,7 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Anyone can scan this QR or enter the group code. It stays valid until you regenerate the code.',
+              'Scan in Groups → Join Group to join. Your phone camera opens the app so you can scan again. You can also enter the group code manually.',
               style: TextStyle(color: AppColors.textMuted, height: 1.35),
             ),
             const SizedBox(height: 16),
@@ -217,8 +230,9 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
           TextField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
+            onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              labelText: 'Email (optional)',
+              labelText: durable == null ? 'Email (optional)' : 'Email address',
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -231,14 +245,22 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
           ),
           const SizedBox(height: 12),
           FilledButton(
-            onPressed: _busy ? null : _create,
+            onPressed: _canCreateInvite ? _create : null,
             child: Text(_busy ? 'Creating…' : durable == null ? 'Refresh invite' : 'Create email invite'),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: const TextStyle(color: Color(0xFFBA1A1A))),
           ],
-          if (payload.isNotEmpty) ...[
+          if (durable != null && payload.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _copy(payload),
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('Copy one-time invite'),
+            ),
+          ],
+          if (durable == null && payload.isNotEmpty) ...[
             const SizedBox(height: 24),
             Center(
               child: RepaintBoundary(
@@ -248,7 +270,7 @@ class _InviteShareScreenState extends State<InviteShareScreen> {
                   color: Colors.white,
                   child: QrImageView(
                     data: payload,
-                    size: durable == null ? 200 : 160,
+                    size: 200,
                     backgroundColor: Colors.white,
                   ),
                 ),

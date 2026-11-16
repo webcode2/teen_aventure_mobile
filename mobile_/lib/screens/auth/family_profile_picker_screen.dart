@@ -40,7 +40,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthSession>();
-    final activeChildren = session.children.where((child) => !child.loginDeactivated).toList();
+    final activeChildren = session.switchableChildren;
     final parentName = session.displayName?.trim().isNotEmpty == true
         ? session.displayName!
         : '';

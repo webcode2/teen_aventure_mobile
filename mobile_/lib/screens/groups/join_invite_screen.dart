@@ -10,10 +10,15 @@ import '../../theme.dart';
 import '../../services/error_text.dart';
 
 class JoinInviteScreen extends StatefulWidget {
-  const JoinInviteScreen({super.key, this.showScanner = true});
+  const JoinInviteScreen({
+    super.key,
+    this.showScanner = true,
+    this.rescanFromPhoneCamera = false,
+  });
 
   /// When false (e.g. widget tests), skip the live camera.
   final bool showScanner;
+  final bool rescanFromPhoneCamera;
 
   @override
   State<JoinInviteScreen> createState() => _JoinInviteScreenState();
@@ -77,7 +82,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     if (kids.isEmpty) return;
     final stillValid = kids.any((c) => c.id == _selectedChildId);
     if (!stillValid) {
-      _selectedChildId = kids.length == 1 ? kids.first.id : (_selectedChildId ?? kids.first.id);
+      _selectedChildId = kids.first.id;
     }
   }
 
@@ -166,17 +171,18 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     }
   }
 
-  Future<void> _previewInvite([String? rawOverride]) async {
+  Future<void> _previewInvite({String? scannedCode}) async {
     if (!_canAcceptIndependently) {
       setState(() => _error = 'Ask a parent to accept this invite from their account.');
       return;
     }
-    final raw = (rawOverride ?? _token.text).trim();
+    final raw = (scannedCode ?? _token.text).trim();
     final token = parseJoinToken(raw);
     if (token == null || token.isEmpty) {
       setState(() => _error = 'That invite code looks empty. Scan again or paste the code.');
       return;
     }
+    FocusScope.of(context).unfocus();
     _token.text = encodeJoinToken(token);
     setState(() {
       _busy = true;
@@ -192,17 +198,22 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
         _ensureChildSelection();
       });
       await _scanner?.stop();
+      if (mounted &&
+          scannedCode != null &&
+          preview['durable'] == true &&
+          preview['kind'] == 'CLASS' &&
+          (!_parentJoiningForExplorer || _familyExplorers.length == 1)) {
+        await _accept();
+      }
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _error = e.message);
-        _handlingScan = false;
-        await _safeStartCamera();
+        if (scannedCode != null) await _scanner?.stop();
       }
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorText(e));
-        _handlingScan = false;
-        await _safeStartCamera();
+        if (scannedCode != null) await _scanner?.stop();
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -260,7 +271,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
   void _onDetect(String raw) {
     if (_handlingScan || _busy || _preview != null) return;
     _handlingScan = true;
-    _previewInvite(raw);
+    _previewInvite(scannedCode: raw);
   }
 
   Future<void> _rescan() async {
@@ -306,25 +317,30 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
               children: [
-                Text(
+                if (_preview == null) Text(
                   _useScanner
-                      ? 'Point your camera at the invite QR. We check it automatically.'
+                      ? widget.rescanFromPhoneCamera
+                          ? 'Scan the group QR code again to join.'
+                          : 'Scan a group QR code to join.'
                       : inviteQrScannerSupported
                           ? 'Paste the invite you received.'
                           : 'Paste the invite code. Live QR scanning is available in the Android/iOS app.',
                   style: const TextStyle(color: AppColors.textMuted, height: 1.35),
                 ),
                 if (widget.showScanner) ...[
-                  const SizedBox(height: 14),
-                  buildInviteQrScanner(
-                    key: _scannerKey,
-                    controller: _scanner,
-                    onDetect: _onDetect,
-                    busy: _busy,
-                    paused: _preview != null,
-                    onRetry: _busy ? null : _retryCamera,
+                  if (_preview == null) const SizedBox(height: 14),
+                  Offstage(
+                    offstage: _preview != null,
+                    child: buildInviteQrScanner(
+                      key: _scannerKey,
+                      controller: _scanner,
+                      onDetect: _onDetect,
+                      busy: _busy,
+                      paused: _preview != null,
+                      onRetry: _busy ? null : _retryCamera,
+                    ),
                   ),
-                  if (_busy && _useScanner) ...[
+                  if (_preview == null && _busy && _useScanner) ...[
                     const SizedBox(height: 12),
                     const Row(
                       children: [
@@ -344,7 +360,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                       ],
                     ),
                   ],
-                  if (_useScanner) ...[
+                  if (_preview == null && _useScanner) ...[
                     const SizedBox(height: 12),
                     TextButton.icon(
                       onPressed: () => setState(() => _showPaste = !_showPaste),
@@ -356,7 +372,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                     ),
                   ],
                 ],
-                if (_showPaste || !_useScanner) ...[
+                if (_preview == null && (_showPaste || !_useScanner)) ...[
                   const SizedBox(height: 8),
                   TextField(
                     controller: _token,
@@ -481,14 +497,15 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                           onPressed: _busy ? null : _accept,
                           style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
                           child: Text(
-                            _parentJoiningForExplorer ? 'Request join' : 'Accept invite',
+                            _parentJoiningForExplorer
+                                ? 'Request join'
+                                : _isFamilyInvite ? 'Accept invite' : 'Join group',
                           ),
                         ),
-                        if (_useScanner)
-                          TextButton(
-                            onPressed: _busy ? null : _rescan,
-                            child: const Text('Scan a different code'),
-                          ),
+                        TextButton(
+                          onPressed: _busy ? null : _rescan,
+                          child: const Text('Use a different code'),
+                        ),
                       ],
                     ),
                   ),

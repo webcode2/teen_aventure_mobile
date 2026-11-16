@@ -1,22 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:teen_aventure/models/auth_session.dart';
 import 'package:teen_aventure/models/game_controller.dart';
 import 'package:teen_aventure/models/level_node.dart';
 import 'package:teen_aventure/models/puzzle.dart';
 import 'package:teen_aventure/platform/invite_qr_scanner_stub.dart';
 import 'package:teen_aventure/providers/hero_copy.dart';
 import 'package:teen_aventure/screens/auth/register_adult_screen.dart';
+import 'package:teen_aventure/screens/auth/auth_gate.dart';
+import 'package:teen_aventure/screens/auth/family_profile_picker_screen.dart';
+import 'package:teen_aventure/screens/groups/invite_share_screen.dart';
 import 'package:teen_aventure/screens/groups/join_invite_screen.dart';
 import 'package:teen_aventure/screens/shared/widgets/double_back_exit.dart';
 import 'package:teen_aventure/screens/teen/level_map_screen.dart';
 import 'package:teen_aventure/screens/teen/widgets/welcome_onboarding_dialog.dart';
 import 'package:teen_aventure/screens/teen/widgets/word_declaration_card.dart';
+import 'package:teen_aventure/services/family_service.dart';
+
+class _JoinFamilyService implements FamilyService {
+  final accepted = <String>[];
+
+  @override
+  Future<Map<String, dynamic>> previewInvite(String raw) async =>
+      {'kind': 'CLASS', 'name': 'Test Group', 'durable': true};
+
+  @override
+  Future<void> acceptInvite(String raw, {String? childId}) async {
+    accepted.add(raw);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('account picker lists only active children of the owned family', (tester) async {
+    final session = AuthSession.test(
+      authenticated: true,
+      shell: AppShell.parent,
+      children: const [
+        FamilyChildProfile(id: 'own', name: 'Home Explorer', ageBand: 'CHILD', canSwitchProfile: true),
+        FamilyChildProfile(id: 'other', name: 'Other Explorer', ageBand: 'TEEN'),
+        FamilyChildProfile(
+          id: 'inactive', name: 'Inactive Explorer', ageBand: 'TEEN',
+          canSwitchProfile: true, loginDeactivated: true,
+        ),
+      ],
+    );
+    await tester.pumpWidget(ChangeNotifierProvider<AuthSession>.value(
+      value: session,
+      child: const MaterialApp(home: FamilyProfilePickerScreen()),
+    ));
+    expect(session.needsProfilePick, isTrue);
+    expect(find.text('Home Explorer'), findsOneWidget);
+    expect(find.text('Other Explorer'), findsNothing);
+    expect(find.text('Inactive Explorer'), findsNothing);
+
+    session.children = [session.children[1]];
+    expect(session.needsProfilePick, isFalse);
+  });
 
   test('welcome dialog is offered once', () {
     expect(WelcomeOnboardingDialog.shouldOffer(enabled: false, alreadyOffered: false, hasContent: true, seen: null), isFalse);
@@ -231,11 +280,87 @@ void main() {
     expect(find.text('Please agree to the Terms of Use to continue.'), findsOneWidget);
   });
 
+  testWidgets('sharing a group code shows a single reusable QR', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: InviteShareScreen(kind: 'CLASS', joinCode: 'AB1234'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text('JOIN CODE: AB1234'), findsOneWidget);
+    expect(find.text('Share invite QR'), findsNothing);
+  });
+
+  testWidgets('email invite requires a valid address', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: InviteShareScreen(kind: 'CLASS', joinCode: 'AB1234'),
+    ));
+    final button = find.widgetWithText(FilledButton, 'Create email invite');
+    await tester.scrollUntilVisible(
+      button, 250, scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+
+    final email = find.widgetWithText(TextField, 'Email address');
+    await tester.enterText(email, 'explorer@example');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+
+    await tester.enterText(email, 'explorer+group@example.com');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+
+    await tester.enterText(email, '');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+  });
+
   test('invite scan stub keeps the torch off', () async {
     final scanner = InviteQrScannerController();
     expect(scanner.torchOn, isFalse);
     await scanner.toggleTorch();
     expect(scanner.torchOn, isFalse);
+  });
+
+  testWidgets('a group QR scan joins once across duplicate camera frames', (tester) async {
+    final family = _JoinFamilyService();
+    final session = AuthSession.test(
+      authenticated: true, shell: AppShell.teen, ageBand: 'TEEN',
+    );
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthSession>.value(value: session),
+        Provider<FamilyService>.value(value: family),
+      ],
+      child: const MaterialApp(home: JoinInviteScreen()),
+    ));
+    await tester.pump();
+    final scanner = tester.widget<MobileScanner>(find.byType(MobileScanner));
+    const capture = BarcodeCapture(barcodes: [
+      Barcode(rawValue: 'https://tba.elastrocloud.com/join/class/AB1234'),
+    ]);
+    scanner.onDetect!(capture);
+    scanner.onDetect!(capture);
+    await tester.pump();
+    expect(family.accepted, ['class:AB1234']);
+  });
+
+  testWidgets('an Android join link opens the scanner with a rescan prompt', (tester) async {
+    const channel = MethodChannel('tba/join_links');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (_) async =>
+        'https://tba.elastrocloud.com/join/class/AB1234');
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    final session = AuthSession.test(
+      authenticated: true, shell: AppShell.teen, ageBand: 'TEEN',
+    );
+    await tester.pumpWidget(ChangeNotifierProvider<AuthSession>.value(
+      value: session,
+      child: const MaterialApp(home: AuthGate(authenticatedChild: SizedBox())),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Scan the group QR code again to join.'), findsOneWidget);
   });
 
   testWidgets('invite scan shows torch and try again when the camera fails', (tester) async {
@@ -251,6 +376,6 @@ void main() {
       await tester.tap(retry);
       await tester.pump();
     }
-    expect(find.textContaining('invite QR'), findsOneWidget);
+    expect(find.textContaining('group QR'), findsOneWidget);
   });
 }

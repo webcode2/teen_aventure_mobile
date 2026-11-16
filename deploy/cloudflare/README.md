@@ -39,5 +39,9 @@ The public host redirects staff frontend pages to the admin hostname. The admin 
 staff dashboard/login. Cloudflare Access is not enabled: the existing app login
 and role checks protect data, while the login page remains publicly reachable.
 `ADMIN_HOSTNAME` can override the configured admin hostname at preparation time.
+For Android group QR links, set `ANDROID_APP_LINK_SHA256` before running
+`node prepare.mjs`. Use the SHA-256 fingerprint of the **app signing**
+certificate from Google Play Console. The Worker serves it at
+`/.well-known/assetlinks.json` for Android to verify the installed app.
 Set API `DASHBOARD_PUBLIC_URL` to the admin HTTPS origin for staff reset emails;
 keep `ADMIN_PUBLIC_URL` on the public hostname for ministry links.

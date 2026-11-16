@@ -1,7 +1,6 @@
 const joinScheme = 'tba-join:';
 const joinUri = 'tba://join/';
-/// Printed passes link here so any phone camera can open them; the Worker sends
-/// people without the app to Google Play.
+/// Printed passes use an Android App Link with a website fallback.
 const joinLinkBase = 'https://tba.elastrocloud.com/join/';
 const maxMemberships = 5;
 

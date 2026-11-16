@@ -18,7 +18,14 @@ if (adminHostname) {
   if (!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(adminHostname)) throw new Error('ADMIN_HOSTNAME must be a valid hostname.');
   config.routes = [...(config.routes ?? []), { pattern: adminHostname.toLowerCase(), custom_domain: true }];
   config.vars.ADMIN_HOSTNAME = adminHostname.toLowerCase();
-  config.assets.run_worker_first = ['/', '/app/*', '/api/*', '/join/*', '/zack.png'];
+  config.assets.run_worker_first = ['/', '/app/*', ...config.assets.run_worker_first, '/zack.png'];
+}
+const androidFingerprint = process.env.ANDROID_APP_LINK_SHA256?.trim().toUpperCase();
+if (androidFingerprint) {
+  if (!/^[A-F0-9]{2}(?::[A-F0-9]{2}){31}$/.test(androidFingerprint)) {
+    throw new Error('ANDROID_APP_LINK_SHA256 must be a colon-separated SHA-256 fingerprint.');
+  }
+  config.vars.ANDROID_APP_LINK_SHA256 = androidFingerprint;
 }
 config.account_id = account;
 config.r2_buckets[0].bucket_name = bucket;

@@ -29,6 +29,9 @@ class FamilyChildProfile {
 
   final bool independentLogin;
   final bool loginDeactivated;
+  final bool? _canSwitchProfile;
+
+  bool get canSwitchProfile => _canSwitchProfile == true;
 
 
 
@@ -44,8 +47,9 @@ class FamilyChildProfile {
 
     this.independentLogin = false,
     this.loginDeactivated = false,
+    bool canSwitchProfile = false,
 
-  });
+  }) : _canSwitchProfile = canSwitchProfile;
 
 
 
@@ -71,6 +75,7 @@ class FamilyChildProfile {
 
       independentLogin: json['independentLogin'] as bool? ?? false,
       loginDeactivated: json['loginDeactivated'] == true,
+      canSwitchProfile: json['canSwitchProfile'] == true,
 
     );
 
@@ -487,9 +492,12 @@ class AuthSession extends ChangeNotifier {
 
   bool get canEditProfile => authenticated && !isUnderAgeExplorer;
 
-  bool get needsProfilePick =>
+  List<FamilyChildProfile> get switchableChildren => children
+      .where((child) => child.canSwitchProfile && !child.loginDeactivated)
+      .toList();
 
-      authenticated && isParent && children.isNotEmpty && !profilePicked;
+  bool get needsProfilePick =>
+      authenticated && isParent && switchableChildren.isNotEmpty && !profilePicked;
 
 
 

@@ -1,7 +1,31 @@
 const KEY = 'published/site-content.json';
 // Matches applicationId in mobile_/android/app/build.gradle.kts.
-const PLAY_STORE = 'https://play.google.com/store/apps/details?id=com.elasctroclud.teen_aventure';
+const ANDROID_PACKAGE = 'com.elasctroclud.teen_aventure';
+const PLAY_STORE = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 const JOIN_LINK = /^\/join\/(church|class)\/([A-Za-z0-9]{4,12})\/?$/;
+
+function joinPage(request, kind, code) {
+  const store = new URL(PLAY_STORE);
+  store.searchParams.set('referrer', `join=${kind}:${code}`);
+  // Android browsers that support intent links resolve the package first.
+  const openApp = `intent://join/${kind}/${code}#Intent;scheme=tba;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(store.href)};end`;
+  return new Response(request.method === 'HEAD' ? null : `<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join a group · Teen Bible Adventures</title>
+<main>
+  <h1>Join a group</h1>
+  <p>Open Teen Bible Adventures and scan the group QR code again. You can also enter <strong>${code}</strong> in Groups → Join Group.</p>
+  <p><a href="${openApp}">Open the app</a></p>
+  <p><a href="${store.href.replaceAll('&', '&amp;')}">Get it on Google Play</a></p>
+</main></html>`, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+    },
+  });
+}
+
 export function publicRoute(path) {
   return path.replace(/^\/api\/v1\//, '/api/').match(/^\/api\/(content\/(web|mobile)|site-pages(?:\/([^/]+))?)$/);
 }
@@ -28,13 +52,18 @@ export default {
     const url = new URL(request.url);
     // Keep old cached frontend builds working after the mascot asset rename.
     if (url.pathname === '/zack.png') return Response.redirect(new URL('/zach.png', url), 301);
-    // Printed join passes: phone camera -> Google Play. The code rides along as the
-    // install referrer; the in-app scanner reads the same link.
-    const join = url.pathname.match(JOIN_LINK);
-    if (join) {
-      const store = new URL(PLAY_STORE);
-      store.searchParams.set('referrer', `join=${join[1]}:${join[2].toUpperCase()}`);
-      return new Response(null, { status: 302, headers: { Location: store.href, 'Cache-Control': 'no-store' } });
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const join = url.pathname.match(JOIN_LINK);
+      if (join) return joinPage(request, join[1], join[2].toUpperCase());
+      if (url.pathname === '/.well-known/assetlinks.json') {
+        const fingerprint = env.ANDROID_APP_LINK_SHA256;
+        if (!fingerprint) return new Response(null, { status: 404 });
+        const response = Response.json([{
+          relation: ['delegate_permission/common.handle_all_urls'],
+          target: { namespace: 'android_app', package_name: ANDROID_PACKAGE, sha256_cert_fingerprints: [fingerprint] },
+        }]);
+        return request.method === 'HEAD' ? new Response(null, { headers: response.headers }) : response;
+      }
     }
     if (env.ADMIN_HOSTNAME) {
       const adminHost = url.hostname === env.ADMIN_HOSTNAME;

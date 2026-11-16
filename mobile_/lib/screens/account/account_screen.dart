@@ -28,6 +28,11 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   bool _busy = false;
+  (bool, String?, String?, int, int)? _achievementKey;
+  Future<Achievements>? _achievements;
+
+  Future<Achievements> _loadAchievements() async =>
+      context.read<EngagementService>().getAchievements();
 
   Future<void> _restoreParent() async {
     setState(() => _busy = true);
@@ -94,6 +99,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AuthSession>();
+    final switchableChildren = session.switchableChildren;
     final name = session.displayName?.trim().isNotEmpty == true
         ? session.displayName!
         : 'Explorer';
@@ -113,25 +119,49 @@ class _AccountScreenState extends State<AccountScreen> {
       tracked = quest?.tracked == true;
     } catch (_) {}
     final showQuestMilestone = session.isChild || tracked;
+    final achievementKey = (
+      session.authenticated, session.userId, session.childId, weeksCompleted, points,
+    );
+    if (_achievementKey != achievementKey) {
+      _achievementKey = achievementKey;
+      _achievements = session.authenticated ? _loadAchievements() : null;
+    }
 
     return Material(
       color: AppColors.cream,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         children: [
-          _ProfileHeroCard(
-            name: name,
-            role: session.accountKindLabel,
-            milestoneLine: showQuestMilestone
-                ? profileMilestoneLine(name: firstName, weeksCompleted: weeksCompleted)
-                : null,
-            weeksCompleted: weeksCompleted,
-            points: points,
-            onPersonalInfo: session.canEditProfile ? () => _openPersonalInfo(session) : null,
-            onViewAllAchievements: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+          FutureBuilder<Achievements>(
+            key: ValueKey((session.userId, session.childId)),
+            future: _achievements,
+            builder: (context, snapshot) {
+              final achievements = snapshot.data;
+              final record = achievements?.self;
+              final completed = record?.weeksCompleted ?? weeksCompleted;
+              final awards = awardStates(
+                achievements?.awards ?? knownQuestMilestones,
+                weeksCompleted: completed,
+                earned: record?.earnedAwards,
+              );
+              final latest = awards.where((award) => award.earned).lastOrNull;
+              final milestoneLine =
+                  latest == null ? firstName : '$firstName, ${latest.milestone.title}';
+              return _ProfileHeroCard(
+                name: name,
+                role: session.accountKindLabel,
+                milestoneLine: showQuestMilestone || achievements?.tracked == true
+                    ? milestoneLine
+                    : null,
+                awards: awards,
+                points: record?.points ?? points,
+                onPersonalInfo: session.canEditProfile ? () => _openPersonalInfo(session) : null,
+                onViewAllAchievements: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                  );
+                },
               );
             },
           ),
@@ -191,10 +221,10 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ],
           ),
-          if (session.isParent && session.children.isNotEmpty) ...[
+          if (session.isParent && switchableChildren.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
-              session.children.where((child) => !child.loginDeactivated).length == 1
+              switchableChildren.length == 1
                   ? 'Child profile'
                   : 'Children profiles',
               style: const TextStyle(
@@ -204,7 +234,7 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            for (final child in session.children.where((child) => !child.loginDeactivated)) ...[
+            for (final child in switchableChildren) ...[
               _ChildSwitchTile(
                 child: child,
                 busy: _busy,
@@ -288,7 +318,7 @@ class _ProfileHeroCard extends StatelessWidget {
   const _ProfileHeroCard({
     required this.name,
     required this.role,
-    required this.weeksCompleted,
+    required this.awards,
     required this.points,
     required this.onViewAllAchievements,
     this.onPersonalInfo,
@@ -298,7 +328,7 @@ class _ProfileHeroCard extends StatelessWidget {
   final String name;
   final String role;
   final String? milestoneLine;
-  final int weeksCompleted;
+  final List<({QuestMilestone milestone, bool earned})> awards;
   final int points;
   final VoidCallback? onPersonalInfo;
   final VoidCallback onViewAllAchievements;
@@ -365,7 +395,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   const SizedBox(height: 14),
                 ],
                 _ProfileAchievementsRow(
-                  weeksCompleted: weeksCompleted,
+                  awards: awards,
                   points: points,
                   onViewAll: onViewAllAchievements,
                 ),
@@ -382,24 +412,24 @@ class _ProfileHeroCard extends StatelessWidget {
 
 class _ProfileAchievementsRow extends StatelessWidget {
   const _ProfileAchievementsRow({
-    required this.weeksCompleted,
+    required this.awards,
     required this.points,
     required this.onViewAll,
   });
 
-  final int weeksCompleted;
+  final List<({QuestMilestone milestone, bool earned})> awards;
   final int points;
   final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
     final badges = <({String label, IconData icon, Color color, bool earned})>[
-      for (final m in knownQuestMilestones)
+      for (final award in awards)
         (
-          label: m.title,
+          label: award.milestone.title,
           icon: Icons.workspace_premium_rounded,
           color: AppColors.teal,
-          earned: weeksCompleted >= m.weekComplete,
+          earned: award.earned,
         ),
       (
         label: pointsLabel(points),
