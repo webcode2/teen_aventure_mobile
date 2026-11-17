@@ -1,4 +1,5 @@
 import '../../providers/cms_text.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/api_models.dart';
@@ -18,6 +19,10 @@ import 'widgets/todays_quest_card.dart';
 import 'widgets/welcome_onboarding_dialog.dart';
 import 'widgets/word_declaration_card.dart';
 import 'week_quest_flow.dart';
+
+/// Testing only: opens Quiz and Match without watching every video. Needs a debug
+/// build with --dart-define=QA_UNLOCK_STEPS=true; release builds can never turn it on.
+const bool _qaUnlockSteps = kDebugMode && bool.fromEnvironment('QA_UNLOCK_STEPS');
 
 class ExplorerHomeTab extends StatefulWidget {
   const ExplorerHomeTab({super.key});
@@ -251,7 +256,7 @@ class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
                   gameStepTitle: current.quest.gameStepTitle,
                   progress: WeekQuestFlow.progress(context),
                   allWeeksDone: current.caughtUp && quests?.isBrowsing != true,
-                  stepsOpen: quests?.isBrowsing == true,
+                  stepsOpen: quests?.isBrowsing == true || _qaUnlockSteps,
                 ),
               ] else
                 _QuestPlaceholder(quests: quests),

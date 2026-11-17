@@ -15,9 +15,12 @@ class FamilyService {
   Map<String, dynamic>? get _familyQuery => familyId == null ? null : {'familyId': familyId};
 
 
-  Future<Map<String, dynamic>> getSession() async {
+  Future<Map<String, dynamic>> getSession({bool skipCache = false}) async {
     try {
-      final response = await _apiClient.dio.get('/api/auth/me');
+      final response = await _apiClient.dio.get(
+        '/api/auth/me',
+        options: skipCache ? Options(extra: {'skipCache': true}) : null,
+      );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -47,9 +50,13 @@ class FamilyService {
     }
   }
 
-  Future<Map<String, dynamic>> getMyFamily() async {
+  Future<Map<String, dynamic>> getMyFamily({bool skipCache = false}) async {
     try {
-      final response = await _apiClient.dio.get('/api/families/my', queryParameters: _familyQuery);
+      final response = await _apiClient.dio.get(
+        '/api/families/my',
+        queryParameters: _familyQuery,
+        options: skipCache ? Options(extra: {'skipCache': true}) : null,
+      );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

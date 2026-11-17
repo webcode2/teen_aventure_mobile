@@ -1,8 +1,8 @@
 {
-  "builtAt": "2026-11-11T16:15:18.457053+00:00",
+  "builtAt": "2026-11-17T13:16:57.8494749+00:00",
   "mode": "release",
   "version": "1.0.0",
   "apiBaseUrl": "https://tba.elastrocloud.com",
   "webBaseUrl": "https://tba.elastrocloud.com",
-  "sha256": "b9cffd80d4763bb3416f2f8d01379027c40a20940a132e698b20dd6d72435fef"
+  "sha256": "7f84997239de9839cc030c17c3429004ba71260dd605f9312c897746d30e22a2"
 }

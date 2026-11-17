@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { api } from './api';
@@ -48,4 +48,35 @@ it('offers only the two staff roles when inviting someone', async () => {
   expect(options).not.toContain('App Manager');
   expect(options).not.toContain('Super Admin');
   expect(dialog.querySelector('input[type="password"]')).toBeNull();
+});
+
+it.each([
+  { tab: 'Children', title: 'Child details', kind: 'children', detail: {
+    id: 'child-1', name: 'Test Explorer', ageBand: 'TEEN', independentLogin: true,
+    family: { name: 'Test Household' }, askScore: 12, enrollments: [], scores: [], nudgesReceived: [],
+  }, field: 'Current streak' },
+  { tab: 'Families', title: 'Family details', kind: 'families', detail: {
+    id: 'family-1', name: 'Test Household', owner: { name: 'Test Parent', email: 'parent@example.test' },
+    _count: { children: 0 }, familyAskScore: 12, children: [], guardians: [], jarEntries: [], deletionRequests: [],
+  }, field: 'Family AskScore' },
+])('opens and closes the $tab detail drawer', async ({ tab, title, kind, detail, field }) => {
+  vi.mocked(api).mockImplementation(async (path) => {
+    if (path === `/api/admin/people/${kind}/${detail.id}`) return detail as never;
+    const activeKind = new URL(path, 'http://localhost').searchParams.get('kind');
+    return {
+      users: [],
+      children: activeKind === 'children' ? [detail] : [],
+      families: activeKind === 'families' ? [detail] : [],
+      pagination: { page: 1, pageSize: 40, total: activeKind === kind ? 1 : 0, kind: activeKind },
+    } as never;
+  });
+
+  render(<MemoryRouter><PeoplePage /></MemoryRouter>);
+  await userEvent.click(await screen.findByRole('tab', { name: new RegExp(`^${tab}`) }));
+  await userEvent.click(await screen.findByRole('button', { name: detail.name }));
+  const drawer = within(await screen.findByRole('dialog', { name: title }));
+  expect(await drawer.findByText(field)).toBeTruthy();
+  await userEvent.click(drawer.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog', { name: title })).toBeNull();
+  expect(screen.getByRole('button', { name: detail.name })).toBeTruthy();
 });

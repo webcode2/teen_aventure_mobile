@@ -831,6 +831,185 @@ function UserAccountPanel({
   );
 }
 
+type DirectoryRecord = {
+  kind: 'children' | 'families';
+  id: string;
+  name: string;
+};
+
+type ChildDetail = Omit<PeopleChild, '_count' | 'enrollments'> & {
+  enrollments: Array<PeopleChild['enrollments'][number] & { id: string }>;
+  birthYear?: number | null;
+  bio?: string | null;
+  scores: Array<{ id: string; activityType: string; points: number; createdAt: string }>;
+  nudgesReceived: Array<{ id: string; message?: string | null; stickerKey: string; createdAt: string; from?: { name: string } }>;
+};
+
+type FamilyDetail = Omit<PeopleFamily, 'owner' | '_count'> & {
+  description?: string | null;
+  owner: PeopleFamily['owner'] | null;
+  familyAskScore: number;
+  children: Array<Pick<PeopleChild, 'id' | 'name' | 'ageBand' | 'email'>>;
+  guardians: Array<{ userId: string; relation: string; user: PeopleFamily['owner'] | null }>;
+  jarEntries: Array<{ id: string; label: string; points: number; createdAt: string }>;
+  deletionRequests: Array<{ id: string; requestedAt: string; reason?: string | null; purgedAt?: string | null }>;
+};
+
+function detailDate(value: string | null | undefined) {
+  return value ? new Date(value).toLocaleDateString() : '—';
+}
+
+function DirectoryDetailSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border/70 bg-surface p-4 shadow-xs">
+      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">{title}</h4>
+      <dl className="divide-y divide-border/60">{children}</dl>
+    </section>
+  );
+}
+
+function DirectoryDetailRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2 text-sm">
+      <dt className="min-w-0 break-words text-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-right font-medium text-navy">{children ?? '—'}</dd>
+    </div>
+  );
+}
+
+function DirectoryRecordPanel({ record, onClose }: { record: DirectoryRecord; onClose: () => void }) {
+  const [detail, setDetail] = useState<ChildDetail | FamilyDetail | null>(null);
+  const [error, setError] = useState('');
+  const { kind, id } = record;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    api<ChildDetail | FamilyDetail>(`/api/admin/people/${kind}/${id}`, { signal: controller.signal })
+      .then((result) => {
+        if (!controller.signal.aborted) setDetail(result);
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Could not load record');
+      });
+    return () => controller.abort();
+  }, [kind, id]);
+
+  const child = detail && 'ageBand' in detail ? detail : null;
+  const family = detail && 'familyAskScore' in detail ? detail : null;
+  const name = detail?.name ?? record.name;
+
+  return (
+    <Drawer open onClose={onClose} title={kind === 'children' ? 'Child details' : 'Family details'} widthClass="max-w-md">
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      {!detail && !error ? <Spinner /> : null}
+      {detail ? (
+        <div className="space-y-4">
+          <div className="rounded-[1.75rem] border border-border/70 bg-surface px-5 pb-5 pt-6 text-center shadow-xs">
+            <span className="inline-flex size-20 items-center justify-center rounded-full bg-navy text-2xl font-bold text-white ring-6 ring-border/50" aria-hidden>
+              {initials(name)}
+            </span>
+            <h4 className="mt-4 break-words text-lg font-bold text-navy">{name}</h4>
+            <p className="mt-1 text-sm text-muted">
+              {child ? childAccountLabel(child) : family?.description || family?.owner?.name}
+            </p>
+          </div>
+
+          {child ? (
+            <>
+              <DirectoryDetailSection title="Profile">
+                <DirectoryDetailRow label="Age band"><Badge kind="info">{child.ageBand}</Badge></DirectoryDetailRow>
+                <DirectoryDetailRow label="Birth year">{child.birthYear}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Email">{child.email}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Family">{child.family?.name}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Church">{child.family?.church?.name}</DirectoryDetailRow>
+                <DirectoryDetailRow label="PIN">{child.hasPin ? 'Set' : 'Not set'}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Created">{detailDate(child.createdAt)}</DirectoryDetailRow>
+                {child.bio ? <DirectoryDetailRow label="Bio">{child.bio}</DirectoryDetailRow> : null}
+              </DirectoryDetailSection>
+              <DirectoryDetailSection title="Progress">
+                <DirectoryDetailRow label="AskScore">{child.askScore}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Current streak">{child.streak?.current ?? 0}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Longest streak">{child.streak?.longest ?? 0}</DirectoryDetailRow>
+              </DirectoryDetailSection>
+              {child.enrollments.length > 0 ? (
+                <DirectoryDetailSection title="Groups">
+                  {child.enrollments.map((row) => (
+                    <DirectoryDetailRow key={row.id} label={row.classGroup?.name ?? 'Group'}>{row.status}</DirectoryDetailRow>
+                  ))}
+                </DirectoryDetailSection>
+              ) : null}
+              {child.scores.length > 0 ? (
+                <DirectoryDetailSection title="Recent scores">
+                  {child.scores.map((row) => (
+                    <DirectoryDetailRow key={row.id} label={row.activityType.replaceAll('_', ' ')}>
+                      {row.points} pts · {detailDate(row.createdAt)}
+                    </DirectoryDetailRow>
+                  ))}
+                </DirectoryDetailSection>
+              ) : null}
+              {child.nudgesReceived.length > 0 ? (
+                <DirectoryDetailSection title="Recent cheers">
+                  {child.nudgesReceived.map((row) => (
+                    <DirectoryDetailRow key={row.id} label={row.from?.name ?? detailDate(row.createdAt)}>
+                      {row.message || row.stickerKey}
+                    </DirectoryDetailRow>
+                  ))}
+                </DirectoryDetailSection>
+              ) : null}
+            </>
+          ) : null}
+
+          {family ? (
+            <>
+              <DirectoryDetailSection title="Overview">
+                <DirectoryDetailRow label="Owner">{family.owner?.name}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Owner email">{family.owner?.email}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Church">{family.church?.name}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Jurisdiction">{family.jurisdiction}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Family AskScore">{family.familyAskScore}</DirectoryDetailRow>
+                <DirectoryDetailRow label="Created">{detailDate(family.createdAt)}</DirectoryDetailRow>
+                {family.deletionStage ? <DirectoryDetailRow label="Deletion stage">{family.deletionStage}</DirectoryDetailRow> : null}
+              </DirectoryDetailSection>
+              <DirectoryDetailSection title="Children">
+                {family.children.length === 0 ? <p className="text-sm text-muted">No children</p> : family.children.map((row) => (
+                  <DirectoryDetailRow key={row.id} label={row.name}>
+                    <Badge kind="info">{row.ageBand}</Badge>
+                    {row.email ? <span className="mt-1 block text-xs text-muted">{row.email}</span> : null}
+                  </DirectoryDetailRow>
+                ))}
+              </DirectoryDetailSection>
+              <DirectoryDetailSection title="Guardians">
+                {family.guardians.length === 0 ? <p className="text-sm text-muted">No guardians</p> : family.guardians.map((row) => (
+                  <DirectoryDetailRow key={row.userId} label={row.user?.name ?? 'Guardian'}>
+                    {row.relation}
+                    {row.user?.email ? <span className="mt-1 block text-xs text-muted">{row.user.email}</span> : null}
+                  </DirectoryDetailRow>
+                ))}
+              </DirectoryDetailSection>
+              {family.jarEntries.length > 0 ? (
+                <DirectoryDetailSection title="Recent jar entries">
+                  {family.jarEntries.map((row) => (
+                    <DirectoryDetailRow key={row.id} label={row.label}>{row.points} pts · {detailDate(row.createdAt)}</DirectoryDetailRow>
+                  ))}
+                </DirectoryDetailSection>
+              ) : null}
+              {family.deletionRequests.length > 0 ? (
+                <DirectoryDetailSection title="Deletion requests">
+                  {family.deletionRequests.map((row) => (
+                    <DirectoryDetailRow key={row.id} label={detailDate(row.requestedAt)}>
+                      {row.reason || (row.purgedAt ? 'Purged' : 'Requested')}
+                    </DirectoryDetailRow>
+                  ))}
+                </DirectoryDetailSection>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </Drawer>
+  );
+}
+
 export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySection }) {
   const [data, setData] = useState<Directory | null>(null);
   const [error, setError] = useState('');
@@ -849,8 +1028,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [creating, setCreating] = useState<'user' | 'staff' | null>(null);
-  const [detail, setDetail] = useState<{ title: string; body: unknown } | null>(null);
-  const [detailError, setDetailError] = useState('');
+  const [record, setRecord] = useState<DirectoryRecord | null>(null);
 
   const apiScope = section === 'users' ? 'users' : section === 'pastors' ? 'pastors' : 'staff';
 
@@ -875,6 +1053,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
   useEffect(() => { reload(); return () => { requestVersion.current++; }; }, [reload]);
 
   useEffect(() => {
+    setRecord(null);
     setKind(section === 'staff' ? 'staff' : section === 'pastors' ? 'pastors' : 'users');
     setSelectedUserId(null);
     setQ('');
@@ -984,20 +1163,13 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
     ).length;
   }, [data, query, section, serverPaged, kind]);
 
-  async function open(path: string, title: string) {
-    setDetailError('');
+  function selectRecord(kind: DirectoryRecord['kind'], row: { id: string; name: string }) {
     setSelectedUserId(null);
-    try {
-      const body = await api(path);
-      setDetail({ title, body });
-    } catch (e: unknown) {
-      setDetailError(e instanceof Error ? e.message : 'Could not load record');
-    }
+    setRecord({ kind, id: row.id, name: row.name });
   }
 
   function selectUser(id: string) {
-    setDetail(null);
-    setDetailError('');
+    setRecord(null);
     setSelectedUserId(id);
   }
 
@@ -1092,7 +1264,7 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
                   className={`cursor-pointer rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     active ? 'bg-navy text-white shadow-xs' : 'text-muted hover:bg-surface hover:text-navy'
                   }`}
-                  onClick={() => { setPage(1); setKind(tab.id); }}
+                  onClick={() => { setPage(1); setRecord(null); setKind(tab.id); }}
                 >
                   {tab.label}{serverPaged ? kind === tab.id ? ` (${data.pagination?.total ?? 0})` : '' : ` (${tab.count})`}
                 </button>
@@ -1361,13 +1533,22 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
               {childrenPage.rows.map((c) => (
                 <tr
                   key={c.id}
-                  className={rowClass(false)}
-                  onClick={() => open(`/api/admin/people/children/${c.id}`, c.name)}
+                  className={rowClass(record?.kind === 'children' && record.id === c.id)}
+                  onClick={() => selectRecord('children', c)}
                 >
                   <td className={`${tdClass} font-semibold`}>
                     <div className="flex min-w-[9rem] items-center gap-2.5">
                       <PersonAvatar name={c.name} />
-                      <span className="truncate">{c.name}</span>
+                      <button
+                        type="button"
+                        className="cursor-pointer truncate text-left hover:underline focus-visible:underline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectRecord('children', c);
+                        }}
+                      >
+                        {c.name}
+                      </button>
                     </div>
                   </td>
                   <td className={`${tdClass} text-muted`}>{childAccountLabel(c)}</td>
@@ -1409,13 +1590,22 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
               {familiesPage.rows.map((f) => (
                 <tr
                   key={f.id}
-                  className={rowClass(false)}
-                  onClick={() => open(`/api/admin/people/families/${f.id}`, f.name)}
+                  className={rowClass(record?.kind === 'families' && record.id === f.id)}
+                  onClick={() => selectRecord('families', f)}
                 >
                   <td className={`${tdClass} font-semibold`}>
                     <div className="flex min-w-[9rem] items-center gap-2.5">
                       <PersonAvatar name={f.name} />
-                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        className="cursor-pointer truncate text-left hover:underline focus-visible:underline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectRecord('families', f);
+                        }}
+                      >
+                        {f.name}
+                      </button>
                     </div>
                   </td>
                   <td className={`${tdClass} max-w-[14rem] text-muted`}>
@@ -1455,23 +1645,8 @@ export function PeoplePage({ section = 'users' }: { section?: PeopleDirectorySec
         />
       ) : null}
 
-      {detailError ? <Alert kind="error">{detailError}</Alert> : null}
-      {detail ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xs">
-          <div className="flex items-center justify-between gap-4">
-            <h3 className="m-0 text-base font-bold text-navy">{detail.title}</h3>
-            <button
-              type="button"
-              className="cursor-pointer rounded-full border border-border bg-cream px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-surface-2"
-              onClick={() => setDetail(null)}
-            >
-              Close
-            </button>
-          </div>
-          <pre className="m-0 max-h-96 overflow-x-auto rounded-xl bg-navy p-4 font-mono text-xs leading-relaxed text-cream">
-            {JSON.stringify(detail.body, null, 2)}
-          </pre>
-        </div>
+      {record && kind === record.kind ? (
+        <DirectoryRecordPanel key={record.id} record={record} onClose={() => setRecord(null)} />
       ) : null}
     </div>
   );

@@ -517,19 +517,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         : 'Change who is watching',
                     onTap: () async {
                       Navigator.pop(context);
+                      var message = 'No explorer profiles are available to switch to.';
                       try {
-                        await context
-                            .read<AuthSession>()
-                            .switchWatchingProfile();
+                        if (await session.switchWatchingProfile()) return;
                       } catch (_) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not switch account.'),
-                            backgroundColor: AppColors.navy,
-                          ),
-                        );
+                        message = 'Could not switch account. Please try again.';
                       }
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          backgroundColor: AppColors.navy,
+                        ),
+                      );
                     },
                   ),
                 if (StoreConfig.showOfflineDownload)

@@ -47,7 +47,7 @@ class FamilyChildProfile {
 
     this.independentLogin = false,
     this.loginDeactivated = false,
-    bool canSwitchProfile = false,
+    bool? canSwitchProfile,
 
   }) : _canSwitchProfile = canSwitchProfile;
 
@@ -75,7 +75,7 @@ class FamilyChildProfile {
 
       independentLogin: json['independentLogin'] as bool? ?? false,
       loginDeactivated: json['loginDeactivated'] == true,
-      canSwitchProfile: json['canSwitchProfile'] == true,
+      canSwitchProfile: json['canSwitchProfile'] as bool?,
 
     );
 
@@ -545,22 +545,68 @@ class AuthSession extends ChangeNotifier {
 
   }
 
-  /// Re-open the family profile picker so a parent can switch who is watching.
-  void requestProfileSwitch() {
-    if (!isParent || children.isEmpty) return;
+  /// Return to the parent session if needed, then open the profile picker.
+  Future<bool> switchWatchingProfile() async {
+    if (canRestoreParent) await restoreParentAccount();
+    if (!isParent) return false;
+
+    if (switchableChildren.isEmpty) {
+      await refreshProfile(skipCache: true);
+      if (!isParent) return false;
+      if (switchableChildren.isEmpty) await _loadLegacySwitchPermissions();
+    }
+
+    if (switchableChildren.isEmpty) return false;
     profilePicked = false;
     notifyListeners();
+    return true;
   }
 
-  /// Drawer "Switch account": return to parent (if needed) and show the picker.
-  Future<void> switchWatchingProfile() async {
-    if (canRestoreParent) {
-      await restoreParentAccount();
-      profilePicked = false;
-      notifyListeners();
+  Future<void> _loadLegacySwitchPermissions() async {
+    final service = _family;
+    final parentId = userId;
+    if (service == null ||
+        parentId == null ||
+        !children.any((child) => child._canSwitchProfile == null)) {
       return;
     }
-    requestProfileSwitch();
+
+    // Older session responses omit the switch flag. The family response
+    // independently establishes ownership and which logins the parent manages.
+    final family = await service.getMyFamily(skipCache: true);
+    if (!isParent || userId != parentId || family['ownerUserId'] != parentId) {
+      return;
+    }
+    final records = family['children'];
+    if (records is! List) return;
+
+    final eligibleIds = records
+        .whereType<Map<String, dynamic>>()
+        .where((record) =>
+            record['selfOwned'] == false &&
+            record['canManageLogin'] == true &&
+            (record['transitionedToUserId'] == null ||
+                record['independentLogin'] == true))
+        .map((record) => record['id'])
+        .whereType<String>()
+        .toSet();
+
+    children = [
+      for (final child in children)
+        if (child._canSwitchProfile == null &&
+            !child.loginDeactivated &&
+            eligibleIds.contains(child.id))
+          FamilyChildProfile(
+            id: child.id,
+            name: child.name,
+            ageBand: child.ageBand,
+            email: child.email,
+            independentLogin: child.independentLogin,
+            canSwitchProfile: true,
+          )
+        else
+          child,
+    ];
   }
 
 
@@ -656,7 +702,7 @@ class AuthSession extends ChangeNotifier {
 
 
 
-  Future<void> refreshProfile() async {
+  Future<void> refreshProfile({bool skipCache = false}) async {
 
     final family = _family;
 
@@ -664,7 +710,7 @@ class AuthSession extends ChangeNotifier {
 
     try {
 
-      final me = await family.getSession();
+      final me = await family.getSession(skipCache: skipCache);
 
       userType = me['type'] as String?;
 
