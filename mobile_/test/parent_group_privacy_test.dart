@@ -5,6 +5,7 @@ import 'package:teen_aventure/models/api_models.dart';
 import 'package:teen_aventure/models/auth_session.dart';
 import 'package:teen_aventure/screens/groups/group_standing_board.dart';
 import 'package:teen_aventure/screens/groups/groups_screen.dart';
+import 'package:teen_aventure/screens/groups/teacher_class_members.dart';
 
 void main() {
   test('redacted API points parse safely and stay out of group summary', () {
@@ -45,6 +46,32 @@ void main() {
     expect(find.text('My Family'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Family'), findsOneWidget);
     expect(find.text('Teen accepted circle'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('owner of a custom group sees standings without a church roster', (tester) async {
+    final session = AuthSession.test(authenticated: true, shell: AppShell.parent);
+    await tester.pumpWidget(ChangeNotifierProvider<AuthSession>.value(
+      value: session,
+      child: const MaterialApp(home: GroupsScreen(
+        ranksOverride: [],
+        membershipsOverride: {
+          'items': [
+            {'id': 'custom', 'kind': 'CLASS', 'groupKind': 'CUSTOM',
+              'name': 'Custom circle', 'role': 'Owner', 'canAdmin': true},
+          ],
+        },
+      )),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom circle'));
+    await tester.pumpAndSettle();
+    expect(find.text('Group details'), findsOneWidget);
+    expect(find.text('Your standing'), findsOneWidget);
+    final detailPadding = tester.widget<SliverPadding>(find.byType(SliverPadding).first).padding;
+    expect(detailPadding.resolve(TextDirection.ltr).left, 12);
+    expect(detailPadding.resolve(TextDirection.ltr).right, 12);
+    expect(find.byType(TeacherClassMembers), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

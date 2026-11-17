@@ -50,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   StreamSubscription<PushNotice>? _pushReceived;
   StreamSubscription<PushNotice>? _pushOpened;
   bool _bellOpen = false;
+  Future<void>? _inboxLoad;
+  int _inviteRevision = 0;
   GameController? _game;
 
   @override
@@ -127,9 +129,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _openAchievements();
       return;
     }
-    if (_bellOpen) return;
-    await _loadInbox();
-    if (mounted) await _openBell();
+    await _openBell();
   }
 
   /// Award notices open the explorer's Achievements, where the award is shown.
@@ -151,70 +151,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadInbox() async {
-    try {
-      final session = context.read<AuthSession>();
-      final engagement = context.read<EngagementService>();
-      List<Nudge> nudges = const [];
-      // Child JWT / explorer session — always poll the inbox (do not wait for push).
-      // Parents on Family home have no explorer inbox.
-      if (session.isChild || session.childId != null) {
-        try {
-          nudges = await engagement.getNudges();
-        } catch (_) {}
-      }
-      var deletions = const <Map<String, dynamic>>[];
-      if (!mounted) return;
-      // Saved family invites: pulled on every refresh so a missed push still shows up here.
-      var invites = const <Map<String, dynamic>>[];
-      try {
-        invites = await context.read<FamilyService>().pendingInvites();
-      } catch (_) {}
-      if (!mounted) return;
-      try {
-        final memberships =
-            await context.read<FamilyService>().getMemberships();
-        final items = memberships['items'];
-        if (items is List) {
-          deletions = [
+  Future<void> _loadInbox() =>
+      _inboxLoad ??= _fetchInbox().whenComplete(() => _inboxLoad = null);
+
+  Future<void> _fetchInbox() async {
+    final session = context.read<AuthSession>();
+    final engagement = context.read<EngagementService>();
+    final familyService = context.read<FamilyService>();
+    final hasExplorer = session.isChild || session.childId != null;
+    final inviteRevision = _inviteRevision;
+
+    final (nudges, invites, memberships) = await (
+      hasExplorer
+          ? engagement.getNudges().catchError((_) => _nudges)
+          : Future.value(const <Nudge>[]),
+      familyService.pendingInvites().catchError((_) => _familyInvites),
+      familyService.getMemberships().catchError((_) => <String, dynamic>{}),
+    ).wait;
+    if (!mounted) return;
+
+    final items = memberships['items'];
+    final deletions = items is List
+        ? [
             for (final item in items)
               if (item is Map && item['deletionPending'] == true)
                 Map<String, dynamic>.from(item),
-          ];
-          if (!mounted) return;
-          try {
-            final family = await context.read<FamilyService>().getMyFamily();
-            final deletionAt = family['deletionAt'];
-            if (deletionAt != null) {
-              for (final item in deletions) {
-                if (item['kind'] == 'FAMILY' && item['deletionAt'] == null) {
-                  item['deletionAt'] = deletionAt;
-                }
-              }
+          ]
+        : _deletionNotices;
+
+    if (deletions.any((item) => item['kind'] == 'FAMILY' && item['deletionAt'] == null)) {
+      try {
+        final family = await familyService.getMyFamily();
+        final deletionAt = family['deletionAt'];
+        if (deletionAt != null) {
+          for (final item in deletions) {
+            if (item['id'] == family['id'] && item['deletionAt'] == null) {
+              item['deletionAt'] = deletionAt;
             }
-          } catch (_) {}
+          }
         }
       } catch (_) {}
-      if (!mounted) return;
-      setState(() {
-        _nudges = nudges;
-        _deletionNotices = deletions;
-        _familyInvites = invites;
-      });
-    } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() {
+      _nudges = nudges;
+      _deletionNotices = deletions;
+      if (inviteRevision == _inviteRevision) _familyInvites = invites;
+    });
   }
 
   int get _unreadInboxCount =>
       _nudges.where((n) => n.readAt == null).length +
       _familyInvites.where((invite) => invite['readAt'] == null).length;
 
-  Future<void> _openBell() async {
-    if (_bellOpen) return;
+  void _markInboxSeen() {
     final session = context.read<AuthSession>();
     final engagement = context.read<EngagementService>();
-    // Pull latest cheers before showing the list — push may be offline/unconfigured.
-    await _loadInbox();
-    if (!mounted) return;
     final hadUnreadNudges = _nudges.any((n) => n.readAt == null);
 
     // Clear the badge as soon as the inbox is opened.
@@ -240,27 +232,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unawaited(familyService.markInviteRead(id).catchError((_) {}));
       }
     }
+  }
 
+  Future<void> _openBell() async {
+    if (_bellOpen) return;
     _bellOpen = true;
-    final result = await Navigator.push<NotificationsResult>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => NotificationsScreen(
-          nudges: _nudges,
-          deletionNotices: _deletionNotices,
-          familyInvites: _familyInvites,
+    try {
+      _markInboxSeen();
+      final result = await Navigator.push<NotificationsResult>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NotificationsScreen(
+            nudges: _nudges,
+            deletionNotices: _deletionNotices,
+            familyInvites: _familyInvites,
+            onRefresh: () async {
+              await _loadInbox();
+              if (!mounted || !_bellOpen) return null;
+              _markInboxSeen();
+              return (
+                nudges: _nudges,
+                deletionNotices: _deletionNotices,
+                familyInvites: _familyInvites,
+              );
+            },
+            onInvitesChanged: (remaining) {
+              if (!mounted) return;
+              setState(() {
+                _familyInvites = remaining;
+                _inviteRevision++;
+                _groupsEpoch++;
+              });
+            },
+          ),
         ),
-      ),
-    );
-    _bellOpen = false;
-    if (!mounted) return;
-    if (result != null) {
-      setState(() {
-        _nudges = result.nudges;
-      });
+      );
+      if (mounted && result != null) setState(() => _nudges = result.nudges);
+    } finally {
+      _bellOpen = false;
     }
-    // Invites may have been answered in the inbox; reload them (and the rest).
-    await _loadInbox();
   }
 
   Future<void> _loadAskScore({bool reset = false}) async {
@@ -378,9 +388,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           );
         }
         return GroupsScreen(
-          key: ValueKey('groups-$_groupsEpoch'),
+          refreshRevision: _groupsEpoch,
           embedded: true,
           showRanks: true,
+          onInvitesChanged: (remaining) => setState(() {
+            _familyInvites = remaining;
+            _inviteRevision++;
+          }),
         );
       case AdventureTab.account:
         return const AccountScreen();
@@ -410,8 +424,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       MaterialPageRoute(builder: (_) => const JoinInviteScreen()),
     );
     if (!mounted || joined != true) return;
-    await context.read<AuthSession>().refreshProfile();
-    if (!mounted) return;
     setState(() {
       _groupsEpoch++;
       _tab = AdventureTab.groups;

@@ -149,7 +149,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 16, kScreenHorizontalInset, 32),
           children: [
             Text(
               familyHub ? 'Family achievements' : 'Achievements',

@@ -32,7 +32,7 @@ class ExplorerHomeTab extends StatefulWidget {
 }
 
 class _ExplorerHomeTabState extends State<ExplorerHomeTab> {
-  static const double sidePadding = 16;
+  static const double sidePadding = kScreenHorizontalInset;
   bool _familyDialogOffered = false;
   bool _welcomeOffered = false;
 

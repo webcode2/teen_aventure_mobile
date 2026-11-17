@@ -64,7 +64,7 @@ class AuthChrome extends StatelessWidget {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 440),
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                              padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 8, kScreenHorizontalInset, 32),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [

@@ -29,9 +29,11 @@ class FamilyChildProfile {
 
   final bool independentLogin;
   final bool loginDeactivated;
+  final bool? _canJoinGroup;
   final bool? _canSwitchProfile;
 
   bool get canSwitchProfile => _canSwitchProfile == true;
+  bool get canJoinGroup => !loginDeactivated && (_canJoinGroup ?? canSwitchProfile);
 
 
 
@@ -48,8 +50,10 @@ class FamilyChildProfile {
     this.independentLogin = false,
     this.loginDeactivated = false,
     bool? canSwitchProfile,
+    bool? canJoinGroup,
 
-  }) : _canSwitchProfile = canSwitchProfile;
+  }) : _canSwitchProfile = canSwitchProfile,
+       _canJoinGroup = canJoinGroup;
 
 
 
@@ -76,6 +80,7 @@ class FamilyChildProfile {
       independentLogin: json['independentLogin'] as bool? ?? false,
       loginDeactivated: json['loginDeactivated'] == true,
       canSwitchProfile: json['canSwitchProfile'] as bool?,
+      canJoinGroup: json['canJoinGroup'] as bool?,
 
     );
 
@@ -562,6 +567,11 @@ class AuthSession extends ChangeNotifier {
     return true;
   }
 
+  Future<void> refreshGroupJoinProfiles() async {
+    await refreshProfile(skipCache: true);
+    if (isParent) await _loadLegacySwitchPermissions();
+  }
+
   Future<void> _loadLegacySwitchPermissions() async {
     final service = _family;
     final parentId = userId;
@@ -603,6 +613,7 @@ class AuthSession extends ChangeNotifier {
             email: child.email,
             independentLogin: child.independentLogin,
             canSwitchProfile: true,
+            canJoinGroup: child._canJoinGroup,
           )
         else
           child,

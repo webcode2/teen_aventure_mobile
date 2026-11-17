@@ -49,7 +49,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
         child: ParentHomePanel(actions: _actions),
       ),
     );
@@ -69,7 +69,7 @@ class FamilyOptionsMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <(String, IconData, VoidCallback)>[
       if (actions.addExplorer case final action?) ('Add explorer', Icons.person_add_alt_1, action),
-      if (actions.inviteGuardian case final action?) ('Invite guardian', Icons.forward_to_inbox_rounded, action),
+      if (actions.inviteGuardian case final action?) ('Invite to family', Icons.forward_to_inbox_rounded, action),
       if (actions.addGuardian case final action?) ('Add guardian', Icons.shield_outlined, action),
       if (actions.updateFamily case final action?) ('Update family', Icons.edit_outlined, action),
       ('All groups', Icons.groups_rounded, actions.allGroups),
@@ -87,7 +87,7 @@ class FamilyOptionsMenu extends StatelessWidget {
               children: [
                 Icon(item.$2, color: AppColors.navy, size: 20),
                 const SizedBox(width: 12),
-                Text(item.$1),
+                Flexible(child: Text(item.$1)),
               ],
             ),
           ),

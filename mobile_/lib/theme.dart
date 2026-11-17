@@ -35,6 +35,9 @@ class AppColors {
   static const Color textMuted = Color(0xFF6B7C8A);
 }
 
+/// Horizontal inset for screen content, shared with the Profile screen.
+const double kScreenHorizontalInset = 12;
+
 class AppRadii {
   static const double card = 18;
   static const BorderRadius cardRadius =

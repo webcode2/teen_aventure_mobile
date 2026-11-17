@@ -88,7 +88,7 @@ class _WhatToLearnScreenState extends State<WhatToLearnScreen> {
     return RefreshIndicator(
       onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 28),
         children: [
           const Text(
             'What to learn',

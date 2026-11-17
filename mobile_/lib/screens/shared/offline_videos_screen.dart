@@ -68,7 +68,7 @@ class _OfflineVideosScreenState extends State<OfflineVideosScreen> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
                 itemCount: videos.length,
                 itemBuilder: (context, index) {
                   final video = videos[index];

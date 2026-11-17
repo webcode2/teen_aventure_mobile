@@ -33,7 +33,7 @@ class ChildAchievementRecordScreen extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
         children: [
           CircleStatsCard(
             title: child.firstName.isEmpty ? 'Your journey' : '$first’s Journey',

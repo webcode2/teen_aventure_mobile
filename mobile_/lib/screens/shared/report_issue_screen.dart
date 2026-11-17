@@ -128,7 +128,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         title: const Text('Report an issue', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 16, kScreenHorizontalInset, 28),
         children: [
           Text(
             about,

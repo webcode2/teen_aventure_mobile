@@ -303,7 +303,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 8, kScreenHorizontalInset, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -358,7 +358,7 @@ class _ObjectiveQuizScreenState extends State<ObjectiveQuizScreen> {
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                    padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 28, kScreenHorizontalInset, 20),
                     children: [
                       Text(
                         'Q.${currentIndex + 1}/${questions.length}',

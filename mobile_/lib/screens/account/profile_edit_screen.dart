@@ -236,7 +236,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   email: _email.text.trim().isEmpty ? _originalEmail : _email.text.trim(),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 16, kScreenHorizontalInset, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -371,7 +371,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 8, kScreenHorizontalInset, 16),
               child: SizedBox(
                 width: double.infinity,
                 height: 52,

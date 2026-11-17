@@ -69,7 +69,7 @@ class _AccountScreenState extends State<AccountScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 16, kScreenHorizontalInset, 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +130,7 @@ class _AccountScreenState extends State<AccountScreen> {
     return Material(
       color: AppColors.cream,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+        padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 24),
         children: [
           FutureBuilder<Achievements>(
             key: ValueKey((session.userId, session.childId)),

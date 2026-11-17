@@ -92,7 +92,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
       backgroundColor: AppColors.cream,
       appBar: AppBar(title: const Text('Delete family account')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
         children: [
           const Text(
             'Requesting deletion immediately removes family-side visibility.',

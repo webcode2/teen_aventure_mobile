@@ -77,7 +77,7 @@ class _TeacherHomeTabState extends State<TeacherHomeTab> {
       onRefresh: () => Future.wait([_refresh(), refreshDashboardCopy(context)]),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
         children: [
           if (_error != null) ...[
             Text(_error!, style: const TextStyle(color: Color(0xFFBA1A1A))),
@@ -278,7 +278,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 32),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 if (_error != null) ...[
@@ -388,7 +388,7 @@ class _ClassHeroHeader extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(20, top + 56, 20, 0),
+          padding: EdgeInsets.fromLTRB(kScreenHorizontalInset, top + 56, kScreenHorizontalInset, 0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

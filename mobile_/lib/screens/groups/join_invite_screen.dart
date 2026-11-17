@@ -57,12 +57,14 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
   /// Family invites are accepted by the person themselves, never on an explorer's behalf.
   bool get _isFamilyInvite => (_preview?['kind'] as String?)?.toUpperCase() == 'FAMILY';
 
+  bool get _isCustomGroup => (_preview?['groupKind'] as String?)?.toUpperCase() == 'CUSTOM';
+
   /// Parent on the adult shell joining an explorer into a group.
   bool get _parentJoiningForExplorer {
     if (_isFamilyInvite) return false;
     try {
       final session = context.read<AuthSession>();
-      return session.isParent && !session.isChild && session.children.isNotEmpty;
+      return session.isParent;
     } catch (_) {
       return false;
     }
@@ -70,7 +72,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
 
   List<FamilyChildProfile> get _familyExplorers {
     try {
-      return context.read<AuthSession>().children;
+      return context.read<AuthSession>().children.where((child) => child.canJoinGroup).toList();
     } catch (_) {
       return const [];
     }
@@ -193,6 +195,11 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     try {
       final preview = await family.previewInvite(token);
       if (!mounted) return;
+      if (preview['kind'] != 'FAMILY') {
+        final session = context.read<AuthSession>();
+        if (session.isParent) await session.refreshGroupJoinProfiles();
+      }
+      if (!mounted) return;
       setState(() {
         _preview = preview;
         _ensureChildSelection();
@@ -228,6 +235,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     final token = parseJoinToken(_token.text.trim());
     if (token == null || token.isEmpty) return;
     _ensureChildSelection();
+    if (_parentJoiningForExplorer && _familyExplorers.isEmpty) return;
     if (_parentJoiningForExplorer && (_selectedChildId == null || _selectedChildId!.isEmpty)) {
       setState(() => _error = 'Choose which explorer to join this group.');
       return;
@@ -239,18 +247,23 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
     final family = context.read<FamilyService>();
     final session = context.read<AuthSession>();
     try {
-      await family.acceptInvite(
+      final result = await family.acceptInvite(
         token,
         childId: _parentJoiningForExplorer ? _selectedChildId : null,
       );
-      await session.refreshProfile();
+      if (_isFamilyInvite) await session.refreshProfile(skipCache: true);
       if (!mounted) return;
+      if (_isCustomGroup && result['status'] == null) {
+        setState(() => _error = 'Your group join has not been confirmed. Check Groups before trying again.');
+        return;
+      }
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context, true);
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            _parentJoiningForExplorer
+            result['status'] == 'PENDING' ||
+                    (result['status'] == null && _parentJoiningForExplorer)
                 ? 'Join requested. The group leader will approve it.'
                 : 'You joined. Welcome in.',
           ),
@@ -315,7 +328,7 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
               ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 28),
               children: [
                 if (_preview == null) Text(
                   _useScanner
@@ -457,7 +470,12 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                             style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
                           ),
                         ],
-                        if (_parentJoiningForExplorer) ...[
+                        if (_parentJoiningForExplorer && _familyExplorers.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12),
+                            child: Text('Your account has no explorer profiles eligible to join this group.'),
+                          ),
+                        if (_parentJoiningForExplorer && _familyExplorers.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           const Text(
                             'Who is joining?',
@@ -487,17 +505,21 @@ class _JoinInviteScreenState extends State<JoinInviteScreen>
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Under-age explorers (14 and under) join through your account. The group leader approves the request.',
-                            style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
+                          Text(
+                            _isCustomGroup
+                                ? 'The selected explorer will join this group.'
+                                : 'The group leader reviews the request for the selected explorer.',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.35),
                           ),
                         ],
                         const SizedBox(height: 12),
                         FilledButton(
-                          onPressed: _busy ? null : _accept,
+                          onPressed: _busy || (_parentJoiningForExplorer && _familyExplorers.isEmpty)
+                              ? null
+                              : _accept,
                           style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
                           child: Text(
-                            _parentJoiningForExplorer
+                            _parentJoiningForExplorer && !_isCustomGroup
                                 ? 'Request join'
                                 : _isFamilyInvite ? 'Accept invite' : 'Join group',
                           ),

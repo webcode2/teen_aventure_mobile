@@ -17,6 +17,12 @@ class NotificationsResult {
   final List<Nudge> nudges;
 }
 
+typedef NotificationsData = ({
+  List<Nudge> nudges,
+  List<Map<String, dynamic>> deletionNotices,
+  List<Map<String, dynamic>> familyInvites,
+});
+
 /// Inbox for approved encouragements and group deletion notices.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
@@ -24,8 +30,12 @@ class NotificationsScreen extends StatefulWidget {
     this.nudges = const [],
     this.deletionNotices = const [],
     this.familyInvites = const [],
+    this.onRefresh,
+    this.onInvitesChanged,
   });
 
+  final Future<NotificationsData?> Function()? onRefresh;
+  final ValueChanged<List<Map<String, dynamic>>>? onInvitesChanged;
   final List<Nudge> nudges;
   final List<Map<String, dynamic>> deletionNotices;
   /// Saved family invites waiting for an answer (from `/invites/pending`).
@@ -38,13 +48,34 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   late List<Nudge> _nudges;
   late List<Map<String, dynamic>> _invites;
+  late List<Map<String, dynamic>> _deletions;
   bool _busy = false;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
     _nudges = List<Nudge>.from(widget.nudges);
-    _invites = List<Map<String, dynamic>>.from(widget.familyInvites);
+    _invites = widget.familyInvites;
+    _deletions = widget.deletionNotices;
+    final refresh = widget.onRefresh;
+    if (refresh != null) {
+      _refreshing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        try {
+          final data = await refresh();
+          if (!mounted || data == null) return;
+          setState(() {
+            _nudges = data.nudges;
+            _invites = data.familyInvites;
+            _deletions = data.deletionNotices;
+          });
+        } finally {
+          if (mounted) setState(() => _refreshing = false);
+        }
+      });
+    }
   }
 
   Future<void> _answerInvite(Map<String, dynamic> invite, {required bool accept}) async {
@@ -55,12 +86,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       if (accept) {
         await service.acceptInvite(invite['payload'] as String);
-        await session.refreshProfile();
+        await session.refreshProfile(skipCache: true);
       } else {
         await service.declineInvite(invite['id'] as String);
       }
       if (!mounted) return;
-      setState(() => _invites = [for (final i in _invites) if (i['id'] != invite['id']) i]);
+      final familyId = invite['familyId'];
+      setState(() => _invites = [
+        for (final i in _invites)
+          if (i['id'] != invite['id'] && (!accept || familyId == null || i['familyId'] != familyId)) i,
+      ]);
+      widget.onInvitesChanged?.call(_invites);
       messenger.showSnackBar(SnackBar(
         content: Text(accept ? 'You joined ${invite['name']}.' : 'Invite declined.'),
         backgroundColor: AppColors.navy,
@@ -139,7 +175,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final deletions = widget.deletionNotices;
+    final deletions = _deletions;
+    final busy = _busy || _refreshing;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -156,7 +193,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           actions: [
             if (_canClear)
               TextButton(
-                onPressed: _busy ? null : _clearAll,
+                onPressed: busy ? null : _clearAll,
                 child: const Text(
                   'Clear all',
                   style: TextStyle(fontWeight: FontWeight.w800),
@@ -165,8 +202,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+          padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 88),
           children: [
+            if (_refreshing) const LinearProgressIndicator(),
             if (_invites.isNotEmpty) ...[
               const _SectionLabel('Family invites'),
               const SizedBox(height: 8),
@@ -175,8 +213,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 FamilyInviteCard(
                   name: _invites[i]['name'] as String? ?? 'Family',
                   invitedBy: _invites[i]['invitedByName'] as String?,
-                  onAccept: _busy ? null : () => _answerInvite(_invites[i], accept: true),
-                  onDecline: _busy ? null : () => _answerInvite(_invites[i], accept: false),
+                  onAccept: busy ? null : () => _answerInvite(_invites[i], accept: true),
+                  onDecline: busy ? null : () => _answerInvite(_invites[i], accept: false),
                 ),
               ],
               const SizedBox(height: 20),
@@ -197,10 +235,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (i > 0) const SizedBox(height: 10),
                 _NotificationTile(
                   nudge: _nudges[i],
-                  onDismiss: _busy ? null : () => _dismissNudge(_nudges[i]),
+                  onDismiss: busy ? null : () => _dismissNudge(_nudges[i]),
                 ),
               ],
-            ] else if (deletions.isEmpty && _invites.isEmpty)
+            ] else if (!_refreshing && deletions.isEmpty && _invites.isEmpty)
               const _EmptyCard(
                 icon: Icons.notifications_none_rounded,
                 title: 'No notifications yet',

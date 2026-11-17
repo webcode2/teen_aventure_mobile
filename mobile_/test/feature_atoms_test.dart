@@ -23,15 +23,21 @@ import 'package:teen_aventure/screens/teen/widgets/word_declaration_card.dart';
 import 'package:teen_aventure/services/family_service.dart';
 
 class _JoinFamilyService implements FamilyService {
+  _JoinFamilyService({this.groupKind = 'CHURCH'});
+
+  final String groupKind;
   final accepted = <String>[];
+  final acceptedChildIds = <String?>[];
 
   @override
   Future<Map<String, dynamic>> previewInvite(String raw) async =>
-      {'kind': 'CLASS', 'name': 'Test Group', 'durable': true};
+      {'kind': 'CLASS', 'groupKind': groupKind, 'name': 'Test Group', 'durable': true};
 
   @override
-  Future<void> acceptInvite(String raw, {String? childId}) async {
+  Future<Map<String, dynamic>> acceptInvite(String raw, {String? childId}) async {
     accepted.add(raw);
+    acceptedChildIds.add(childId);
+    return {'status': childId == null || groupKind == 'CUSTOM' ? 'APPROVED' : 'PENDING'};
   }
 
   @override
@@ -344,6 +350,51 @@ void main() {
     await tester.pump();
     expect(family.accepted, ['class:AB1234']);
   });
+
+  for (final kind in ['CUSTOM', 'CHURCH']) {
+    testWidgets('$kind group picker offers only authorized explorer profiles', (tester) async {
+      final family = _JoinFamilyService(groupKind: kind);
+      final session = AuthSession.test(
+        authenticated: true,
+        shell: AppShell.parent,
+        children: const [
+          FamilyChildProfile(id: 'own', name: 'Own explorer', ageBand: 'CHILD', canJoinGroup: true),
+          FamilyChildProfile(id: 'ward', name: 'Guardian explorer', ageBand: 'CHILD', canJoinGroup: true),
+          FamilyChildProfile(id: 'peer', name: 'Joined family explorer', ageBand: 'CHILD', canJoinGroup: false),
+        ],
+      );
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthSession>.value(value: session),
+          Provider<FamilyService>.value(value: family),
+        ],
+        child: MaterialApp(home: Builder(builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => Navigator.push<void>(context, MaterialPageRoute(
+              builder: (_) => const JoinInviteScreen(showScanner: false),
+            )),
+            child: const Text('Open group invite'),
+          ),
+        ))),
+      ));
+      await tester.tap(find.text('Open group invite'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'class:AB1234');
+      await tester.tap(find.text('Check invite'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Own explorer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Joined family explorer'), findsNothing);
+      await tester.tap(find.text('Guardian explorer').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(kind == 'CUSTOM' ? 'Join group' : 'Request join'));
+      await tester.pumpAndSettle();
+      expect(family.acceptedChildIds, ['ward']);
+      expect(find.text(kind == 'CUSTOM'
+          ? 'You joined. Welcome in.'
+          : 'Join requested. The group leader will approve it.'), findsOneWidget);
+    });
+  }
 
   testWidgets('an Android join link opens the scanner with a rescan prompt', (tester) async {
     const channel = MethodChannel('tba/join_links');

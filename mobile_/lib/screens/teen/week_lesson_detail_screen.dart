@@ -180,7 +180,7 @@ class _WeekLessonDetailScreenState extends State<WeekLessonDetailScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 28),
               children: [
                 Text(
                   week.title,

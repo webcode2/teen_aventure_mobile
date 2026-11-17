@@ -62,7 +62,7 @@ class FamilyProfilePickerScreen extends StatelessWidget {
               child: ColoredBox(
                 color: AppColors.cream,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 24, kScreenHorizontalInset, 32),
                   children: [
                     const Text(
                       'Who is on the Quest?',

@@ -75,7 +75,7 @@ void main() {
       addGuardian: () {},
       updateFamily: () {},
     ));
-    for (final label in ['Add explorer', 'Invite guardian', 'Add guardian', 'Update family', 'All groups']) {
+    for (final label in ['Add explorer', 'Invite to family', 'Add guardian', 'Update family', 'All groups']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Add admin'), findsNothing);
@@ -84,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     var opened = false;
     await open(FamilyPanelActions(title: 'Okafor Home', allGroups: () => opened = true));
-    expect(find.text('Invite guardian'), findsNothing);
+    expect(find.text('Invite to family'), findsNothing);
     await tester.tap(find.text('All groups'));
     await tester.pumpAndSettle();
     expect(opened, isTrue);

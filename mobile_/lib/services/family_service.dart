@@ -217,9 +217,12 @@ class FamilyService {
     }
   }
 
-  Future<Map<String, dynamic>> getMemberships() async {
+  Future<Map<String, dynamic>> getMemberships({bool skipCache = false}) async {
     try {
-      final response = await _apiClient.dio.get('/api/memberships');
+      final response = await _apiClient.dio.get(
+        '/api/memberships',
+        options: skipCache ? Options(extra: {'skipCache': true}) : null,
+      );
       return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -308,13 +311,15 @@ class FamilyService {
     }
   }
 
-  Future<void> acceptInvite(String raw, {String? childId}) async {
+  Future<Map<String, dynamic>> acceptInvite(String raw, {String? childId}) async {
     final token = parseJoinToken(raw) ?? raw.trim();
     try {
-      await _apiClient.dio.post('/api/invites/accept', data: {
+      final response = await _apiClient.dio.post('/api/invites/accept', data: {
         'token': token,
         if (childId != null && childId.isNotEmpty) 'childId': childId,
       });
+      final data = response.data;
+      return data is Map ? Map<String, dynamic>.from(data) : {};
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

@@ -134,7 +134,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
         onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
         color: AppColors.teal,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 20, kScreenHorizontalInset, 32),
           children: [
             const Text(
               'These are devices signed in for notifications on your account. Remove any you do not recognize.',

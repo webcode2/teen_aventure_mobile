@@ -154,7 +154,7 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
         child: Form(
           key: _form,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 20),
             children: [
               TextFormField(
                 key: const ValueKey('explorer-name'),
@@ -298,7 +298,7 @@ class _ExplorerPinScreenState extends State<ExplorerPinScreen> {
         child: Form(
           key: _form,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 20),
             children: [
               _PinFields(pin: _pin, confirm: _confirm),
               if (_error != null) ...[

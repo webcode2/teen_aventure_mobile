@@ -1,5 +1,6 @@
 import '../family/family_screen.dart';
 import '../account/individual_account_deletion_screen.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../family/family_account_rules.dart';
@@ -51,12 +52,16 @@ class GroupsScreen extends StatefulWidget {
     this.embedded = false,
     this.showRanks = false,
     this.ranksOverride,
+    this.onInvitesChanged,
+    this.refreshRevision = 0,
   });
 
   final Map<String, dynamic>? membershipsOverride;
   final bool embedded;
   final bool showRanks;
   final List<LeaderboardEntry>? ranksOverride;
+  final ValueChanged<List<Map<String, dynamic>>>? onInvitesChanged;
+  final int refreshRevision;
 
   @override
   State<GroupsScreen> createState() => _GroupsScreenState();
@@ -68,6 +73,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   GroupJar? _jar;
   String? _error;
   bool _loading = true;
+  int _loadRevision = 0;
 
   @override
   void initState() {
@@ -81,6 +87,12 @@ class _GroupsScreenState extends State<GroupsScreen> {
         if (mounted) _load();
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant GroupsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshRevision != oldWidget.refreshRevision) _load();
   }
 
   Future<void> _load() async {
@@ -97,35 +109,35 @@ class _GroupsScreenState extends State<GroupsScreen> {
       _loading = true;
       _error = null;
     });
+    final revision = ++_loadRevision;
     final familyService = context.read<FamilyService>();
     final engagement = context.read<EngagementService>();
     try {
-      final data = await familyService.getMemberships();
-      try {
-        final family = await familyService.getMyFamily();
-        final deletionAt = family['deletionAt'];
-        final items = data['items'];
-        if (deletionAt != null && items is List) {
+      final data = await familyService.getMemberships(skipCache: true);
+      if (!mounted || revision != _loadRevision) return;
+      setState(() {
+        _data = data;
+        _loading = false;
+      });
+      final items = data['items'];
+      if (items is List && items.any((item) =>
+          item is Map && item['kind'] == 'FAMILY' &&
+          item['deletionPending'] == true && item['deletionAt'] == null)) {
+        try {
+          final family = await familyService.getMyFamily();
           for (final item in items) {
-            if (item is Map && item['kind'] == 'FAMILY' && item['deletionAt'] == null) {
-              item['deletionAt'] = deletionAt;
+            if (item is Map && item['kind'] == 'FAMILY' &&
+                item['id'] == family['id'] && item['deletionAt'] == null) {
+              item['deletionAt'] = family['deletionAt'];
             }
           }
-        }
-      } catch (_) {}
-      GroupJar? jar;
-      try {
-        jar = await engagement.getGroupJar();
-      } catch (_) {
-        jar = null;
+        } catch (_) {}
       }
-      var invites = const <Map<String, dynamic>>[];
-      try {
-        invites = await familyService.pendingInvites();
-      } catch (_) {
-        // Invites are optional on this screen; the memberships list still loads.
-      }
-      if (mounted) {
+      final (jar, invites) = await (
+        engagement.getGroupJar().then<GroupJar?>((value) => value, onError: (_) => null),
+        familyService.pendingInvites().catchError((_) => _invites),
+      ).wait;
+      if (mounted && revision == _loadRevision) {
         setState(() {
           _data = data;
           _jar = jar;
@@ -133,11 +145,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
         });
       }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted && revision == _loadRevision) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted && revision == _loadRevision) setState(() => _error = errorText(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && revision == _loadRevision) setState(() => _loading = false);
     }
   }
 
@@ -157,7 +169,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
     if (_items.isEmpty && classes.isNotEmpty) return classes;
     return [
       for (final item in _items)
-        if ((item['kind'] == 'CLASS' || item['kind'] == 'FAMILY') && item['id'] is String)
+        if ((item['kind'] == 'CLASS' || item['kind'] == 'FAMILY') &&
+            item['role'] != 'Pending' && item['id'] is String)
           AssignedClass(
             id: item['id'] as String,
             name: item['name'] as String? ?? 'Group',
@@ -172,10 +185,17 @@ class _GroupsScreenState extends State<GroupsScreen> {
     try {
       if (accept) {
         await service.acceptInvite(invite['payload'] as String);
-        await session.refreshProfile();
+        await session.refreshProfile(skipCache: true);
       } else {
         await service.declineInvite(invite['id'] as String);
       }
+      if (!mounted) return;
+      final familyId = invite['familyId'];
+      setState(() => _invites = [
+        for (final i in _invites)
+          if (i['id'] != invite['id'] && (!accept || familyId == null || i['familyId'] != familyId)) i,
+      ]);
+      widget.onInvitesChanged?.call(_invites);
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -388,6 +408,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }
 
   void _openMembershipStanding(Map<String, dynamic> item) {
+    if (item['role'] == 'Pending') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(item['groupKind'] == 'CUSTOM'
+            ? 'Scan the group invite again to finish joining.'
+            : 'Waiting for the group leader to approve the join request.')),
+      );
+      return;
+    }
     _openGroupStanding(
       AssignedClass(
         id: item['id'] as String,
@@ -567,14 +595,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
         ? const <Widget>[]
         : _groupListingTiles();
 
-    final body = _loading
+    final body = _loading && _data == null
         ? const Center(child: CircularProgressIndicator())
         : RefreshIndicator(
             onRefresh: () => Future.wait([_load(), refreshDashboardCopy(context)]),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: kScreenHorizontalInset, vertical: 16),
               children: [
+                if (_loading) const LinearProgressIndicator(),
                 if (_error != null) ...[
                   Text(_error!, style: const TextStyle(color: Color(0xFFBA1A1A))),
                   const SizedBox(height: 12),
@@ -812,7 +841,7 @@ class _GroupStandingScreenState extends State<_GroupStandingScreen> {
                     ),
                   ),
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(kScreenHorizontalInset, 12, kScreenHorizontalInset, 24),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         if (widget.canManageFamily || (canInvite && onInvite != null))
@@ -1134,7 +1163,7 @@ class _GroupDetailBody extends StatelessWidget {
         _ExpandableDescription(text: _description),
         const SizedBox(height: 18),
         _GroupLeadCard(name: _creatorName, email: _creatorEmail),
-        if (canNudge && _isTeachingGroup(membership) && cls.kind.toUpperCase() != 'FAMILY') ...[
+        if (canNudge && _isTeachingGroup(membership) && _displayKind.toUpperCase() == 'CHURCH') ...[
           const SizedBox(height: 24),
           const Text(
             'Members',
@@ -1502,7 +1531,11 @@ class _MembershipTile extends StatelessWidget {
           ? '$label · Under review'
           : pending
               ? '$label · Scheduled for deletion'
-              : '$label · Standing',
+              : item['role'] == 'Pending'
+                  ? item['groupKind'] == 'CUSTOM'
+                      ? '$label · Join again to finish'
+                      : '$label · Awaiting approval'
+                  : '$label · Standing',
       icon: kindIcon,
       onTap: onTap,
       accent: item['underReview'] == true
