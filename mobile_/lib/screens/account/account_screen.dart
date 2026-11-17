@@ -423,19 +423,22 @@ class _ProfileAchievementsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badges = <({String label, IconData icon, Color color, bool earned})>[
-      for (final award in awards)
+    final currentAward = awards.where((award) => award.earned).lastOrNull;
+    final badges = <({String label, IconData icon, Color color, bool earned, bool current})>[
+      for (final award in profileAwardPreview(awards))
         (
           label: award.milestone.title,
           icon: Icons.workspace_premium_rounded,
           color: AppColors.teal,
           earned: award.earned,
+          current: identical(award.milestone, currentAward?.milestone),
         ),
       (
         label: pointsLabel(points),
         icon: Icons.stars_rounded,
         color: AppColors.gold,
         earned: points > 0,
+        current: false,
       ),
     ];
 
@@ -473,7 +476,7 @@ class _ProfileAchievementsRow extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            for (final badge in badges.take(4))
+            for (final badge in badges)
               Expanded(
                 child: Column(
                   children: [
@@ -485,6 +488,7 @@ class _ProfileAchievementsRow extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: badge.color.withValues(alpha: 0.14),
+                          border: badge.current ? Border.all(color: badge.color, width: 2) : null,
                         ),
                         child: Icon(badge.icon, color: badge.color, size: 26),
                       ),

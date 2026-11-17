@@ -14,6 +14,23 @@ Map<String, bool> _earnedByTitle(List<({QuestMilestone milestone, bool earned})>
     {for (final s in states) s.milestone.title: s.earned};
 
 void main() {
+  test('profile keeps the current award between the previous earned and next awards', () {
+    const milestones = [
+      ..._awards,
+      QuestMilestone(title: 'Fourth award', criteria: '', weekComplete: 8),
+    ];
+    List<String> preview(int weeks) =>
+        profileAwardPreview(awardStates(milestones, weeksCompleted: weeks))
+            .map((award) => award.milestone.title)
+            .toList();
+
+    expect(preview(0), ['New Quester', 'Ardent Reader', 'Great Follower']);
+    expect(preview(1), preview(0));
+    expect(preview(2), preview(0));
+    expect(preview(6), ['Ardent Reader', 'Great Follower', 'Fourth award']);
+    expect(preview(8), ['Great Follower', 'Fourth award']);
+  });
+
   test('awards come from the person\'s saved record, not their week count', () {
     final states = awardStates(
       _awards,

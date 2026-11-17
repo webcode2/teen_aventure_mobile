@@ -61,6 +61,22 @@ List<({QuestMilestone milestone, bool earned})> awardStates(
   return rows;
 }
 
+/// The awards shown on the profile, in milestone order.
+List<({QuestMilestone milestone, bool earned})> profileAwardPreview(
+  List<({QuestMilestone milestone, bool earned})> awards,
+) {
+  final currentIndex = awards.lastIndexWhere((award) => award.earned);
+  if (currentIndex <= 0) return awards.take(3).toList();
+
+  final previous = awards.take(currentIndex).where((award) => award.earned).lastOrNull;
+  final next = awards.skip(currentIndex + 1).firstOrNull;
+  return [
+    if (previous != null) previous,
+    awards[currentIndex],
+    if (next != null) next,
+  ];
+}
+
 /// Titles with stated criteria in the client review. Later titles stay unpublished.
 const knownQuestMilestones = [
   QuestMilestone(
