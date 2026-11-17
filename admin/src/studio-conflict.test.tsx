@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { PuzzlesStudioPage } from './pages-puzzles';
@@ -14,6 +14,30 @@ vi.mock('./api', async () => {
 });
 
 const mockedApi = vi.mocked(api);
+
+afterEach(() => { cleanup(); mockedApi.mockReset(); });
+
+it('resumes the saved draft and saves edits against its original ID', async () => {
+  const doc = {
+    schemaVersion: 1, id: 'saved-key', type: 'LAYOUT', title: 'Saved crossword',
+    scripture: '', rewards: {}, data: { steps: [] },
+  };
+  mockedApi.mockImplementation(async (path, options) => {
+    if (options?.method === 'PUT') return { id: 'draft-1', version: 5 };
+    if (path === '/api/puzzle-drafts/draft-1') return { id: 'draft-1', version: 4, doc };
+    return [{ id: 'draft-1', title: doc.title, version: 4, puzzleKey: doc.id }];
+  });
+  render(<MemoryRouter><PuzzlesStudioPage /></MemoryRouter>);
+  const title = await screen.findByDisplayValue('Saved crossword');
+  expect(mockedApi.mock.calls.some(([, options]) => options?.method === 'PUT')).toBe(false);
+  await userEvent.type(title, ' revised');
+  await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => {
+    const saved = mockedApi.mock.calls.find(([, options]) => options?.method === 'PUT');
+    expect(saved).toBeTruthy();
+    expect(JSON.parse(saved?.[1]?.body as string)).toMatchObject({ id: 'draft-1', title: 'Saved crossword revised' });
+  });
+});
 
 describe('Puzzle Studio WIP conflict dialog', () => {
   it('shows reload theirs / keep mine when autosave returns 409', async () => {
@@ -51,6 +75,7 @@ describe('Puzzle Studio WIP conflict dialog', () => {
       </MemoryRouter>,
     );
     const title = screen.getByRole('textbox', { name: 'Puzzle title' });
+    await waitFor(() => expect((title as HTMLInputElement).disabled).toBe(false));
     await userEvent.clear(title);
     await userEvent.type(title, 'Conflict test');
 

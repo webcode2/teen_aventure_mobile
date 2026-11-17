@@ -290,6 +290,25 @@ export function PuzzleLibraryPage() {
     }
   }
 
+  async function keepOnlyDraft(row: DraftRow) {
+    if (!await askConfirm(`Keep “${row.title}” and permanently delete your other crossword drafts?`, {
+      title: 'Keep one draft', confirmLabel: 'Keep this draft', tone: 'danger',
+    })) return;
+    setBusyId(row.id);
+    setActionError('');
+    try {
+      await api('/api/puzzle-drafts/delete-many', {
+        method: 'POST',
+        body: JSON.stringify({ all: true, keepId: row.id }),
+      });
+      load({ quiet: true });
+    } catch (cause: unknown) {
+      setActionError(cause instanceof Error ? cause.message : 'Could not remove old drafts');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function statusBadge(r: LibraryRow) {
     if (r.status === 'LIVE') return <Badge kind="ok">LIVE</Badge>;
     if (r.status === 'STAGED') return <Badge kind="warn">STAGED</Badge>;
@@ -497,6 +516,13 @@ export function PuzzleLibraryPage() {
                         >
                           {busy ? '…' : 'Delete'}
                         </button>
+                        {r.kind === 'draft' && drafts.length > 1 ? (
+                          <button type="button" disabled={busyId !== null}
+                            className="border border-border px-2.5 py-1 text-[11px] font-semibold text-navy"
+                            onClick={() => void keepOnlyDraft(r.draft)}>
+                            Keep only this draft
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

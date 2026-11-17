@@ -32,6 +32,7 @@ import {
 } from './pages-ops';
 import { PastorPortalPage } from './pages-pastor';
 import { PeoplePage } from './pages-people';
+import { ObjectiveQuizzesPage } from './pages-objective-quizzes';
 import { PuzzlesStudioPage } from './pages-puzzles';
 import { PuzzleLibraryPage } from './pages-puzzle-library';
 import { MatchingStudioPage } from './pages-matching';
@@ -80,6 +81,7 @@ function DashboardTabPage() {
     'users-archive': <AccountDeletionQueue archiveScope="ACCOUNT" />,
     groups: <GroupsPage />,
     quests: <QuestsPage />,
+    quizzes: <ObjectiveQuizzesPage />,
     puzzles: <PuzzlesStudioPage />,
     matching: <MatchingStudioPage />,
     notifications: <NotificationsPage />,

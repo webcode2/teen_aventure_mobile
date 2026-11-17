@@ -123,6 +123,7 @@ const NAV_ICONS: Record<Tab, () => ReactNode> = {
   groups: GroupsIcon,
   notifications: MailIcon,
   quests: QuestIcon,
+  quizzes: ConsentIcon,
   puzzles: PuzzleIcon,
   matching: MatchIcon,
   'content-mobile': MobileIcon,

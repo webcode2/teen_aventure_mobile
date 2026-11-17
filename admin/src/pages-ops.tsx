@@ -1745,6 +1745,7 @@ type AdminGroup = {
   joinCode: string;
   createdAt: string;
   deletionAt: string | null;
+  disabledAt?: string | null;
   owner: { id: string; name: string; email: string };
   church: { id: string; name: string } | null;
   family: { id: string; name: string } | null;
@@ -1762,6 +1763,9 @@ type GroupDetail = {
   joinCode: string;
   createdAt: string;
   deletionAt: string | null;
+  disabledAt?: string | null;
+  deletionDeadline?: string | null;
+  canManageLifecycle?: boolean;
   owner: { id: string; name: string; email: string };
   church: { id: string; name: string } | null;
   family: { id: string; name: string } | null;
@@ -1954,9 +1958,11 @@ export function GroupsPage() {
                             {g.description}
                           </span>
                         ) : null}
-                        {g.deletionAt ? (
+                        {g.deletionAt || g.disabledAt ? (
                           <span className="mt-1 inline-block">
-                            <Badge kind="warn">Deleting</Badge>
+                            <Badge kind={g.deletionAt ? 'warn' : 'bad'}>
+                              {g.deletionAt ? 'Deletion scheduled' : 'Disabled'}
+                            </Badge>
                           </span>
                         ) : null}
                       </span>
@@ -2004,6 +2010,7 @@ export function GroupDetailPage() {
   const [memberQuery, setMemberQuery] = useState('');
   const [page, setPage] = useState(1);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -2038,6 +2045,44 @@ export function GroupDetailPage() {
   useEffect(() => {
     setPage(1);
   }, [memberFilter, memberQuery, classId]);
+
+  async function changeLifecycle(action: 'disable' | 'delete' | 'restore' | 'purge') {
+    if (!detail || lifecycleBusy) return;
+    let credentials = {};
+    if (action === 'purge') {
+      const confirmation = await askPrompt('Type PURGE PERMANENTLY to confirm permanent removal of the group, enrollments, and invites.', {});
+      if (confirmation !== 'PURGE PERMANENTLY') return;
+      const password = await askPrompt('Confirm your password', { inputType: 'password' });
+      if (!password) return;
+      credentials = { confirmation, password };
+    } else if (action === 'delete') {
+      const confirmed = await askConfirm('The group will be permanently deleted after three days. You can restore it before it is removed.', { title: 'Schedule group deletion?', confirmLabel: 'Schedule deletion', tone: 'danger' });
+      if (!confirmed) return;
+    } else if (action === 'disable') {
+      const confirmed = await askConfirm('Members lose access until the group is restored.', { title: 'Disable this group?', confirmLabel: 'Disable group' });
+      if (!confirmed) return;
+    }
+
+    setLifecycleBusy(true);
+    setFeedback('');
+    setError('');
+    try {
+      await api(`/api/admin/groups/${detail.id}/lifecycle`, {
+        method: 'POST',
+        body: JSON.stringify({ action, ...credentials }),
+      });
+      if (action === 'purge') {
+        onBack();
+        return;
+      }
+      setFeedback(action === 'delete' ? 'Group deletion scheduled.' : action === 'disable' ? 'Group disabled.' : 'Group restored.');
+      await load();
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : 'Could not update group status');
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
 
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -2230,7 +2275,9 @@ export function GroupDetailPage() {
                   {detail.joinCode}
                 </span>
               ) : null}
-              {detail.deletionAt ? <Badge kind="warn">Deleting</Badge> : <Badge kind="ok">Active</Badge>}
+              {detail.deletionAt
+                ? <Badge kind="warn">Deletion scheduled</Badge>
+                : detail.disabledAt ? <Badge kind="bad">Disabled</Badge> : <Badge kind="ok">Active</Badge>}
               <Button
                 size="sm"
                 type="button"
@@ -2287,6 +2334,37 @@ export function GroupDetailPage() {
           ))}
         </div>
       </header>
+
+      {detail.canManageLifecycle ? (
+        <section className="rounded-2xl border border-border bg-surface p-5">
+          <h2 className="m-0 text-sm font-bold text-navy">Group lifecycle</h2>
+          {detail.deletionDeadline ? (
+            <p className="mt-2 text-sm text-muted">
+              Scheduled for permanent deletion on {new Date(detail.deletionDeadline).toLocaleString()}.
+              {detail.disabledAt ? ' The group will remain disabled if you cancel deletion.' : ''}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {detail.deletionAt || detail.disabledAt ? (
+              <Button size="sm" variant="outline" disabled={lifecycleBusy} onClick={() => void changeLifecycle('restore')}>
+                {detail.deletionAt && detail.disabledAt ? 'Cancel deletion' : 'Restore group'}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled={lifecycleBusy} onClick={() => void changeLifecycle('disable')}>
+                Disable group
+              </Button>
+            )}
+            {!detail.deletionAt ? (
+              <Button size="sm" variant="outline" disabled={lifecycleBusy} onClick={() => void changeLifecycle('delete')}>
+                Schedule deletion
+              </Button>
+            ) : null}
+            <Button size="sm" variant="danger" disabled={lifecycleBusy} onClick={() => void changeLifecycle('purge')}>
+              Permanently delete
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       {error ? <Alert kind="error">{error}</Alert> : null}
       {feedback ? <Alert kind="ok">{feedback}</Alert> : null}

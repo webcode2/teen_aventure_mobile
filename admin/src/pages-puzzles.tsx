@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Alert, Button } from './ui';
 import { api, ApiError } from './api';
+import { askConfirm } from './prompt-dialog';
 import {
   emptyDoc,
   initialState,
@@ -27,6 +28,8 @@ export function parseWeekNumber(title: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+type DraftSlot = { id: string; version: number; title: string; puzzleKey: string };
+
 export function PuzzlesStudioPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,6 +43,9 @@ export function PuzzlesStudioPage() {
   const openedDraft = useRef<string | null>(null);
   const openedVersion = useRef<string | null>(null);
   const startedNew = useRef(false);
+  const [replacedDraft, setReplacedDraft] = useState<DraftSlot | null>(null);
+  const [opening, setOpening] = useState(true);
+  const loadedVersion = useRef(1);
   const [state, dispatch] = useReducer(studioReducer, undefined, () => initialState());
   const [openError, setOpenError] = useState('');
   const [highlight, setHighlight] = useState<{ row: number; col: number } | null>(null);
@@ -86,27 +92,17 @@ export function PuzzlesStudioPage() {
     dispatch({ type: 'setDraftId', id });
   }, []);
 
-  const { status: saveStatus, error: saveError, conflict, clearConflict } = useDebouncedDraftAutosave({
+  const { status: saveStatus, error: saveError, conflict, clearConflict, saveNow } = useDebouncedDraftAutosave({
     draftId: state.draftId,
     version: state.version,
+    replace: replacedDraft,
+    loadedVersion: loadedVersion.current,
     doc: state.present,
-    enabled: !draftsPaused,
+    enabled: !draftsPaused && !opening,
     holdRef: draftHold,
     onDraftId,
     onDroppedEmpty: () => dispatch({ type: 'dropEmpty' }),
   });
-
-  // Quest “Create new puzzle” → blank draft (optionally titled from the week).
-  useEffect(() => {
-    if (!startNew || editPuzzle || openDraftId || openVersionId || startedNew.current) return;
-    startedNew.current = true;
-    const title = seedTitle || 'Untitled puzzle';
-    dispatch({ type: 'replace', doc: emptyDoc(title), draftId: null, version: 1 });
-    setPublishVersion(null);
-    setNextPublishVersion(null);
-    setEditingLive(false);
-    clearConflict();
-  }, [startNew, editPuzzle, openDraftId, openVersionId, seedTitle, clearConflict]);
 
   function addStep() {
     const step: StudioStep = {
@@ -143,6 +139,7 @@ export function PuzzlesStudioPage() {
   }
 
   function loadOnGrid(doc: StudioDoc, draftId: string | null, version: number) {
+    loadedVersion.current = version;
     const placed = withPlacedCoordinates(doc);
     const first = placed.data.steps[0];
     dispatch({
@@ -157,6 +154,7 @@ export function PuzzlesStudioPage() {
   }
 
   async function openDraft(id: string) {
+    setOpening(true);
     try {
       const row = await api<{ id: string; version: number; doc: StudioDoc }>(
         `/api/puzzle-drafts/${id}`,
@@ -164,13 +162,17 @@ export function PuzzlesStudioPage() {
       setOpenError('');
       setNextPublishVersion(null);
       setEditingLive(false);
+      setReplacedDraft(null);
       loadOnGrid(row.doc, row.id, row.version);
     } catch (e) {
       setOpenError(e instanceof Error ? e.message : 'Failed to open draft');
+    } finally {
+      setOpening(false);
     }
   }
 
   async function openLivePuzzle(puzzleId: string) {
+    setOpening(true);
     try {
       const row = await api<{ id: string; version: number; status: string; title: string; doc: unknown }>(
         `/api/puzzles/id/${puzzleId}/live`,
@@ -180,16 +182,19 @@ export function PuzzlesStudioPage() {
         setOpenError('This puzzle has no grid to edit.');
         return;
       }
+      if (!await openPublishedDraft(doc)) return;
       setOpenError('');
       setNextPublishVersion(row.version + 1);
       setEditingLive(row.status === 'LIVE');
-      loadOnGrid(doc, null, 1);
     } catch (e) {
       setOpenError(e instanceof Error ? e.message : 'Failed to open puzzle');
+    } finally {
+      setOpening(false);
     }
   }
 
   async function openPublished(versionId: string) {
+    setOpening(true);
     try {
       const row = await api<{ id: string; version: number; status: string; title: string; doc: unknown }>(
         `/api/puzzles/versions/${versionId}`,
@@ -199,12 +204,14 @@ export function PuzzlesStudioPage() {
         setOpenError('This published puzzle has no grid to edit.');
         return;
       }
+      if (!await openPublishedDraft(doc)) return;
       setOpenError('');
       setNextPublishVersion(row.version + 1);
       setEditingLive(row.status === 'LIVE');
-      loadOnGrid(doc, null, 1);
     } catch (e) {
       setOpenError(e instanceof Error ? e.message : 'Failed to open puzzle');
+    } finally {
+      setOpening(false);
     }
   }
 
@@ -226,13 +233,69 @@ export function PuzzlesStudioPage() {
     void openPublished(openVersionId);
   }, [openVersionId]);
 
-  function newDraft() {
-    dispatch({ type: 'replace', doc: emptyDoc(), draftId: null, version: 1 });
-    setPublishVersion(null);
-    setNextPublishVersion(null);
-    setEditingLive(false);
-    clearConflict();
+  async function confirmReplacing(rows: DraftSlot[]) {
+    if (rows.length > 1) {
+      setOpenError('Choose which draft to keep in the Puzzle Library before starting a different puzzle.');
+      return false;
+    }
+    if (rows[0] && !await askConfirm(
+      `Replace “${rows[0].title}” when you first save the new draft?`,
+      { title: 'Replace current draft', confirmLabel: 'Start new', tone: 'danger' },
+    )) return false;
+    setReplacedDraft(rows[0] ?? null);
+    return true;
   }
+
+  async function openPublishedDraft(doc: StudioDoc) {
+    const rows = await api<DraftSlot[]>('/api/puzzle-drafts');
+    const existing = rows.find((row) => row.puzzleKey === doc.id);
+    if (existing) {
+      const row = await api<{ id: string; version: number; doc: StudioDoc }>(`/api/puzzle-drafts/${existing.id}`);
+      setReplacedDraft(null);
+      loadOnGrid(row.doc, row.id, row.version);
+      return true;
+    }
+    if (!await confirmReplacing(rows)) return false;
+    loadOnGrid(doc, null, 1);
+    return true;
+  }
+
+  async function newDraft(title?: string, resumeIfCancelled = false) {
+    setOpening(true);
+    setOpenError('');
+    try {
+      const rows = await api<DraftSlot[]>('/api/puzzle-drafts');
+      if (!await confirmReplacing(rows)) {
+        if (resumeIfCancelled && rows[0]) await openDraft(rows[0].id);
+        return;
+      }
+      loadedVersion.current = 1;
+      dispatch({ type: 'replace', doc: emptyDoc(title), draftId: null, version: 1 });
+      setPublishVersion(null);
+      setNextPublishVersion(null);
+      setEditingLive(false);
+      clearConflict();
+    } catch (cause: unknown) {
+      setOpenError(cause instanceof Error ? cause.message : 'Could not check the current draft');
+    } finally {
+      setOpening(false);
+    }
+  }
+
+  useEffect(() => {
+    if (editPuzzle || openDraftId || openVersionId || startedNew.current) return;
+    startedNew.current = true;
+    if (startNew) {
+      void newDraft(seedTitle || undefined, true);
+      return;
+    }
+    void api<DraftSlot[]>('/api/puzzle-drafts')
+      .then((rows) => rows[0] ? openDraft(rows[0].id) : setOpening(false))
+      .catch((cause: unknown) => {
+        setOpening(false);
+        setOpenError(cause instanceof Error ? cause.message : 'Could not load your current draft');
+      });
+  }, [editPuzzle, openDraftId, openVersionId, startNew, seedTitle]);
 
   function reloadTheirs() {
     if (!conflict?.serverDoc) return;
@@ -371,7 +434,7 @@ export function PuzzlesStudioPage() {
     'studio-toolbar-button';
 
   return (
-    <div className="puzzle-studio mx-auto flex max-w-6xl flex-col gap-6 pb-12">
+    <div className="puzzle-studio mx-auto flex max-w-[86rem] flex-col gap-6 pb-12">
       <div className="studio-header flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           {returnTo ? (
@@ -386,23 +449,24 @@ export function PuzzlesStudioPage() {
           <span className="studio-eyebrow">PUZZLE STUDIO / SCRIPTURE CROSSWORD</span>
           <input
             aria-label="Puzzle title"
+            disabled={opening}
             value={state.present.title}
             onChange={(e) => dispatch({ type: 'setMeta', title: e.target.value })}
             placeholder="Untitled puzzle"
             className="w-full bg-transparent text-2xl font-semibold tracking-tight text-navy rounded-lg focus:ring-2 focus:ring-teal/30 outline-none placeholder:text-muted"
           />
           <p className="m-0 text-[11px] text-muted" role="status">
-            {saveStatus === 'error'
+            {opening ? 'Opening draft…' : saveStatus === 'error'
               ? saveError || 'Offline'
               : saveStatus === 'saving'
                 ? 'Saving…'
-                : saveStatus === 'saved'
+                : saveStatus === 'saved' || (state.draftId && state.version === loadedVersion.current)
                   ? 'Saved'
                   : 'Draft'}
           </p>
         </div>
         <div className="studio-toolbar flex flex-wrap items-center gap-1">
-          <button type="button" className={quietButton} onClick={newDraft}>
+          <button type="button" className={quietButton} disabled={opening} onClick={() => void newDraft()}>
             New
           </button>
           <button
@@ -430,7 +494,10 @@ export function PuzzlesStudioPage() {
           >
             Library
           </button>
-          <Button size="sm" type="button" disabled={publishBusy || scriptureMissing} title={scriptureMissing ? 'Every word needs a scripture reference' : undefined} onClick={() => void publishStaged()}>
+          <button type="button" className={quietButton} disabled={opening || draftsPaused || state.version <= loadedVersion.current || saveStatus === 'saving'} onClick={saveNow}>
+            Save draft
+          </button>
+          <Button size="sm" type="button" disabled={opening || publishBusy || scriptureMissing} title={scriptureMissing ? 'Every word needs a scripture reference' : undefined} onClick={() => void publishStaged()}>
             {publishBusy ? 'Publishing…' : 'Publish'}
           </Button>
         </div>

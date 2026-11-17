@@ -222,6 +222,14 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.getByLabelText('Puzzle title')).toBeTruthy();
   });
 
+  it('opens the standalone Objective Quiz library from the sidebar', async () => {
+    setToken('test-token');
+    renderApp('/app/dashboard');
+    await userEvent.click(screen.getByRole('button', { name: 'Objective Quiz' }));
+    expect(await screen.findByRole('heading', { name: 'Objective Quiz Library' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create quiz' })).toBeTruthy();
+  });
+
   it('renders public landing page at / with discipleship pillars, mission, and barcode onboarding pass', async () => {
     renderApp('/');
 

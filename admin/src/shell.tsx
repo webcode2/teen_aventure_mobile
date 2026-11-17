@@ -25,6 +25,7 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
     label: 'Publish',
     items: [
       ['quests', 'Quest'],
+      ['quizzes', 'Objective Quiz'],
       ['puzzles', 'Puzzle Studio'],
       ['matching', 'Match Studio'],
     ],

@@ -6,6 +6,7 @@ export const TABS = [
   "churches",
   "groups",
   "quests",
+  "quizzes",
   "puzzles",
   "matching",
   "content-mobile",

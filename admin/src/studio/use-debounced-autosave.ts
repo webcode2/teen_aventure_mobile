@@ -20,6 +20,8 @@ const OFFLINE_BACKOFF_MS = 20_000;
  */
 export function useDebouncedDraftAutosave(opts: {
   draftId: string | null;
+  replace?: { id: string; version: number } | null;
+  loadedVersion?: number;
   version: number;
   doc: StudioDoc;
   enabled?: boolean;
@@ -33,6 +35,8 @@ export function useDebouncedDraftAutosave(opts: {
 }) {
   const {
     draftId,
+    replace,
+    loadedVersion = 1,
     version,
     doc,
     enabled = true,
@@ -46,9 +50,10 @@ export function useDebouncedDraftAutosave(opts: {
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<DraftConflict | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latest = useRef({ draftId, version, doc, onDraftId, onConflict, onDroppedEmpty });
-  latest.current = { draftId, version, doc, onDraftId, onConflict, onDroppedEmpty };
-  const lastSavedVersion = useRef<number | null>(null);
+  const latest = useRef({ draftId, replace, loadedVersion, version, doc, onDraftId, onConflict, onDroppedEmpty });
+  latest.current = { draftId, replace, loadedVersion, version, doc, onDraftId, onConflict, onDroppedEmpty };
+  const lastSaved = useRef<{ key: string; version: number } | null>(null);
+  const blockedKey = useRef<string | null>(null);
   const backoffUntil = useRef(0);
   const inFlight = useRef(false);
   const enabledRef = useRef(enabled);
@@ -56,20 +61,22 @@ export function useDebouncedDraftAutosave(opts: {
   const hold = useRef(holdRef);
   hold.current = holdRef;
   const savingHeld = () => !enabledRef.current || Boolean(hold.current?.current);
-  const scheduleSave = useRef<() => void>(() => {});
+  const scheduleSave = useRef<(immediate?: boolean) => void>(() => {});
 
-  scheduleSave.current = () => {
+  scheduleSave.current = (immediate = false) => {
     if (!enabled || hold.current?.current) return;
     const cur = latest.current;
-    if (lastSavedVersion.current === cur.version && cur.draftId) return;
+    if (cur.version <= cur.loadedVersion || blockedKey.current === cur.doc.id) return;
+    if (lastSaved.current?.key === cur.doc.id && lastSaved.current.version === cur.version) return;
     if (inFlight.current) return;
 
     if (timer.current) clearTimeout(timer.current);
-    const wait = Math.max(debounceMs, backoffUntil.current - Date.now());
+    const wait = immediate ? 0 : Math.max(debounceMs, backoffUntil.current - Date.now());
     timer.current = setTimeout(async () => {
       const snap = latest.current;
       if (savingHeld()) return;
-      if (lastSavedVersion.current === snap.version && snap.draftId) return;
+      if (snap.version <= snap.loadedVersion || blockedKey.current === snap.doc.id) return;
+      if (lastSaved.current?.key === snap.doc.id && lastSaved.current.version === snap.version) return;
       if (inFlight.current) return;
 
       inFlight.current = true;
@@ -83,12 +90,14 @@ export function useDebouncedDraftAutosave(opts: {
           method: 'PUT',
           body: JSON.stringify({
             id: snap.draftId ?? undefined,
+            replace: snap.draftId ? undefined : snap.replace ?? undefined,
             version: snap.version,
             title: savedDoc.title,
             doc: savedDoc,
           }),
         });
-        lastSavedVersion.current = snap.version;
+        lastSaved.current = { key: snap.doc.id, version: snap.version };
+        if (latest.current.doc.id !== snap.doc.id) return;
         backoffUntil.current = 0;
         if (savedDoc !== snap.doc) snap.onDroppedEmpty?.();
         if (!snap.draftId) snap.onDraftId?.(saved.id);
@@ -100,9 +109,16 @@ export function useDebouncedDraftAutosave(opts: {
         if (savingHeld()) return;
         if (e instanceof ApiError && e.status === 409) {
           const body = (e.body ?? {}) as {
+            code?: string;
             serverVersion?: number;
             doc?: unknown;
           };
+          if (body.code === 'ACTIVE_DRAFT_EXISTS') {
+            blockedKey.current = snap.doc.id;
+            setStatus('error');
+            setError(e.message);
+            return;
+          }
           const next: DraftConflict = {
             serverVersion: body.serverVersion ?? snap.version,
             serverDoc: body.doc,
@@ -123,7 +139,7 @@ export function useDebouncedDraftAutosave(opts: {
         if (savingHeld()) return;
         // Edits that landed during the PUT — schedule one more quiet pass.
         const again = latest.current;
-        if (lastSavedVersion.current !== again.version || !again.draftId) {
+        if (lastSaved.current?.key !== again.doc.id || lastSaved.current.version !== again.version) {
           scheduleSave.current();
         }
       }
@@ -146,5 +162,5 @@ export function useDebouncedDraftAutosave(opts: {
     if (status === 'conflict') setStatus('idle');
   }
 
-  return { status, error, conflict, clearConflict };
+  return { status, error, conflict, clearConflict, saveNow: () => scheduleSave.current(true) };
 }
