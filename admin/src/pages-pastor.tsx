@@ -497,7 +497,7 @@ export function PastorPortalPage({
   const [classActivityData, setClassActivityData] = useState<ClassActivity | null>(null);
   const [loadingActivity, setLoadingActivity] = useState(false);
 
-  // Objective Quiz activate / class standing (teachers + pastors)
+  // Quiz activate / class standing (teachers + pastors)
   type QuestWeekOpt = { id: string; weekNumber: number; title: string };
   type ClassStandingRow = {
     childId?: string;
@@ -870,8 +870,8 @@ export function PastorPortalPage({
       });
       setFeedbackMsg(
         isActive
-          ? `Objective Quiz activated for ${selectedClassForQuiz.name}.`
-          : `Objective Quiz deactivated for ${selectedClassForQuiz.name}.`,
+          ? `Quiz activated for ${selectedClassForQuiz.name}.`
+          : `Quiz deactivated for ${selectedClassForQuiz.name}.`,
       );
       const active = await api<
         Array<{ questId: string; isActive: boolean; quest?: { weekNumber: number; title: string } }>
@@ -1691,7 +1691,7 @@ export function PastorPortalPage({
                         type="button"
                         onClick={() => void openClassQuiz(c)}
                         className="p-2 rounded-xl bg-surface hover:bg-surface-2 border border-border/80 text-[11px] font-bold text-navy text-center transition-colors cursor-pointer shadow-2xs"
-                        title="Activate or deactivate this week’s Objective Quiz for the class"
+                        title="Activate or deactivate this week’s Quiz for the class"
                       >
                         Quiz
                       </button>
@@ -2461,8 +2461,8 @@ export function PastorPortalPage({
       <Dialog
         open={selectedClassForQuiz !== null}
         onClose={() => setSelectedClassForQuiz(null)}
-        title={`Objective Quiz: ${selectedClassForQuiz?.name || ''}`}
-        subtitle="Activate for this class so explorers can take the weekly Objective Quiz."
+        title={`Quiz: ${selectedClassForQuiz?.name || ''}`}
+        subtitle="Activate for this class so explorers can take the weekly Quiz."
       >
         <div className="flex flex-col gap-4 text-xs">
           {loadingQuiz ? (
@@ -2494,7 +2494,7 @@ export function PastorPortalPage({
                           : a.questId,
                       )
                       .join(', ')}`
-                  : 'No Objective Quiz is active for this class right now.'}
+                  : 'No Quiz is active for this class right now.'}
               </div>
               <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-border/60">
                 <Button

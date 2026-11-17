@@ -14,7 +14,7 @@ const TAB_TITLES: Record<Tab, string> = {
   groups: 'Groups',
   notifications: 'Notifications',
   quests: 'Quest',
-  quizzes: 'Objective Quiz',
+  quizzes: 'Quiz',
   puzzles: 'Puzzle Studio',
   matching: 'Match Studio',
   scoring: 'Quest points',

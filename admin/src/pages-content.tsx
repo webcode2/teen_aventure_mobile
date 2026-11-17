@@ -63,6 +63,7 @@ type QuestDraft = {
   form: QuestFormState;
   videos: QuestVideo[];
   questions: ObjQuestion[];
+  objectiveQuizId?: string | null;
   gameType: QuestGameType;
   puzzleId: string | null;
   puzzleTitle: string;
@@ -190,6 +191,7 @@ export function QuestEditorPage() {
 
   // 2. Objective Quiz — admin picks type per question (MULTIPLE_CHOICE | FILL_BLANK)
   const [questions, setQuestions] = useState<ObjQuestion[]>([]);
+  const [objectiveQuizId, setObjectiveQuizId] = useState<string | null | undefined>(undefined);
 
   // 3. Attach one LIVE game (puzzle crossword or match pairs)
   const [gameType, setGameType] = useState<QuestGameType>('PUZZLE');
@@ -338,8 +340,8 @@ export function QuestEditorPage() {
   useEffect(() => {
     if (!ready) return;
     const stepParam = searchParams.get('step');
-    if (stepParam !== 'puzzle' && stepParam !== 'game') return;
-    setStep(3);
+    if (stepParam !== 'quiz' && stepParam !== 'puzzle' && stepParam !== 'game') return;
+    setStep(stepParam === 'quiz' ? 2 : 3);
     const next = new URLSearchParams(searchParams);
     next.delete('step');
     setSearchParams(next, { replace: true });
@@ -352,6 +354,7 @@ export function QuestEditorPage() {
   function applyDraft(stored: QuestDraft) {
     setForm(stored.form);
     setVideos(stored.videos);
+    setObjectiveQuizId(stored.objectiveQuizId);
     setQuestions(stored.questions.length ? stored.questions.map((q) => normalizeQuestion(q)) : [blankQuestion()]);
     setGameType(stored.gameType === 'MATCHING' ? 'MATCHING' : 'PUZZLE');
     setPuzzleId(stored.puzzleId);
@@ -366,6 +369,7 @@ export function QuestEditorPage() {
   useEffect(() => {
     let alive = true;
     setReady(false);
+    setObjectiveQuizId(undefined);
     setStep(0);
     setDraftAt(null);
     setDraftNote('');
@@ -423,6 +427,7 @@ export function QuestEditorPage() {
       form,
       videos,
       questions,
+      objectiveQuizId,
       gameType,
       puzzleId,
       puzzleTitle,
@@ -440,6 +445,7 @@ export function QuestEditorPage() {
       form,
       videos,
       questions,
+      objectiveQuizId,
       gameType,
       puzzleId,
       puzzleTitle,
@@ -455,7 +461,7 @@ export function QuestEditorPage() {
       setDraftNote('Draft saved');
     }, 400);
     return () => window.clearTimeout(handle);
-  }, [ready, draftKey, step, form, videos, questions, gameType, puzzleId, puzzleTitle, matchingId, matchingTitle]);
+  }, [ready, draftKey, step, form, videos, questions, objectiveQuizId, gameType, puzzleId, puzzleTitle, matchingId, matchingTitle]);
 
   useEffect(() => {
     function flush() {
@@ -491,6 +497,7 @@ export function QuestEditorPage() {
         declarationText?: string;
         videos?: QuestVideo[];
         objectiveQuiz?: unknown;
+        objectiveQuizId?: string | null;
         gameType?: QuestGameType | null;
         puzzleId?: string | null;
         matchingId?: string | null;
@@ -532,6 +539,7 @@ export function QuestEditorPage() {
       }
 
       // Objective Quiz
+      setObjectiveQuizId(week.objectiveQuizId);
       const objs = Array.isArray(week.objectiveQuiz) ? week.objectiveQuiz : [];
       setQuestions(
         objs.length
@@ -595,6 +603,7 @@ export function QuestEditorPage() {
     });
     setVideos(defaultVideosForWeek(nextNum));
     setQuestions([blankQuestion()]);
+    setObjectiveQuizId(undefined);
     setGameType('PUZZLE');
     setPuzzleId(null);
     setPuzzleTitle('');
@@ -667,6 +676,7 @@ export function QuestEditorPage() {
           declarationText: form.declarationText.trim(),
           videos: cleanVideos,
           objectiveQuiz,
+          objectiveQuizId,
           gameType,
           puzzleId: gameType === 'PUZZLE' ? puzzleId : null,
           matchingId: gameType === 'MATCHING' ? matchingId : null,
@@ -885,7 +895,7 @@ export function QuestEditorPage() {
               id="section-quiz"
               className={step === 2 ? 'flex flex-col gap-5' : 'hidden'}
             >
-              {step === 2 ? <QuestQuizPicker onPick={setQuestions} hasQuestions={questions.some((q) => q.question.trim())} /> : null}
+              {step === 2 ? <QuestQuizPicker onPick={(items, id) => { setQuestions(items); setObjectiveQuizId(id); }} hasQuestions={questions.some((q) => q.question.trim())} /> : null}
               <ObjectiveQuizQuestions questions={questions} setQuestions={setQuestions} />
             </section>
 
@@ -1128,7 +1138,7 @@ export function QuestEditorPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-border/40">
-                  <span className="text-muted">1 Objective Quiz</span>
+                  <span className="text-muted">1 Quiz</span>
                   <span className="font-bold text-navy">
                     {questions.filter((q) => q.question.trim()).length} / {questions.length} questions
                   </span>

@@ -225,8 +225,8 @@ describe('Teen Bible Adventures Admin', () => {
   it('opens the standalone Objective Quiz library from the sidebar', async () => {
     setToken('test-token');
     renderApp('/app/dashboard');
-    await userEvent.click(screen.getByRole('button', { name: 'Objective Quiz' }));
-    expect(await screen.findByRole('heading', { name: 'Objective Quiz Library' })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Quiz' }));
+    expect(await screen.findByRole('heading', { name: 'Quiz library' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create quiz' })).toBeTruthy();
   });
 
