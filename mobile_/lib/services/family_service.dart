@@ -120,6 +120,14 @@ class FamilyService {
     }
   }
 
+  Future<void> removeGuardianRole(String userId) async {
+    try {
+      await _apiClient.dio.delete('/api/families/guardians/$userId', queryParameters: _familyQuery);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   /// Pass both [email] and [password] for an independent teen login; under-15s need a [pin].
   Future<Map<String, dynamic>> addChild({
     required String name,

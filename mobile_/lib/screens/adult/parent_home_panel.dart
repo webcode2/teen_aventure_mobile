@@ -393,6 +393,27 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
   }
 
   /// Removes an adult (by account) or a teen who joined with their own account.
+  Future<void> _removeGuardianRole(String name, String userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Remove guardian role for $name?'),
+        content: const Text('They will stay in the family as an explorer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove guardian role')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await context.read<FamilyService>().removeGuardianRole(userId);
+      if (mounted) await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
+    }
+  }
+
   Future<void> _removeMember(String name, {String? userId, String? childId}) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -692,9 +713,16 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     }
 
     final familyName = _family?['name'] as String? ?? 'Your family';
-    final guardians = (_family?['guardians'] as List?)?.whereType<Map>() ?? const [];
+    final adults = (_family?['guardians'] as List?)?.whereType<Map>() ?? const [];
+    final guardians = adults.where((adult) => adult['relation'] != 'Member').toList();
+    final guardianIds = guardians.map((guardian) => guardian['userId']).whereType<String>().toSet();
     final canManage = _family?['deletionStage'] == null;
-    final kids = _children;
+    final kids = _children.where((child) =>
+        child['isAdult'] != true || !guardianIds.contains(child['transitionedToUserId'])).toList();
+    final explorerUserIds = kids.map((child) => child['transitionedToUserId']).whereType<String>().toSet();
+    final otherAdults = adults.where((adult) =>
+        adult['relation'] == 'Member' && !explorerUserIds.contains(adult['userId'])).toList();
+    final explorerCount = kids.length + otherAdults.length;
     final userId = context.watch<AuthSession>().userId;
     final ownsFamily = userId != null && _family?['ownerUserId'] == userId;
     final canAddAdmin = canManage && (ownsFamily || guardians.any(
@@ -706,7 +734,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
         title: ownsFamily ? 'My family' : familyName,
         addExplorer: canManage ? _openAddExplorer : null,
         inviteGuardian: canAddAdmin ? _inviteGuardian : null,
-        addGuardian: canAddAdmin ? () => _addGuardian(guardians) : null,
+        addGuardian: canAddAdmin ? () => _addGuardian(adults) : null,
         updateFamily: canManage ? _editFamily : null,
         allGroups: _openAllGroups,
       );
@@ -722,7 +750,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _FamilyCircleStats(
-          explorers: kids.where((kid) => kid['isAdult'] != true).length,
+          explorers: explorerCount,
           guardians: guardians.length,
           points: points,
           groupJar: _groupJar?.groupJarTotal,
@@ -767,12 +795,13 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
                             : null,
                         onRemove: canManage &&
                                 canAddAdmin &&
+                                user['id'] is String &&
                                 user['id'] != userId &&
                                 guardian['relation'] != 'Owner' &&
                                 (ownsFamily || guardian['relation'] != 'Admin')
-                            ? () => _removeMember(
+                            ? () => _removeGuardianRole(
                                   user['name'] as String? ?? 'this adult',
-                                  userId: user['id'] as String?,
+                                  user['id'] as String,
                                 )
                             : null,
                       ),
@@ -805,7 +834,7 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               ),
             ),
             Text(
-              '${kids.length}',
+              '$explorerCount',
               style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.textMuted),
             ),
           ],
@@ -816,10 +845,10 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
           style: TextStyle(color: AppColors.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 12),
-        if (kids.isEmpty)
+        if (explorerCount == 0)
           const _Surface(
             child: Text(
-              'Add a child to start cheering them on.',
+              'Add an explorer to start cheering them on.',
               style: TextStyle(color: AppColors.textSecondary),
             ),
           )
@@ -841,13 +870,29 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
               onRequestDeletion: ownsFamily && kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
                   ? () => _changeDependentDeletion(kids[i])
                   : null,
-              // Adults are removed from the Guardians list; joined teens from here.
-              onRemove: canManage && canAddAdmin && kids[i]['selfOwned'] == true && kids[i]['isAdult'] != true
-                  ? () => _removeMember(kids[i]['name'] as String? ?? 'this teen', childId: kids[i]['id'] as String?)
+              onRemove: canManage && canAddAdmin && kids[i]['selfOwned'] == true &&
+                      kids[i]['transitionedToUserId'] != userId
+                  ? () => _removeMember(kids[i]['name'] as String? ?? 'this explorer', childId: kids[i]['id'] as String?)
                   : null,
             ),
             const SizedBox(height: 12),
           ],
+        for (final adult in otherAdults)
+          if (adult['user'] case final Map user)
+            ListTile(
+              title: Text(user['name'] as String? ?? 'Explorer'),
+              subtitle: const Text('Adult'),
+              trailing: canAddAdmin && adult['userId'] is String && adult['userId'] != userId
+                  ? IconButton(
+                      tooltip: 'Remove ${user['name'] ?? 'explorer'} from family',
+                      onPressed: () => _removeMember(
+                        user['name'] as String? ?? 'this adult',
+                        userId: adult['userId'] as String,
+                      ),
+                      icon: const Icon(Icons.person_remove_outlined),
+                    )
+                  : null,
+            ),
         if (ownsFamily)
           for (final child in pending.whereType<Map>())
             ListTile(
@@ -1372,7 +1417,7 @@ class _GuardianRow extends StatelessWidget {
           ),
           if (onRemove != null)
             IconButton(
-              tooltip: 'Remove $name from family',
+              tooltip: 'Remove guardian role for $name',
               onPressed: onRemove,
               icon: const Icon(Icons.person_remove_outlined, color: AppColors.textMuted),
             ),

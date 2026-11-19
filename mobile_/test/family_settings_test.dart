@@ -30,13 +30,15 @@ void main() {
       ],
       'guardians': <Map<String, dynamic>>[
         {
-          'relation': 'Guardian',
-          'user': {'name': 'Existing Adult', 'email': 'existing@example.com'},
+          'relation': 'Member',
+          'userId': 'adult-1',
+          'user': {'id': 'adult-1', 'name': 'Existing Adult', 'email': 'existing@example.com'},
         },
       ],
     };
     String? savedPin;
     String? guardianEmail;
+    bool guardianRoleRemoved = false;
     Map<String, dynamic>? createdExplorer;
     Map<String, dynamic>? sentInvite;
     final adultRequests = <Map<String, dynamic>>[];
@@ -65,6 +67,9 @@ void main() {
                 'user': {'name': 'Second Adult', 'email': guardianEmail},
               });
             }
+          case 'DELETE /api/v1/families/guardians/adult-1':
+            (family['guardians'] as List).first['relation'] = 'Member';
+            guardianRoleRemoved = true;
           case 'POST /api/v1/families/children':
             final body = Map<String, dynamic>.from(request.data as Map);
             if (body['kind'] == 'ADULT_INVITE' || body['kind'] == 'ADULT_CREATE') {
@@ -132,6 +137,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    expect(find.byTooltip('Remove guardian role for Existing Adult'), findsNothing);
     await menu('Add guardian');
     final dialog = find.byType(AlertDialog);
     final add = find.descendant(of: dialog, matching: find.widgetWithText(FilledButton, 'Add guardian'));
@@ -253,6 +259,16 @@ void main() {
     expect(addTeen.onPressed, isNull);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
+    final removeRole = find.byTooltip('Remove guardian role for Existing Adult');
+    await tester.ensureVisible(removeRole);
+    await tester.tap(removeRole);
+    await tester.pumpAndSettle();
+    expect(find.text('They will stay in the family as an explorer.'), findsOneWidget);
+    await tester.tap(find.text('Remove guardian role'));
+    await tester.pumpAndSettle();
+    expect(guardianRoleRemoved, isTrue);
+    expect((family['guardians'] as List).first['relation'], 'Member');
+    expect(find.byTooltip('Remove guardian role for Existing Adult'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
