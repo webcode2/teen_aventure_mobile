@@ -88,6 +88,38 @@ class FamilyService {
     }
   }
 
+  Future<void> inviteAdultExplorer(String email) => _submitAdultExplorer(
+        {'kind': 'ADULT_INVITE', 'email': email.trim().toLowerCase()},
+        202,
+        'PENDING',
+      );
+
+  Future<void> createAdultExplorer({
+    required String email,
+    required String name,
+    required int birthYear,
+  }) => _submitAdultExplorer(
+        {'kind': 'ADULT_CREATE', 'email': email.trim().toLowerCase(), 'name': name, 'birthYear': birthYear},
+        201,
+        'ADDED',
+      );
+
+  Future<void> _submitAdultExplorer(Map<String, dynamic> data, int statusCode, String status) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/api/families/children',
+        queryParameters: _familyQuery,
+        data: data,
+      );
+      if (response.statusCode != statusCode || response.data is! Map ||
+          response.data['status'] != status) {
+        throw ApiException(statusCode: 502, message: 'Could not confirm the adult explorer request.');
+      }
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   /// Pass both [email] and [password] for an independent teen login; under-15s need a [pin].
   Future<Map<String, dynamic>> addChild({
     required String name,

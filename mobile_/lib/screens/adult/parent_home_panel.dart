@@ -1,7 +1,6 @@
 
 import 'package:flutter/cupertino.dart' show CupertinoPicker;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/auth_session.dart';
 import '../../models/api_models.dart';
@@ -121,14 +120,43 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
     if (_family != null || !session.canCreateGroups || !canCreateOwnedFamily(session.familyId)) return;
     final name = defaultFamilyName(session.displayName);
     await context.read<FamilyService>().createFamily(name);
-    await session.refreshProfile();
+    await session.refreshProfile(skipCache: true);
   }
 
   Future<void> _openAddExplorer() async {
-    final added = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => AddExplorerScreen(beforeAdd: _ensureOwnedFamily)),
+    final adult = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person_add_alt_1),
+              title: const Text('Add youth explorer'),
+              subtitle: const Text('Ages 0–19'),
+              onTap: () => Navigator.pop(sheetContext, false),
+            ),
+            ListTile(
+              leading: const Icon(Icons.mail_outline),
+              title: const Text('Add adult explorer'),
+              subtitle: const Text('Ages 20 and over'),
+              onTap: () => Navigator.pop(sheetContext, true),
+            ),
+          ],
+        ),
+      ),
     );
+    if (adult == null || !mounted) return;
+    final added = adult
+        ? await showAddAdultExplorerDialog(
+            context,
+            familyName: _family?['name'] as String?,
+            beforeAdd: _ensureOwnedFamily,
+          )
+        : await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => AddExplorerScreen(beforeAdd: _ensureOwnedFamily)),
+          );
     if (added != true || !mounted) return;
     await context.read<AuthSession>().refreshProfile();
     await _load();

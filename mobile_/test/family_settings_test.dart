@@ -39,10 +39,12 @@ void main() {
     String? guardianEmail;
     Map<String, dynamic>? createdExplorer;
     Map<String, dynamic>? sentInvite;
+    final adultRequests = <Map<String, dynamic>>[];
     api.dio.interceptors.add(InterceptorsWrapper(
       onRequest: (request, handler) {
         final route = '${request.method} ${request.path}';
         Object data = <String, dynamic>{};
+        var statusCode = 200;
         switch (route) {
           case 'GET /api/v1/families/my':
             data = Map<String, dynamic>.of(family);
@@ -64,6 +66,14 @@ void main() {
               });
             }
           case 'POST /api/v1/families/children':
+            final body = Map<String, dynamic>.from(request.data as Map);
+            if (body['kind'] == 'ADULT_INVITE' || body['kind'] == 'ADULT_CREATE') {
+              adultRequests.add(body);
+              final create = body['kind'] == 'ADULT_CREATE';
+              statusCode = create ? 201 : 202;
+              data = {'status': create ? 'ADDED' : 'PENDING'};
+              break;
+            }
             createdExplorer = Map<String, dynamic>.from(request.data as Map);
             (family['children'] as List).add({
               'id': 'teen',
@@ -79,7 +89,7 @@ void main() {
             savedPin = (request.data as Map)['pin'] as String;
         }
         handler.resolve(
-          Response(requestOptions: request, data: data, statusCode: 200),
+          Response(requestOptions: request, data: data, statusCode: statusCode),
           true,
         );
       },
@@ -160,6 +170,8 @@ void main() {
 
     // Add explorer opens a full screen.
     await menu('Add explorer');
+    await tester.tap(find.text('Add youth explorer'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Maya');
     await tester.enterText(find.byKey(const ValueKey('explorer-age')), '16');
     await tester.pumpAndSettle();
@@ -178,6 +190,8 @@ void main() {
 
     // Under-15s are saved with the PIN the creator typed.
     await menu('Add explorer');
+    await tester.tap(find.text('Add youth explorer'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('explorer-name')), 'Tobi');
     await tester.enterText(find.byKey(const ValueKey('explorer-age')), '7');
     await tester.pump();
@@ -187,8 +201,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(createdExplorer, containsPair('pin', '1357'));
 
+    Future<void> adultOption(String label) async {
+      await menu('Add explorer');
+      await tester.tap(find.text('Add adult explorer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    await adultOption('Create adult profile');
+    final year = DateTime.now().toUtc().year;
+    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), 'New Adult');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Birth year'), '${year - 19}');
+    final adultEmail = find.widgetWithText(TextFormField, 'Email');
+    await tester.enterText(adultEmail, 'new@example.com');
+    await tester.tap(find.text('Add adult explorer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adult explorers must be 20 or older'), findsOneWidget);
+    expect(adultRequests, isEmpty);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Birth year'), '${year - 20}');
+    await tester.tap(find.text('Add adult explorer'));
+    await tester.pumpAndSettle();
+    expect(adultRequests.single, {
+      'kind': 'ADULT_CREATE', 'email': 'new@example.com', 'name': 'New Adult', 'birthYear': year - 20,
+    });
+    expect(find.text('Adult explorer added. Password setup is pending.'), findsOneWidget);
+
+    await adultOption('Invite existing account');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'existing@example.com');
+    await tester.tap(find.text('Send invite'));
+    await tester.pumpAndSettle();
+    expect(adultRequests.last, {'kind': 'ADULT_INVITE', 'email': 'existing@example.com'});
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Adult explorer invitation pending acceptance.'), findsOneWidget);
+
     // Invite guardian sends a family invite for this family to that account's email.
-    await menu('Invite guardian');
+    await menu('Invite to family');
     await tester.enterText(find.byKey(const ValueKey('invite-guardian-email')), 'auntie@example.com');
     await tester.tap(find.text('Send invite'));
     await tester.pumpAndSettle();

@@ -148,7 +148,7 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.cream,
-        title: const Text('Add explorer', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text('Add youth explorer', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: SafeArea(
         child: Form(
@@ -230,7 +230,7 @@ class _AddExplorerScreenState extends State<AddExplorerScreen> {
                   backgroundColor: AppColors.navy,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(_busy ? 'Adding…' : 'Add explorer'),
+                child: Text(_busy ? 'Adding…' : 'Add youth explorer'),
               ),
             ],
           ),
