@@ -6,7 +6,9 @@
   "description": "Shared TBA puzzle contracts + pure lib/puzzles (TS ↔ Dart)",
   "main": "./dist/lib/puzzles/index.js",
   "types": "./dist/lib/puzzles/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/lib/puzzles/index.d.ts",
@@ -35,6 +37,6 @@
     "@types/node": "^22.15.21",
     "tsx": "^4.23.12",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.12"
   }
 }
