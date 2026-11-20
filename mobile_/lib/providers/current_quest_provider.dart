@@ -28,7 +28,7 @@ class CurrentQuestProvider extends ChangeNotifier {
         _online = online ?? _deviceOnline,
         _fetchOverride = fetch,
         _completeOverride = complete,
-        _loadWeek = loadWeek ?? (content == null ? null : content.getTeenQuestWeek),
+        _loadWeek = loadWeek ?? content?.getTeenQuestWeek,
         _loadWeekProgressOverride = loadWeekProgress,
         _markVideoOverride = markVideo;
 

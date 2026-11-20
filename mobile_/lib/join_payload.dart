@@ -73,8 +73,3 @@ String membershipApiKind(String kind) {
   if (upper == 'CUSTOM') return 'CLASS';
   return upper;
 }
-
-bool isChurchInviteKind(String? kind) {
-  final value = kind?.toUpperCase();
-  return value == 'CHURCH' || value == 'CLASS';
-}

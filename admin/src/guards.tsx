@@ -36,13 +36,6 @@ export function RequireStaff({ children }: { children: ReactNode }) {
   return children;
 }
 
-export function RequireGuest({ children }: { children: ReactNode }) {
-  const { token, ready } = useStaffSession();
-  if (!ready) return <p role="status">Checking your session…</p>;
-  if (token) return <Navigate to="/app/dashboard" replace />;
-  return children;
-}
-
 export function LegacyHashRedirect() {
   const navigate = useNavigate();
 

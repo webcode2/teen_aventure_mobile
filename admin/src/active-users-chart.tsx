@@ -10,15 +10,6 @@ export type ActiveUserWindows = {
   year: number;
 };
 
-export const EMPTY_ACTIVE_USERS: ActiveUserWindows = {
-  day: 0,
-  week: 0,
-  month: 0,
-  threeMonths: 0,
-  sixMonths: 0,
-  year: 0,
-};
-
 type ActivityPeriod = 'week' | 'month' | 'quarter' | 'year';
 type Trend = { buckets: Array<{ start: string; count: number }> };
 const PERIODS = { week: 'Weekly', month: 'Monthly', quarter: 'Quarterly', year: 'Yearly' } as const;

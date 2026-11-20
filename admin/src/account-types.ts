@@ -55,11 +55,6 @@ export function isStaffAccount(input: AccountInput): boolean {
   return DASHBOARD_ROLES.has(input.platformRole);
 }
 
-/** App users: parents, teens, pastors, and church team (not dashboard admins). */
-export function isCommunityUser(input: AccountInput): boolean {
-  return !isStaffAccount(input);
-}
-
 export function isPastorAccount(input: AccountInput): boolean {
   return (input.churchRoles ?? []).some((r) => r.role === 'PASTOR');
 }

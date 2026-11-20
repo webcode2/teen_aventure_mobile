@@ -28,14 +28,6 @@ export function DashboardIcon() {
   );
 }
 
-export function PointsIcon() {
-  return (
-    <NavSvg>
-      <path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L6 21l2.3-7-6-4.6h7.6L12 2z" strokeLinecap="round" strokeLinejoin="round" />
-    </NavSvg>
-  );
-}
-
 export function ConsentIcon() {
   return (
     <NavSvg>

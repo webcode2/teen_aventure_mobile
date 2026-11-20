@@ -18,11 +18,6 @@ import { WordListEditor } from './studio/WordListEditor';
 import { PuzzleCanvas } from './studio/PuzzleCanvas';
 import { IssuesPanel } from './studio/IssuesPanel';
 
-/** Used by quest list helpers that still parse week from older puzzle titles. */
-export function weekTitle(weekNumber: number): string {
-  return `Week ${weekNumber}`;
-}
-
 export function parseWeekNumber(title: string): number | null {
   const m = /^Week\s+(\d+)\b/i.exec(title.trim()) || /^(\d+)$/.exec(title.trim());
   return m ? Number(m[1]) : null;
