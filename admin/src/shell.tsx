@@ -19,6 +19,7 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
       ['churches', 'Churches'],
       ['groups', 'Groups'],
       ['notifications', 'Notifications'],
+      ['staff', 'Staff'],
     ],
   },
   {
@@ -28,6 +29,7 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
       ['quizzes', 'Quiz'],
       ['puzzles', 'Puzzle Studio'],
       ['matching', 'Match Studio'],
+      ['scoring', 'Quest points'],
     ],
   },
   {
@@ -44,13 +46,6 @@ const GROUPS: Array<{ label: string; items: Array<[Tab, string]> }> = [
       ['reports', 'Safeguarding'],
       ['cheers', 'Student nudges'],
       ['deletions', 'Deletions'],
-    ],
-  },
-  {
-    label: 'Settings',
-    items: [
-      ['staff', 'Staff'],
-      ['scoring', 'Quest points'],
     ],
   },
   {

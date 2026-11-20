@@ -8,7 +8,6 @@ import '../../theme.dart';
 import 'widgets/grid_panel.dart';
 import 'widgets/clue_panel.dart';
 import 'widgets/custom_keyboard.dart';
-import 'widgets/verse_dialog.dart';
 import 'widgets/puzzle_status_cards.dart';
 import 'widgets/puzzle_win_dialog.dart';
 
@@ -221,14 +220,8 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   }
 
   Future<void> _onSolvedWord(GameController game) async {
-    if (game.newlySolvedWord == null) return;
-    final word = game.newlySolvedWord!;
+    if (!mounted || game.newlySolvedWord == null) return;
     game.clearNewlySolvedWord();
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) => VerseDialog(word: word),
-    );
     if (!mounted || !game.isPuzzleComplete) return;
 
     if (!_handledWin) {

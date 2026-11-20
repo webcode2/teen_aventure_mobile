@@ -121,14 +121,11 @@ class WeekQuestFlow {
       if (puzzleId == null || puzzleId.isEmpty) {
         game.markTechnicalIssue('This week has no game attached yet.');
       } else {
-        final samePuzzle = game.boundPuzzleId == puzzleId &&
-            game.puzzleScreenState == PuzzleScreenState.ready;
-        if (!samePuzzle) {
-          await game.loadLiveFromDatabase(
-            contentService: content,
-            puzzleId: puzzleId,
-          );
-        }
+        await game.loadLiveFromDatabase(
+          contentService: content,
+          puzzleId: puzzleId,
+          keepUnchangedBoard: true,
+        );
       }
     } catch (_) {}
 

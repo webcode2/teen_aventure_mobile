@@ -3323,12 +3323,15 @@ const QUEST_SCORE_META: Record<
   },
   PRAYER_DECLARATION: {
     label: 'Prayer declaration',
-    hint: 'Spoken week declaration',
+    hint: 'Claimable daily',
     tone: 'gold',
   },
 };
 
-const VIDEOS_PER_WEEK = 3;
+const SCORING_TABS = [
+  { id: 'awards', label: 'Award milestones' },
+  { id: 'ledger', label: 'Completion ledger' },
+] as const;
 const MAX_QUEST_AWARDS = 12;
 
 type QuestAward = { id: string; title: string; weekNumber: number; weeksExpected: number; criteria: string };
@@ -3350,6 +3353,7 @@ const SCORE_TONE: Record<'teal' | 'forest' | 'orange' | 'gold', string> = {
 };
 
 export function ScoringPage() {
+  const [activeTab, setActiveTab] = useState<(typeof SCORING_TABS)[number]['id']>('awards');
   const [rules, setRules] = useState<Record<string, number> | null>(null);
   const [awards, setAwards] = useState<QuestAward[] | null>(null);
   const [error, setError] = useState('');
@@ -3434,283 +3438,301 @@ export function ScoringPage() {
     points: rules[key] ?? QUEST_SCORE_FALLBACK[key],
     ...QUEST_SCORE_META[key],
   }));
-  const jarIfAllDone = questRules.reduce((sum, row) => {
-    const points = Number(row.points || 0);
-    return sum + (row.key === 'VIDEO_WATCH' ? points * VIDEOS_PER_WEEK : points);
-  }, 0);
   const sortedAwards = awards;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex justify-end">
-        <div className="flex items-center gap-2 rounded-full border border-border bg-navy-tint/60 px-3.5 py-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
-            Full week
-          </span>
-          <span className="font-mono text-lg font-extrabold tabular-nums text-navy leading-none">
-            {jarIfAllDone}
-          </span>
-          <span className="text-xs font-semibold text-teal">pts</span>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div role="tablist" aria-label="Quest points" className="flex gap-4 border-b border-border sm:gap-6">
+        {SCORING_TABS.map(({ id, label }, index) => (
+          <button
+            key={id}
+            id={`scoring-tab-${id}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === id}
+            aria-controls={`scoring-panel-${id}`}
+            tabIndex={activeTab === id ? 0 : -1}
+            className={`-mb-px min-h-11 cursor-pointer border-b-2 px-2 py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-teal ${
+              activeTab === id ? 'border-teal text-teal' : 'border-transparent text-muted hover:text-navy'
+            }`}
+            onClick={() => setActiveTab(id)}
+            onKeyDown={(event) => {
+              const tabIndex = ['ArrowLeft', 'ArrowRight'].includes(event.key) ? 1 - index
+                : event.key === 'Home' ? 0
+                : event.key === 'End' ? SCORING_TABS.length - 1
+                : -1;
+              if (tabIndex < 0) return;
+              event.preventDefault();
+              const nextTab = SCORING_TABS[tabIndex].id;
+              setActiveTab(nextTab);
+              document.getElementById(`scoring-tab-${nextTab}`)?.focus();
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      <form className="flex flex-col gap-3" onSubmit={saveAwards}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-extrabold tracking-tight text-navy">Award milestones</h2>
-              {awards ? (
-                <span className="rounded-full bg-teal-tint px-2 py-0.5 text-[10px] font-bold tabular-nums text-teal">
-                  {awards.length}/{MAX_QUEST_AWARDS}
-                </span>
-              ) : null}
+      <div role="tabpanel" id="scoring-panel-awards" aria-labelledby="scoring-tab-awards" hidden={activeTab !== 'awards'}>
+        <form className="flex flex-col gap-3" onSubmit={saveAwards}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-extrabold tracking-tight text-navy">Award milestones</h2>
+                {awards ? (
+                  <span className="rounded-full bg-teal-tint px-2 py-0.5 text-[10px] font-bold tabular-nums text-teal">
+                    {awards.length}/{MAX_QUEST_AWARDS}
+                  </span>
+                ) : null}
+              </div>
+              <p className="m-0 mt-0.5 text-xs text-muted">Weeks to finish this badge before the next one starts.</p>
             </div>
-            <p className="m-0 mt-0.5 text-xs text-muted">Weeks to finish this badge before the next one starts.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-xs font-bold text-navy transition-colors hover:border-teal hover:text-teal disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={awardBusy || !awards || awards.length >= MAX_QUEST_AWARDS}
-              onClick={() => {
-                if (!awards || awards.length >= MAX_QUEST_AWARDS) return;
-                const id = crypto.randomUUID();
-                setAwards(withExpectedWeeks([
-                  ...awards,
-                  { id, title: '', weekNumber: 1, weeksExpected: 1, criteria: '' },
-                ]));
-                setEditingAwardIds((current) => new Set(current).add(id));
-                setAwardMessage('');
-                setAwardError('');
-              }}
-            >
-              Add award
-            </button>
-            <Button type="submit"
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-xs font-bold text-navy transition-colors hover:border-teal hover:text-teal disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={awardBusy || !awards || awards.length >= MAX_QUEST_AWARDS}
+                onClick={() => {
+                  if (!awards || awards.length >= MAX_QUEST_AWARDS) return;
+                  const id = crypto.randomUUID();
+                  setAwards(withExpectedWeeks([
+                    ...awards,
+                    { id, title: '', weekNumber: 1, weeksExpected: 1, criteria: '' },
+                  ]));
+                  setEditingAwardIds((current) => new Set(current).add(id));
+                  setAwardMessage('');
+                  setAwardError('');
+                }}
+              >
+                Add award
+              </button>
+              <Button type="submit"
                
-              disabled={awardBusy || !awards}>
-              {awardBusy ? 'Saving…' : 'Save awards'}
-            </Button>
+                disabled={awardBusy || !awards}>
+                {awardBusy ? 'Saving…' : 'Save awards'}
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {awardError ? <Alert kind="error">{awardError}</Alert> : null}
-        {awardMessage ? <Alert kind="ok">{awardMessage}</Alert> : null}
+          {awardError ? <Alert kind="error">{awardError}</Alert> : null}
+          {awardMessage ? <Alert kind="ok">{awardMessage}</Alert> : null}
 
-        {awards ? (
-          <div className="overflow-x-auto rounded-card border border-border bg-surface">
-            <table className="w-full min-w-[36rem] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border bg-cream/90 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-                  <th scope="col" className="px-4 py-2.5 font-bold">#</th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">Badge</th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">Name</th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">Weeks</th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">Span</th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">Ends</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-bold">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(sortedAwards ?? awards).map((award, toneIndex) => {
-                  const index = awards.findIndex((row) => row.id === award.id);
-                  const weeks = Math.min(52, Math.max(1, Number(award.weeksExpected) || 1));
-                  const endsAt = Number(award.weekNumber) || weeks;
-                  const startsAt = Math.max(1, endsAt - weeks + 1);
-                  const editing = editingAwardIds.has(award.id);
-                  const tone = [
-                    'text-orange bg-orange/15',
-                    'text-forest bg-forest/15',
-                    'text-teal bg-teal/15',
-                    'text-gold bg-gold/25',
-                  ][toneIndex % 4];
-                  const quietField =
-                    'border-0 bg-transparent p-0 text-navy outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0';
-                  return (
-                    <tr key={award.id} className="group border-b border-border last:border-b-0 hover:bg-cream/35">
-                      <td className="px-4 py-3 align-middle">
-                        <span className="font-mono text-xs font-bold tabular-nums text-muted">
-                          {String(toneIndex + 1).padStart(2, '0')}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        <span className={`grid h-9 w-9 place-items-center rounded-full ${tone}`} aria-hidden>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        {editing ? (
-                          <input
-                            required
-                            aria-label={`Award ${index + 1} name`}
-                            placeholder="Badge name"
-                            value={award.title}
-                            onChange={(e) => {
-                              const next = [...awards];
-                              next[index] = { ...award, title: e.target.value };
-                              setAwards(next);
-                            }}
-                            className={`w-full min-w-[10rem] text-sm font-semibold placeholder:text-muted/55 ${quietField}`}
-                          />
-                        ) : (
-                          <span className="text-sm font-semibold text-navy">{award.title || 'Untitled badge'}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        {editing ? (
-                          <label className="inline-flex items-center gap-1">
+          {awards ? (
+            <div className="overflow-x-auto rounded-card border border-border bg-surface">
+              <table className="w-full min-w-[36rem] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-border bg-cream/90 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                    <th scope="col" className="px-4 py-2.5 font-bold">#</th>
+                    <th scope="col" className="px-3 py-2.5 font-bold">Badge</th>
+                    <th scope="col" className="px-3 py-2.5 font-bold">Name</th>
+                    <th scope="col" className="px-3 py-2.5 font-bold">Weeks</th>
+                    <th scope="col" className="px-3 py-2.5 font-bold">Span</th>
+                    <th scope="col" className="px-3 py-2.5 font-bold">Ends</th>
+                    <th scope="col" className="px-4 py-2.5 text-right font-bold">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(sortedAwards ?? awards).map((award, toneIndex) => {
+                    const index = awards.findIndex((row) => row.id === award.id);
+                    const weeks = Math.min(52, Math.max(1, Number(award.weeksExpected) || 1));
+                    const endsAt = Number(award.weekNumber) || weeks;
+                    const startsAt = Math.max(1, endsAt - weeks + 1);
+                    const editing = editingAwardIds.has(award.id);
+                    const tone = [
+                      'text-orange bg-orange/15',
+                      'text-forest bg-forest/15',
+                      'text-teal bg-teal/15',
+                      'text-gold bg-gold/25',
+                    ][toneIndex % 4];
+                    const quietField =
+                      'border-0 bg-transparent p-0 text-navy outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0';
+                    return (
+                      <tr key={award.id} className="group border-b border-border last:border-b-0 hover:bg-cream/35">
+                        <td className="px-4 py-3 align-middle">
+                          <span className="font-mono text-xs font-bold tabular-nums text-muted">
+                            {String(toneIndex + 1).padStart(2, '0')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <span className={`grid h-9 w-9 place-items-center rounded-full ${tone}`} aria-hidden>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          {editing ? (
                             <input
-                              type="number"
-                              min={1}
-                              max={52}
                               required
-                              aria-label={`${award.title || 'Award'} weeks`}
-                              value={award.weeksExpected}
+                              aria-label={`Award ${index + 1} name`}
+                              placeholder="Badge name"
+                              value={award.title}
                               onChange={(e) => {
                                 const next = [...awards];
-                                next[index] = { ...award, weeksExpected: Number(e.target.value) };
-                                setAwards(withExpectedWeeks(next));
+                                next[index] = { ...award, title: e.target.value };
+                                setAwards(next);
                               }}
-                              className={`w-10 text-center font-mono text-sm font-extrabold tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${quietField}`}
+                              className={`w-full min-w-[10rem] text-sm font-semibold placeholder:text-muted/55 ${quietField}`}
                             />
-                            <span className="text-[11px] font-semibold text-muted">wk</span>
-                          </label>
-                        ) : (
-                          <span className="font-mono text-sm font-extrabold tabular-nums text-navy">
-                            {weeks} <span className="text-[11px] font-semibold text-muted">wk</span>
+                          ) : (
+                            <span className="text-sm font-semibold text-navy">{award.title || 'Untitled badge'}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          {editing ? (
+                            <label className="inline-flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={1}
+                                max={52}
+                                required
+                                aria-label={`${award.title || 'Award'} weeks`}
+                                value={award.weeksExpected}
+                                onChange={(e) => {
+                                  const next = [...awards];
+                                  next[index] = { ...award, weeksExpected: Number(e.target.value) };
+                                  setAwards(withExpectedWeeks(next));
+                                }}
+                                className={`w-10 text-center font-mono text-sm font-extrabold tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${quietField}`}
+                              />
+                              <span className="text-[11px] font-semibold text-muted">wk</span>
+                            </label>
+                          ) : (
+                            <span className="font-mono text-sm font-extrabold tabular-nums text-navy">
+                              {weeks} <span className="text-[11px] font-semibold text-muted">wk</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <span className="font-mono text-xs font-semibold tabular-nums text-text-2">
+                            W{startsAt}
+                            {startsAt !== endsAt ? `–W${endsAt}` : ''}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        <span className="font-mono text-xs font-semibold tabular-nums text-text-2">
-                          W{startsAt}
-                          {startsAt !== endsAt ? `–W${endsAt}` : ''}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-middle">
-                        <span className="text-xs font-bold tabular-nums text-teal">Week {endsAt}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right align-middle">
-                        <button
-                          type="button"
-                          aria-pressed={editing}
-                          className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold text-muted opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 hover:text-teal"
-                          onClick={() => {
-                            setEditingAwardIds((current) => {
-                              const next = new Set(current);
-                              if (next.has(award.id)) next.delete(award.id);
-                              else next.add(award.id);
-                              return next;
-                            });
-                          }}
-                        >
-                          Update
-                        </button>
-                        <button
-                          type="button"
-                          className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold text-muted opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 hover:bg-error-bg hover:text-error disabled:cursor-not-allowed"
-                          aria-label={`Delete ${award.title || `award ${index + 1}`}`}
-                          disabled={awardBusy || awards.length <= 1}
-                          onClick={() => {
-                            setAwards(withExpectedWeeks(awards.filter((row) => row.id !== award.id)));
-                            setEditingAwardIds((current) => {
-                              const next = new Set(current);
-                              next.delete(award.id);
-                              return next;
-                            });
-                            setAwardMessage('');
-                            setAwardError('');
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : awardError ? null : (
-          <Spinner label="Loading awards…" />
-        )}
-      </form>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <span className="text-xs font-bold tabular-nums text-teal">Week {endsAt}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right align-middle">
+                          <button
+                            type="button"
+                            aria-pressed={editing}
+                            className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold text-muted opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 hover:text-teal"
+                            onClick={() => {
+                              setEditingAwardIds((current) => {
+                                const next = new Set(current);
+                                if (next.has(award.id)) next.delete(award.id);
+                                else next.add(award.id);
+                                return next;
+                              });
+                            }}
+                          >
+                            Update
+                          </button>
+                          <button
+                            type="button"
+                            className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-semibold text-muted opacity-0 transition-all group-hover:opacity-100 focus-visible:opacity-100 hover:bg-error-bg hover:text-error disabled:cursor-not-allowed"
+                            aria-label={`Delete ${award.title || `award ${index + 1}`}`}
+                            disabled={awardBusy || awards.length <= 1}
+                            onClick={() => {
+                              setAwards(withExpectedWeeks(awards.filter((row) => row.id !== award.id)));
+                              setEditingAwardIds((current) => {
+                                const next = new Set(current);
+                                next.delete(award.id);
+                                return next;
+                              });
+                              setAwardMessage('');
+                              setAwardError('');
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : awardError ? null : (
+            <Spinner label="Loading awards…" />
+          )}
+        </form>
 
-      {/* Completion ledger — flat instrument strip, not nested cards */}
-      <form className="flex flex-col gap-4" onSubmit={save}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-extrabold tracking-tight text-navy">Completion ledger</h2>
-            <p className="m-0 mt-0.5 text-xs text-muted">
-              One amount per finished activity.
-            </p>
-          </div>
-          <Button type="submit"
+      </div>
+
+      <div role="tabpanel" id="scoring-panel-ledger" aria-labelledby="scoring-tab-ledger" hidden={activeTab !== 'ledger'}>
+        <form className="flex flex-col gap-4" onSubmit={save}>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-extrabold tracking-tight text-navy">Completion ledger</h2>
+              <p className="m-0 mt-0.5 text-xs text-muted">
+                One amount per finished activity.
+              </p>
+            </div>
+            <Button type="submit"
              
-            disabled={busy}>
-            {busy ? 'Saving…' : 'Save quest points'}
-          </Button>
-        </div>
-
-        {error ? <Alert kind="error">{error}</Alert> : null}
-        {message ? <Alert kind="ok">{message}</Alert> : null}
-
-        <div className="overflow-hidden rounded-card border border-border bg-surface">
-          <div className="hidden sm:grid grid-cols-[minmax(0,1.4fr)_7.5rem] gap-3 border-b border-border bg-cream/80 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-            <span>Activity</span>
-            <span className="text-right">Points</span>
+              disabled={busy}>
+              {busy ? 'Saving…' : 'Save quest points'}
+            </Button>
           </div>
-          <ul className="m-0 list-none divide-y divide-border p-0">
-            {questRules.map((row) => (
-              <li
-                key={row.key}
-                className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_7.5rem] sm:gap-3"
-              >
-                <div className="flex min-w-0 items-start gap-3">
-                  <span
-                    className={`mt-1.5 h-8 w-1 shrink-0 rounded-full ${SCORE_TONE[row.tone]}`}
-                    aria-hidden
-                  />
-                  <div className="min-w-0">
-                    <p className="m-0 text-sm font-bold text-navy">{row.label}</p>
-                    <p className="m-0 mt-0.5 text-xs text-muted">{row.hint}</p>
-                    {questScoreLabel(row.key) === row.label ? null : (
-                      <p className="m-0 mt-1 font-mono text-[10px] uppercase tracking-wider text-muted/80">
-                        {questScoreLabel(row.key)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <label className="flex items-center justify-between gap-2 sm:justify-end">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted sm:sr-only">
-                    Points
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={0}
-                  max={10000}
-                      value={row.points}
-                      aria-label={`${questScoreLabel(row.key)} points`}
-                      onChange={(e) => setRules({ ...rules, [row.key]: Number(e.target.value) })}
-                      className="w-[5.5rem] rounded-md border border-border bg-cream px-2.5 py-1.5 text-right font-mono text-base font-extrabold tabular-nums text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
-                    />
-                    <span className="w-8 text-[11px] font-semibold text-muted">
-                      {row.key === 'VIDEO_WATCH' ? 'each' : 'pts'}
-                    </span>
-              </span>
-            </label>
-              </li>
-          ))}
-          </ul>
-        </div>
-      </form>
 
+          {error ? <Alert kind="error">{error}</Alert> : null}
+          {message ? <Alert kind="ok">{message}</Alert> : null}
+
+          <div className="overflow-hidden rounded-card border border-border bg-surface">
+            <div className="hidden sm:grid grid-cols-[minmax(0,1.4fr)_7.5rem] gap-3 border-b border-border bg-cream/80 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+              <span>Activity</span>
+              <span className="text-right">Points</span>
+            </div>
+            <ul className="m-0 list-none divide-y divide-border p-0">
+              {questRules.map((row) => (
+                <li
+                  key={row.key}
+                  className="grid grid-cols-1 items-center gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1.4fr)_7.5rem] sm:gap-3"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={`mt-1.5 h-8 w-1 shrink-0 rounded-full ${SCORE_TONE[row.tone]}`}
+                      aria-hidden
+                    />
+                    <div className="min-w-0">
+                      <p className="m-0 text-sm font-bold text-navy">{row.label}</p>
+                      <p className="m-0 mt-0.5 text-xs text-muted">{row.hint}</p>
+                      {questScoreLabel(row.key) === row.label ? null : (
+                        <p className="m-0 mt-1 font-mono text-[10px] uppercase tracking-wider text-muted/80">
+                          {questScoreLabel(row.key)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <label className="flex items-center justify-between gap-2 sm:justify-end">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted sm:sr-only">
+                      Points
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10000}
+                        value={row.points}
+                        aria-label={`${questScoreLabel(row.key)} points`}
+                        onChange={(e) => setRules({ ...rules, [row.key]: Number(e.target.value) })}
+                        className="w-[5.5rem] rounded-md border border-border bg-cream px-2.5 py-1.5 text-right font-mono text-base font-extrabold tabular-nums text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25"
+                      />
+                      <span className="w-8 text-[11px] font-semibold text-muted">
+                        {row.key === 'VIDEO_WATCH' ? 'each' : 'pts'}
+                      </span>
+                </span>
+              </label>
+                </li>
+            ))}
+            </ul>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

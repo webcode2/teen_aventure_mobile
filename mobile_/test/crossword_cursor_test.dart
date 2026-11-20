@@ -1,7 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teen_aventure/models/game_controller.dart';
 import 'package:teen_aventure/models/puzzle.dart';
+import 'package:teen_aventure/services/content_service.dart';
+
+class _LiveCrosswordService implements ContentService {
+  _LiveCrosswordService(this.board);
+
+  LivePuzzleResponse board;
+
+  @override
+  Future<LivePuzzleResponse?> getLivePuzzle({String? puzzleId}) async => board;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// Across DOM and down DAVID share the leading D — mirrors clue 9 in the wilderness grid.
 PuzzleEpisode _crossingEpisode() {
@@ -39,6 +55,47 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+  });
+
+  test('reopening preserves the board until its live revision changes', () async {
+    final doc = jsonDecode(
+      File('test/fixtures/contracts/fixtures/canonical/jael.canonical.json')
+          .readAsStringSync(),
+    ) as Map<String, dynamic>;
+    LivePuzzleResponse board(String versionId, int day) => LivePuzzleResponse(
+          versionId: versionId,
+          puzzleKey: 'jael',
+          title: 'Jael',
+          version: 1,
+          lastUpdated: DateTime.utc(2026, 11, day),
+          doc: doc,
+        );
+
+    final content = _LiveCrosswordService(board('v1', 19));
+    final game = GameController();
+    addTearDown(game.dispose);
+    Future<void> open() => game.loadLiveFromDatabase(
+          contentService: content,
+          puzzleId: 'puzzle-id',
+          keepUnchangedBoard: true,
+        );
+
+    await open();
+    expect(game.puzzleScreenState, PuzzleScreenState.ready);
+    final originalGrid = game.grid;
+    await open();
+    expect(game.grid, same(originalGrid));
+
+    content.board = board('v1', 20);
+    await open();
+    expect(game.grid, isNot(same(originalGrid)));
+    expect(game.activePuzzleLastUpdated, DateTime.utc(2026, 11, 20));
+
+    final refreshedGrid = game.grid;
+    content.board = board('v2', 20);
+    await open();
+    expect(game.activePuzzleVersionId, 'v2');
+    expect(game.grid, isNot(same(refreshedGrid)));
   });
 
   test('empty GameController stays loading until live puzzle arrives', () {

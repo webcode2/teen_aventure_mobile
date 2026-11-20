@@ -122,9 +122,17 @@ describe('Teen Bible Adventures Admin', () => {
   it('renders quest point defaults only', async () => {
     setToken('test-token');
     renderApp('/app/dashboard');
-    expect(screen.getByText('Settings')).toBeTruthy();
+    expect(screen.queryByText('Settings')).toBeNull();
+    expect(within(screen.getByText('Publish').parentElement!).getByRole('button', { name: 'Quest points' })).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Quest points' }));
-    expect(await screen.findByRole('spinbutton', { name: 'Quiz points' })).toBeTruthy();
+    const awardsTab = await screen.findByRole('tab', { name: 'Award milestones', selected: true });
+    expect(screen.getByRole('tabpanel', { name: 'Award milestones' })).toBeTruthy();
+    expect(screen.queryByRole('spinbutton', { name: 'Quiz points' })).toBeNull();
+    expect(screen.queryByText(/full week/i)).toBeNull();
+    awardsTab.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Completion ledger', selected: true })).toBe(document.activeElement);
+    expect(screen.getByRole('spinbutton', { name: 'Quiz points' })).toBeTruthy();
     expect(screen.getByRole('spinbutton', { name: 'Puzzle points' })).toBeTruthy();
     expect(screen.getByText('Week quiz finished')).toBeTruthy();
     expect(screen.getByText('Week puzzle finished')).toBeTruthy();
@@ -141,8 +149,10 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.queryByText('PRAYER STEP')).toBeNull();
     expect(screen.queryByText('DEVOTIONAL')).toBeNull();
     expect(screen.getByRole('button', { name: 'Save quest points' })).toBeTruthy();
-    expect(screen.getByText('Completion ledger')).toBeTruthy();
-    expect(screen.getByText('Award milestones')).toBeTruthy();
+    expect(screen.getByRole('tabpanel', { name: 'Completion ledger' })).toBeTruthy();
+    expect(screen.getByText('Claimable daily')).toBeTruthy();
+    await userEvent.click(awardsTab);
+    expect(screen.getByRole('tabpanel', { name: 'Award milestones' })).toBeTruthy();
   });
 
   it('shows login error on failed manager login', async () => {
@@ -194,12 +204,12 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.getByPlaceholderText('Search name, email, family…')).toBeTruthy();
   });
 
-  it('shows pastors under Operate and staff under Settings', async () => {
+  it('shows pastors and staff under Operate', async () => {
     setToken('test-token');
     renderApp('/app/dashboard');
-    expect(screen.getByRole('button', { name: 'Pastors' })).toBeTruthy();
-    expect(screen.getByText('Settings')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Staff' }));
+    const operate = within(screen.getByText('Operate').parentElement!);
+    expect(operate.getByRole('button', { name: 'Pastors' })).toBeTruthy();
+    await userEvent.click(operate.getByRole('button', { name: 'Staff' }));
     expect(await screen.findByText('Dashboard administrator accounts')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search name, email, family…')).toBeTruthy();
   });

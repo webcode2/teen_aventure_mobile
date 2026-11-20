@@ -9,6 +9,16 @@ class ContentService {
 
   ContentService(this._apiClient);
 
+  Options get _liveGameOptions => Options(
+        extra: {'skipCache': true},
+        headers: {'Cache-Control': 'no-cache'},
+      );
+
+  // A solve can update the version row without changing the published board.
+  DateTime? _gameLastUpdated(Map<String, dynamic> data) =>
+      DateTime.tryParse(data['liveAt']?.toString() ?? '') ??
+      DateTime.tryParse(data['updatedAt']?.toString() ?? '');
+
   /// Get all published Teen Quest weeks
   Future<List<TeenQuest>> getTeenQuestWeeks() async {
     try {
@@ -245,7 +255,10 @@ class ContentService {
     final id = puzzleId?.trim();
     if (id == null || id.isEmpty) return null;
     try {
-      final response = await _apiClient.dio.get('/api/puzzles/id/$id/live');
+      final response = await _apiClient.dio.get(
+        '/api/puzzles/id/$id/live',
+        options: _liveGameOptions,
+      );
       if (response.data is Map) {
         final data = Map<String, dynamic>.from(response.data as Map);
         if (data['doc'] is Map) {
@@ -254,6 +267,7 @@ class ContentService {
             puzzleKey: data['puzzleKey']?.toString() ?? '',
             title: data['title']?.toString() ?? '',
             version: (data['version'] as num?)?.toInt() ?? 1,
+            lastUpdated: _gameLastUpdated(data),
             doc: Map<String, dynamic>.from(data['doc'] as Map),
           );
         }
@@ -271,7 +285,10 @@ class ContentService {
     final id = matchingId.trim();
     if (id.isEmpty) return null;
     try {
-      final response = await _apiClient.dio.get('/api/matchings/id/$id/live');
+      final response = await _apiClient.dio.get(
+        '/api/matchings/id/$id/live',
+        options: _liveGameOptions,
+      );
       if (response.data is Map) {
         final data = Map<String, dynamic>.from(response.data as Map);
         if (data['doc'] is Map) {
@@ -280,6 +297,7 @@ class ContentService {
             matchingKey: data['matchingKey']?.toString() ?? '',
             title: data['title']?.toString() ?? '',
             version: (data['version'] as num?)?.toInt() ?? 1,
+            lastUpdated: _gameLastUpdated(data),
             doc: Map<String, dynamic>.from(data['doc'] as Map),
           );
         }
@@ -380,6 +398,7 @@ class LivePuzzleResponse {
   final String puzzleKey;
   final String title;
   final int version;
+  final DateTime? lastUpdated;
   final Map<String, dynamic> doc;
 
   const LivePuzzleResponse({
@@ -387,6 +406,7 @@ class LivePuzzleResponse {
     required this.puzzleKey,
     required this.title,
     required this.version,
+    this.lastUpdated,
     required this.doc,
   });
 }
@@ -396,6 +416,7 @@ class LiveMatchingResponse {
   final String matchingKey;
   final String title;
   final int version;
+  final DateTime? lastUpdated;
   final Map<String, dynamic> doc;
 
   const LiveMatchingResponse({
@@ -403,6 +424,7 @@ class LiveMatchingResponse {
     required this.matchingKey,
     required this.title,
     required this.version,
+    this.lastUpdated,
     required this.doc,
   });
 }

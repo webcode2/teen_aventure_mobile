@@ -50,6 +50,8 @@ class GameController extends ChangeNotifier {
 
   String? activePuzzleVersionId;
   String? activePuzzleTitle;
+  DateTime? activePuzzleLastUpdated;
+  int _puzzleLoadRequest = 0;
   /// Studio puzzle id currently bound for the active week (stable across attempts).
   String? boundPuzzleId;
   bool isLoadedFromDb = false;
@@ -124,28 +126,45 @@ class GameController extends ChangeNotifier {
   Future<void> loadLiveFromDatabase({
     ContentService? contentService,
     String? puzzleId,
+    bool keepUnchangedBoard = false,
   }) async {
     final requestedId = puzzleId?.trim();
-    puzzleScreenState = PuzzleScreenState.loading;
-    puzzleStatusMessage = null;
-    unsupportedPuzzle = null;
-    isLoadedFromDb = false;
-    activePuzzleVersionId = null;
-    activePuzzleTitle = null;
+    final request = ++_puzzleLoadRequest;
+    final canKeepBoard = keepUnchangedBoard &&
+        requestedId == boundPuzzleId &&
+        puzzleScreenState == PuzzleScreenState.ready &&
+        isLoadedFromDb;
     if (requestedId != null && requestedId.isNotEmpty) {
       boundPuzzleId = requestedId;
     }
-    notifyListeners();
+    if (!canKeepBoard) {
+      puzzleScreenState = PuzzleScreenState.loading;
+      puzzleStatusMessage = null;
+      unsupportedPuzzle = null;
+      isLoadedFromDb = false;
+      activePuzzleVersionId = null;
+      activePuzzleTitle = null;
+      activePuzzleLastUpdated = null;
+      notifyListeners();
+    }
 
     try {
       final service = contentService ?? ServiceLocator.instance.contentService;
       final live = await service.getLivePuzzle(puzzleId: requestedId);
+      if (request != _puzzleLoadRequest) return;
       if (live != null) {
+        if (canKeepBoard &&
+            live.versionId.isNotEmpty &&
+            live.versionId == activePuzzleVersionId &&
+            live.lastUpdated == activePuzzleLastUpdated) {
+          return;
+        }
         final result = _contractLoader.loadJson(live.doc);
         applyLoadResult(result);
         if (puzzleScreenState == PuzzleScreenState.ready) {
           activePuzzleVersionId = live.versionId;
           activePuzzleTitle = live.title;
+          activePuzzleLastUpdated = live.lastUpdated;
           isLoadedFromDb = true;
           notifyListeners();
         }
@@ -155,7 +174,7 @@ class GameController extends ChangeNotifier {
       // Network/service failure → technical issue below.
     }
 
-    markTechnicalIssue();
+    if (request == _puzzleLoadRequest) markTechnicalIssue();
   }
 
   /// Same as [loadLiveFromDatabase] (name kept for existing call sites).
@@ -167,6 +186,7 @@ class GameController extends ChangeNotifier {
   }
 
   void markTechnicalIssue([String? message]) {
+    _puzzleLoadRequest++;
     puzzleScreenState = PuzzleScreenState.rejected;
     puzzleStatusMessage = message ?? kPuzzleTechnicalIssueMessage;
     unsupportedPuzzle = null;
@@ -284,6 +304,7 @@ class GameController extends ChangeNotifier {
       weekQuizDone = false;
       weekPuzzleDone = false;
       boundPuzzleId = null;
+      _puzzleLoadRequest++;
     }
     final switchingWeek = _activeWeek != null && _activeWeek != weekNumber;
     if (_activeWeek != weekNumber) {
