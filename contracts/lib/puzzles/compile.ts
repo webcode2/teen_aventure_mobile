@@ -155,6 +155,8 @@ function compileChain(doc: ChainEnvelope): CompileResult {
     title: doc.title,
     scripture: doc.scripture,
     rewards: doc.rewards,
+    ...(doc.hintGems != null ? { hintGems: doc.hintGems } : {}),
+    ...(doc.timeLimitSeconds != null ? { timeLimitSeconds: doc.timeLimitSeconds } : {}),
     data: {
       grid: { rows, cols },
       entries: numbered,
@@ -201,6 +203,8 @@ function compileLayout(doc: LayoutEnvelope): CompileResult {
     title: doc.title,
     scripture: doc.scripture,
     rewards: doc.rewards,
+    ...(doc.hintGems != null ? { hintGems: doc.hintGems } : {}),
+    ...(doc.timeLimitSeconds != null ? { timeLimitSeconds: doc.timeLimitSeconds } : {}),
     data: {
       grid: {
         rows: doc.data.grid?.rows ?? rows,

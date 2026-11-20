@@ -82,12 +82,14 @@ const envelopeBase = {
   title: z.string().min(1),
   scripture: z.string().min(1),
   rewards: rewardsSchema,
+  timeLimitSeconds: z.number().int().min(1).max(3600).optional(),
 };
 
 export const crosswordEnvelopeSchema = z
   .object({
     ...envelopeBase,
     type: z.literal('CROSSWORD'),
+    hintGems: z.number().int().min(0).max(20).optional(),
     data: crosswordDataSchema,
   })
   .strict();
@@ -96,6 +98,7 @@ export const matchingEnvelopeSchema = z
   .object({
     ...envelopeBase,
     type: z.literal('MATCHING'),
+    undoLimit: z.number().int().min(0).max(10).optional(),
     data: matchingDataSchema,
   })
   .strict();
@@ -123,6 +126,7 @@ export const chainEnvelopeSchema = z
   .object({
     ...envelopeBase,
     type: z.literal('CHAIN'),
+    hintGems: z.number().int().min(0).max(20).optional(),
     data: chainDataSchema,
   })
   .strict();
@@ -160,6 +164,7 @@ export const layoutEnvelopeSchema = z
   .object({
     ...envelopeBase,
     type: z.literal('LAYOUT'),
+    hintGems: z.number().int().min(0).max(20).optional(),
     data: layoutDataSchema,
   })
   .strict();

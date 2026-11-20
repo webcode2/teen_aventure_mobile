@@ -20,6 +20,16 @@ function list(dir: string) {
 }
 
 describe('lib/puzzles pure core', () => {
+  it('preserves the crossword deadline when compiling either draft format', () => {
+    const chain = load('fixtures/valid/esther.json');
+    const crossword = compile({ ...chain, timeLimitSeconds: 120, hintGems: 0 });
+    expect(crossword).toMatchObject({ ok: true, canonical: { timeLimitSeconds: 120, hintGems: 0 } });
+    if (!crossword.ok) return;
+    const { data } = crossword.canonical;
+    const layout = { ...chain, type: 'LAYOUT', timeLimitSeconds: 45, hintGems: 2, data };
+    expect(compile(layout)).toMatchObject({ ok: true, canonical: { timeLimitSeconds: 45, hintGems: 2 } });
+  });
+
   it('has no React imports in puzzle modules', async () => {
     const dir = path.join(root, 'lib/puzzles');
     for (const name of readdirSync(dir).filter((n) => n.endsWith('.ts'))) {

@@ -91,6 +91,9 @@ final class PuzzleEnvelope {
     required this.title,
     required this.scripture,
     required this.rewards,
+    this.timeLimitSeconds,
+    this.hintGems,
+    this.undoLimit,
     required this.data,
   });
 
@@ -100,6 +103,9 @@ final class PuzzleEnvelope {
   final String title;
   final String scripture;
   final Map<String, dynamic> rewards;
+  final int? timeLimitSeconds;
+  final int? hintGems;
+  final int? undoLimit;
   final PuzzleData data;
 
   /// Factory on `type` (+ schemaVersion gate). Never throws.
@@ -141,6 +147,14 @@ final class PuzzleEnvelope {
       );
     }
 
+    final timeLimit = map['timeLimitSeconds'];
+    if (timeLimit != null && (timeLimit is! int || timeLimit < 1 || timeLimit > 3600)) {
+      return const PuzzleRejected(
+        message: 'Game time limit is invalid.',
+        code: PuzzleRejectCode.invalidShape,
+      );
+    }
+    final timeLimitSeconds = timeLimit as int?;
     final dataRaw = map['data'];
     if (dataRaw is! Map) {
       return const PuzzleRejected(
@@ -151,6 +165,13 @@ final class PuzzleEnvelope {
     final dataMap = Map<String, dynamic>.from(dataRaw);
 
     if (type == 'MATCHING') {
+      final undoLimit = map['undoLimit'];
+      if (undoLimit != null && (undoLimit is! int || undoLimit < 0 || undoLimit > 10)) {
+        return const PuzzleRejected(
+          message: 'Match game undo limit is invalid.',
+          code: PuzzleRejectCode.invalidShape,
+        );
+      }
       final matching = _parseMatching(dataMap);
       if (matching == null) {
         return const PuzzleRejected(
@@ -169,6 +190,8 @@ final class PuzzleEnvelope {
           scripture: scripture,
           rewards: rewards,
           data: matching,
+          timeLimitSeconds: timeLimitSeconds,
+          undoLimit: undoLimit as int?,
         ),
       );
     }
@@ -191,6 +214,13 @@ final class PuzzleEnvelope {
       );
     }
 
+    final hintGems = map['hintGems'];
+    if (hintGems != null && (hintGems is! int || hintGems < 0 || hintGems > 20)) {
+      return const PuzzleRejected(
+        message: 'Crossword clue gem budget is invalid.',
+        code: PuzzleRejectCode.invalidShape,
+      );
+    }
     final crossword = _parseCrossword(dataMap);
     if (crossword == null) {
       return const PuzzleRejected(
@@ -211,6 +241,8 @@ final class PuzzleEnvelope {
         scripture: scripture,
         rewards: rewards,
         data: crossword,
+        hintGems: hintGems as int?,
+        timeLimitSeconds: timeLimitSeconds,
       ),
     );
   }

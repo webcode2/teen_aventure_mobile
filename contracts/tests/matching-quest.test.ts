@@ -44,6 +44,21 @@ describe('MATCHING studio doc (forgiveness image sample)', () => {
     expect(prepared.canonical.id).toBe('match-forgiveness-1');
   });
 
+  it('preserves a published match deadline and rejects invalid limits', () => {
+    const prepared = prepareMatchingPublish({ ...raw, timeLimitSeconds: 90 });
+    expect(prepared).toMatchObject({ ok: true, canonical: { timeLimitSeconds: 90 } });
+    for (const limit of [0, 1.5, 3601]) {
+      expect(prepareMatchingPublish({ ...raw, timeLimitSeconds: limit }).ok).toBe(false);
+    }
+  });
+
+  it('preserves a valid undo limit when publishing a matching game', () => {
+    expect(prepareMatchingPublish({ ...raw, undoLimit: 0 })).toMatchObject({
+      ok: true, canonical: { undoLimit: 0 },
+    });
+    expect(prepareMatchingPublish({ ...raw, undoLimit: 11 }).ok).toBe(false);
+  });
+
   it('rejects out-of-range pairs', () => {
     const bad = structuredClone(raw);
     bad.data.correctPairs[0].right = 99;

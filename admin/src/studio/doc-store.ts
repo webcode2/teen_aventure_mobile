@@ -19,6 +19,8 @@ export type StudioDoc = {
   title: string;
   scripture: string;
   rewards: { points?: number };
+  timeLimitSeconds?: number;
+  hintGems?: number;
   data: { steps: StudioStep[] };
 };
 
@@ -55,7 +57,7 @@ export function emptyDoc(title = 'Untitled puzzle'): StudioDoc {
     title,
     // Schema requires min(1); per-word refs carry real citations.
     scripture: '—',
-    rewards: { points: 40 },
+    rewards: {},
     data: { steps: [] },
   };
 }
@@ -75,7 +77,7 @@ export function initialState(doc?: StudioDoc): StudioState {
 
 export type StudioAction =
   | { type: 'replace'; doc: StudioDoc; draftId?: string | null; version?: number }
-  | { type: 'setMeta'; title?: string; scripture?: string }
+  | { type: 'setMeta'; title?: string; scripture?: string; timeLimitSeconds?: number | null; hintGems?: number | null }
   | { type: 'addStep'; step: StudioStep }
   | { type: 'addSteps'; steps: StudioStep[] }
   | { type: 'updateStep'; id: string; patch: Partial<StudioStep> }
@@ -141,6 +143,8 @@ export function studioReducer(state: StudioState, action: StudioAction): StudioS
         ...state.present,
         title: action.title ?? state.present.title,
         scripture: action.scripture ?? state.present.scripture,
+        ...(action.hintGems !== undefined ? { hintGems: action.hintGems ?? undefined } : {}),
+        ...(action.timeLimitSeconds !== undefined ? { timeLimitSeconds: action.timeLimitSeconds ?? undefined } : {}),
       };
       return commit(state, next);
     }

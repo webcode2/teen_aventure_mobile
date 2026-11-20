@@ -3,6 +3,7 @@ import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart';
 
+import 'game_time_limit.dart';
 import 'puzzle_contract.dart';
 import 'puzzle_contract_loader.dart';
 import '../services/content_service.dart';
@@ -49,6 +50,12 @@ class MatchingController extends ChangeNotifier {
   int? dragFromLeft;
   Offset? dragPointer;
 
+  static const defaultUndoLimit = 2;
+
+  int _undoLimit = defaultUndoLimit;
+  int _undosUsed = 0;
+  final List<int> _connectionOrder = [];
+  int? _timeLimitSeconds;
   DateTime? _startedAt;
   Duration? _elapsedAtComplete;
   bool completed = false;
@@ -64,15 +71,57 @@ class MatchingController extends ChangeNotifier {
   int get solvedCount => locked.length;
   bool get isComplete => completed || (totalPairs > 0 && locked.length == totalPairs);
 
-  /// Parse a MATCHING envelope doc (used by live load and tests).
-  bool loadFromDoc(Object? doc, {String? versionId, String? titleOverride}) {
-    completed = false;
-    locked.clear();
-    attempts.clear();
-    wrongFlash.clear();
+  Duration? get remaining => remainingGameTime(_timeLimitSeconds, elapsed);
+  bool get timedOut => !isComplete && remaining == Duration.zero;
+  int get undosRemaining => _undoLimit - _undosUsed;
+  bool get undosExhausted =>
+      !isComplete && undosRemaining == 0 && solvedCount + attempts.length == totalPairs && totalPairs > 0;
+  bool get roundEnded => isComplete || timedOut || undosExhausted;
+
+  bool canConnectFrom(int left) =>
+      !roundEnded && !locked.containsKey(left) &&
+      !attempts.containsKey(left);
+
+  bool get canUndo => !roundEnded && undosRemaining > 0 && _connectionOrder.isNotEmpty;
+
+  void undoLastMatch() {
+    if (!canUndo) return;
+    final left = _connectionOrder.removeLast();
+    _undosUsed++;
+    locked.remove(left);
+    attempts.remove(left);
+    wrongFlash.remove(left);
     selectedLeft = null;
     dragFromLeft = null;
     dragPointer = null;
+    notifyListeners();
+  }
+
+  GameRoundScore roundScore(int? defaultPoints) {
+    return GameRoundScore(
+      correct: solvedCount,
+      answers: [
+        for (var left = 0; left < totalPairs; left++)
+          if ((locked[left] ?? attempts[left]) case final int index)
+            rightSourceIndex[index]
+          else
+            null,
+      ],
+      maxPoints: defaultPoints,
+    );
+  }
+
+  void retry() {
+    if (!timedOut && !undosExhausted) return;
+    _resetBoard();
+    _startedAt = DateTime.now();
+    _elapsedAtComplete = null;
+    notifyListeners();
+  }
+
+  /// Parse a MATCHING envelope doc (used by live load and tests).
+  bool loadFromDoc(Object? doc, {String? versionId, String? titleOverride}) {
+    _resetBoard();
     this.versionId = versionId;
 
     final result = _contractLoader.loadJson(doc);
@@ -103,13 +152,8 @@ class MatchingController extends ChangeNotifier {
     screenState = MatchingScreenState.loading;
     statusMessage = null;
     versionId = null;
-    completed = false;
-    locked.clear();
-    attempts.clear();
-    wrongFlash.clear();
-    selectedLeft = null;
-    dragFromLeft = null;
-    dragPointer = null;
+    _timeLimitSeconds = null;
+    _resetBoard();
     notifyListeners();
 
     if (id.isEmpty) {
@@ -137,6 +181,8 @@ class MatchingController extends ChangeNotifier {
   }
 
   void _install(PuzzleEnvelope envelope, MatchingData data) {
+    _timeLimitSeconds = envelope.timeLimitSeconds;
+    _undoLimit = envelope.undoLimit ?? defaultUndoLimit;
     title = envelope.title;
     scripture = envelope.scripture;
     prompt = data.prompt;
@@ -159,23 +205,21 @@ class MatchingController extends ChangeNotifier {
   }
 
   void selectLeft(int left) {
-    if (isComplete || locked.containsKey(left)) return;
+    if (!canConnectFrom(left)) return;
     selectedLeft = left;
-    wrongFlash.remove(left);
     notifyListeners();
   }
 
   void beginDrag(int left, Offset globalPointer) {
-    if (isComplete || locked.containsKey(left)) return;
+    if (!canConnectFrom(left)) return;
     dragFromLeft = left;
     selectedLeft = left;
     dragPointer = globalPointer;
-    wrongFlash.remove(left);
     notifyListeners();
   }
 
   void updateDrag(Offset globalPointer) {
-    if (dragFromLeft == null) return;
+    if (roundEnded || dragFromLeft == null) return;
     dragPointer = globalPointer;
     notifyListeners();
   }
@@ -188,12 +232,13 @@ class MatchingController extends ChangeNotifier {
 
   /// Connect [left] to the right chip at [displayRight].
   void connect(int left, int displayRight) {
-    if (isComplete || locked.containsKey(left)) return;
+    if (!canConnectFrom(left)) return;
     if (displayRight < 0 || displayRight >= rightDisplay.length) return;
 
     // Right chip already locked to another left.
     if (locked.values.contains(displayRight)) return;
 
+    _connectionOrder.add(left);
     final sourceRight = rightSourceIndex[displayRight];
     final expected = _answerByLeft[left];
     attempts[left] = displayRight;
@@ -212,6 +257,7 @@ class MatchingController extends ChangeNotifier {
     } else {
       wrongFlash.add(left);
     }
+    if (undosExhausted) _elapsedAtComplete = elapsed;
     notifyListeners();
   }
 
@@ -221,21 +267,15 @@ class MatchingController extends ChangeNotifier {
     connect(left, displayRight);
   }
 
-  void clearWrong(int left) {
-    if (locked.containsKey(left)) return;
-    attempts.remove(left);
-    wrongFlash.remove(left);
-    if (selectedLeft == left) selectedLeft = null;
-    notifyListeners();
-  }
-
-  void clearAllAttempts() {
-    if (isComplete) return;
+  void _resetBoard() {
+    completed = false;
+    _undosUsed = 0;
+    _connectionOrder.clear();
+    locked.clear();
     attempts.clear();
     wrongFlash.clear();
     selectedLeft = null;
     dragFromLeft = null;
     dragPointer = null;
-    notifyListeners();
   }
 }

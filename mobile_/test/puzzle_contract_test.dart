@@ -34,6 +34,19 @@ void main() {
       });
     }
 
+    test('new published settings replace the old round settings', () {
+      final raw = readJson('test/fixtures/contracts/fixtures/canonical/jael.canonical.json');
+      final game = GameController();
+      addTearDown(game.dispose);
+      game.applyLoadResult(loader.loadJson({...raw, 'timeLimitSeconds': 10, 'hintGems': 1}));
+      expect(game.puzzleRemaining, const Duration(seconds: 10));
+      expect(game.clueGemsRemaining, 1);
+
+      game.applyLoadResult(loader.loadJson({...raw, 'timeLimitSeconds': 60, 'hintGems': 0}));
+      expect(game.puzzleRemaining, const Duration(seconds: 60));
+      expect(game.clueGemsRemaining, 0);
+    });
+
     test('jael golden: JAEL is 3-Across and plays in GameController', () async {
       SharedPreferences.setMockInitialValues({});
       final raw = readJson(

@@ -311,11 +311,14 @@ class ContentService {
   }
 
   /// Claims puzzle reward; points come from admin scoring rules.
-  Future<ActivityAward> claimPuzzleReward(String puzzleVersionId, {String? childId}) async {
+  Future<ActivityAward> claimPuzzleReward(String puzzleVersionId, {String? childId, List<Object?>? answers}) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/puzzles/versions/$puzzleVersionId/claim-reward',
-        data: childId != null && childId.isNotEmpty ? {'childId': childId} : {},
+        '/api/puzzles/versions/$puzzleVersionId/${answers == null ? 'claim-reward' : 'grade-attempt'}',
+        data: {
+          if (childId != null && childId.isNotEmpty) 'childId': childId,
+          if (answers != null) 'answers': answers,
+        },
       );
       return ActivityAward.fromJson(response.data);
     } on DioException {
@@ -326,11 +329,14 @@ class ContentService {
   }
 
   /// Claims match-game reward (same PUZZLE_SOLVE scoring bucket).
-  Future<ActivityAward> claimMatchingReward(String matchingVersionId, {String? childId}) async {
+  Future<ActivityAward> claimMatchingReward(String matchingVersionId, {String? childId, List<Object?>? answers}) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/matchings/versions/$matchingVersionId/claim-reward',
-        data: childId != null && childId.isNotEmpty ? {'childId': childId} : {},
+        '/api/matchings/versions/$matchingVersionId/${answers == null ? 'claim-reward' : 'grade-attempt'}',
+        data: {
+          if (childId != null && childId.isNotEmpty) 'childId': childId,
+          if (answers != null) 'answers': answers,
+        },
       );
       return ActivityAward.fromJson(response.data);
     } on DioException {
@@ -353,6 +359,7 @@ class ActivityAward {
     required this.ok,
     required this.points,
     required this.alreadyAwarded,
+    this.gamePassed,
     this.videoPoints,
     this.quizPoints,
     this.puzzlePoints,
@@ -362,6 +369,7 @@ class ActivityAward {
   final bool ok;
   final int points;
   final bool alreadyAwarded;
+  final bool? gamePassed;
   final int? videoPoints;
   final int? quizPoints;
   final int? puzzlePoints;
@@ -385,6 +393,7 @@ class ActivityAward {
       ok: true,
       points: (map['points'] as num?)?.toInt() ?? 0,
       alreadyAwarded: map['alreadyAwarded'] == true,
+      gamePassed: map['passed'] as bool?,
       videoPoints: rule('VIDEO_WATCH'),
       quizPoints: rule('TEEN_QUEST_OBJS'),
       puzzlePoints: rule('PUZZLE_SOLVE'),

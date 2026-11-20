@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'week_quest_flow.dart';
 import '../../models/game_controller.dart';
 import '../../theme.dart';
+import 'widgets/game_timeout_dialog.dart';
 import 'widgets/grid_panel.dart';
 import 'widgets/clue_panel.dart';
 import 'widgets/custom_keyboard.dart';
@@ -19,21 +20,19 @@ class PuzzleScreen extends StatefulWidget {
 }
 
 class _PuzzleScreenState extends State<PuzzleScreen> {
-  bool _handledCatchUp = false;
   bool _handledWin = false;
   Timer? _clock;
+  bool _showingTimeout = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<GameController>().beginPuzzleTimer();
-    });
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+    _clock = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (!mounted) return;
       final game = context.read<GameController>();
-      if (!game.isPuzzleComplete) setState(() {});
+      if (game.puzzleScreenState != PuzzleScreenState.ready || game.isPuzzleComplete) return;
+      setState(() {});
+      if (game.puzzleTimedOut && !_showingTimeout) unawaited(_onTimeout(game));
     });
   }
 
@@ -85,11 +84,16 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         break;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onSolvedWord(game));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      game.beginPuzzleTimer();
+      if (!game.puzzleTimedOut) unawaited(_onSolvedWord(game));
+    });
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isTabletLandscape = screenWidth > 720;
-    final elapsedLabel = GameController.formatPuzzleElapsed(game.puzzleElapsed);
+    final remaining = game.puzzleRemaining;
+    final elapsedLabel = GameController.formatPuzzleElapsed(remaining ?? game.puzzleElapsed);
 
     return Scaffold(
       body: Container(
@@ -160,11 +164,16 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                               fontFeatures: [FontFeature.tabularFigures()],
                             ),
                           ),
+                          const SizedBox(width: 4),
+                          Text(
+                            remaining == null ? 'elapsed' : 'left',
+                            style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
                           const SizedBox(width: 8),
                           const Text('💎', style: TextStyle(fontSize: 12)),
                           const SizedBox(width: 3),
                           Text(
-                            '${game.gems}',
+                            '${game.clueGemsRemaining}',
                             style: const TextStyle(
                               color: TeenAppTheme.gold,
                               fontWeight: FontWeight.w900,
@@ -219,76 +228,61 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     );
   }
 
+  Future<void> _onTimeout(GameController game) async {
+    _showingTimeout = true;
+    final score = game.roundScore(WeekQuestFlow.defaultGamePoints(context));
+    final award = score.passed
+        ? await WeekQuestFlow.recordGamePass(
+            context, score: score, versionId: game.activePuzzleVersionId, matching: false,
+          )
+        : null;
+    if (!mounted) return;
+    final retry = await showGameTimeoutDialog(
+      context,
+      gameTitle: game.activePuzzleTitle ?? game.episode.title,
+      score: score,
+      itemLabel: 'word',
+      award: award,
+    );
+    if (!mounted) return;
+    if (retry == true) {
+      game.retryTimedPuzzle();
+      _showingTimeout = false;
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   Future<void> _onSolvedWord(GameController game) async {
     if (!mounted || game.newlySolvedWord == null) return;
+    final word = game.newlySolvedWord!;
     game.clearNewlySolvedWord();
-    if (!mounted || !game.isPuzzleComplete) return;
-
-    if (!_handledWin) {
-      _handledWin = true;
-      _clock?.cancel();
-      final elapsed = game.puzzleElapsed;
-      final wordsSolved = game.solvedWordsCount;
-      final points = await WeekQuestFlow.recordPuzzleIfSolved(context);
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => PuzzleWinDialog(
-          elapsed: elapsed,
-          wordsSolved: wordsSolved,
-          points: points,
-        ),
-      );
-    }
-
-    if (!mounted || _handledCatchUp) return;
+    if (!game.isPuzzleComplete || _handledWin) return;
+    _handledWin = true;
+    _clock?.cancel();
+    final elapsed = game.puzzleElapsed;
+    final wordsSolved = game.solvedWordsCount;
+    final points = await WeekQuestFlow.recordPuzzleIfSolved(context);
+    if (!mounted) return;
     final week = WeekQuestFlow.progress(context);
-    if (!(week.videosFinished && week.quizDone)) {
-      // Like Match: after the results, go back Home to the ticked step.
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      return;
-    }
-    _handledCatchUp = true;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_circle_rounded,
-                color: AppColors.forestGreen, size: 52),
-            SizedBox(height: 16),
-            Text(
-              "You're caught up",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-                color: AppColors.navy,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "You've finished this week's quest.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: AppColors.textMuted),
-            ),
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
-            child: const Text('Done'),
-          ),
-        ],
+      builder: (_) => PuzzleWinDialog(
+        elapsed: elapsed,
+        wordsSolved: wordsSolved,
+        points: points,
+        title: 'Well done, Explorer!',
+        gameName: game.activePuzzleTitle ?? game.episode.title,
+        scriptureReference: word.ref,
+        message: 'You solved every word. Keep exploring Scripture one clue at a time!',
       ),
     );
-    if (mounted) Navigator.pop(context);
+    if (!mounted) return;
+    if (week.videosFinished && week.quizDone) {
+      Navigator.pop(context);
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 }

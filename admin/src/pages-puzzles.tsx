@@ -1,3 +1,4 @@
+import { TimeLimitInput } from './studio/TimeLimitInput';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Alert, Button } from './ui';
@@ -331,8 +332,6 @@ export function PuzzlesStudioPage() {
   async function publishStaged() {
     setPublishBusy(true);
     setPublishError('');
-    const version = nextPublishVersion ?? publishVersion ?? state.version;
-    setPublishVersion(version);
     const doc = state.present.scripture.trim()
       ? state.present
       : { ...state.present, scripture: '—' };
@@ -366,6 +365,11 @@ export function PuzzlesStudioPage() {
       return;
     }
     try {
+      const catalogue = await api<{ versions: Array<{ puzzleKey: string; version: number; status: string }> }>('/api/puzzles');
+      const revisions = (catalogue.versions ?? []).filter((row) => row.puzzleKey === body.id);
+      const latest = revisions.reduce((highest, row) => Math.max(highest, row.version), 0);
+      const version = publishVersion ?? Math.max(nextPublishVersion ?? state.version, latest + 1);
+      setPublishVersion(version);
       const published = await api<{
         puzzle: { id: string };
         version: { id: string; version: number };
@@ -377,7 +381,7 @@ export function PuzzlesStudioPage() {
           title: body.title,
         }),
       });
-      if (editingLive) {
+      if (editingLive || revisions.some((row) => row.status === 'LIVE')) {
         await api(`/api/puzzles/versions/${published.version.id}/promote`, { method: 'POST', body: '{}' });
       }
       discardDraftSaves.current = true;
@@ -533,6 +537,31 @@ export function PuzzlesStudioPage() {
         </div>
       ) : null}
 
+      <div className="flex flex-wrap gap-4">
+        <TimeLimitInput
+          value={state.present.timeLimitSeconds}
+          disabled={opening}
+          onChange={(timeLimitSeconds) => dispatch({ type: 'setMeta', timeLimitSeconds: timeLimitSeconds ?? null })}
+        />
+        <label className="flex w-fit flex-col gap-1 text-xs font-semibold text-navy">
+          Clue gems per round
+          <input
+            type="number"
+            min={0}
+            max={20}
+            step={1}
+            placeholder="4"
+            disabled={opening}
+            className="w-32 rounded border border-border bg-cream px-3 py-2 text-sm font-normal"
+            value={state.present.hintGems ?? ''}
+            onChange={(event) => {
+              const { value, valueAsNumber } = event.currentTarget;
+              if (value !== '' && (!Number.isInteger(valueAsNumber) || valueAsNumber < 0 || valueAsNumber > 20)) return;
+              dispatch({ type: 'setMeta', hintGems: value === '' ? null : valueAsNumber });
+            }}
+          />
+        </label>
+      </div>
       <IssuesPanel doc={state.present} onLocate={locateIssue} />
 
       <div className="studio-workspace">

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/game_controller.dart';
-import '../../../models/puzzle.dart';
 import '../../../theme.dart';
 
 class CustomKeyboard extends StatelessWidget {
@@ -16,7 +15,6 @@ class CustomKeyboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final game = context.watch<GameController>();
-    final activeWord = game.activeWord;
 
     return Container(
       color: TeenAppTheme.midnight,
@@ -24,37 +22,6 @@ class CustomKeyboard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Active Clue Banner Above Keyboard
-          if (activeWord != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 6),
-              decoration: BoxDecoration(
-                color: TeenAppTheme.deepPurple.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    '${activeWord.number}${activeWord.direction == Direction.across ? "A" : "D"} ▸ ',
-                    style: const TextStyle(
-                      color: TeenAppTheme.gold,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${activeWord.clue} (${activeWord.ref})',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // QWERTY Keys
           for (final row in _rows)
             Row(
@@ -65,11 +32,11 @@ class CustomKeyboard extends StatelessWidget {
                       padding: const EdgeInsets.all(2.5),
                       child: Material(
                         color: key == '💡'
-                            ? TeenAppTheme.gold
+                            ? (game.clueGemsRemaining > 0 ? TeenAppTheme.gold : Colors.white54)
                             : (key == '⌫' ? TeenAppTheme.violet : Colors.white),
                         borderRadius: BorderRadius.circular(7),
                         child: InkWell(
-                          onTap: () {
+                          onTap: key == '💡' && game.clueGemsRemaining == 0 ? null : () {
                             if (key == '⌫') {
                               game.backspace();
                             } else if (key == '💡') {

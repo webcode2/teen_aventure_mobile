@@ -140,11 +140,11 @@ void main() {
       ),
     );
     game.selectWord(game.episode.words.single);
-    expect(game.gems, 4);
+    expect(game.clueGemsRemaining, 4);
     game.useHint();
-    expect(game.gems, 3);
+    expect(game.clueGemsRemaining, 3);
     expect(game.grid[0][0].userLetter, 'G');
-    game.gems = 0;
+    game.clueGemsRemaining = 0;
     game.useHint();
     expect(game.grid[0][1].userLetter, isEmpty);
   });

@@ -97,7 +97,7 @@ const PAGE_SIZE = 12;
 const pageBtnClass =
   'rounded-none border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy cursor-pointer disabled:opacity-40';
 
-/** Keep LIVE + latest STAGED per puzzle so staged orphans stay visible. */
+/** Show the current live version, or the newest staged version before first promotion. */
 function collapsePublished(versions: PublishedRow[]): PublishedRow[] {
   const byPuzzle = new Map<string, { live?: PublishedRow; staged?: PublishedRow }>();
   for (const v of versions) {
@@ -112,8 +112,8 @@ function collapsePublished(versions: PublishedRow[]): PublishedRow[] {
   }
   const out: PublishedRow[] = [];
   for (const slot of byPuzzle.values()) {
-    if (slot.live) out.push(slot.live);
-    if (slot.staged) out.push(slot.staged);
+    const current = slot.live ?? slot.staged;
+    if (current) out.push(current);
   }
   return out;
 }
@@ -189,7 +189,9 @@ export function PuzzleLibraryPage() {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const publishedKeys = new Set(published.map((row) => row.puzzleKey));
     return rows.filter((r) => {
+      if (kind === 'all' && r.kind === 'draft' && r.draft.puzzleKey && publishedKeys.has(r.draft.puzzleKey)) return false;
       if (kind === 'draft' && r.kind !== 'draft') return false;
       if (kind === 'published' && r.kind !== 'published') return false;
       if (status !== 'all') {
@@ -202,7 +204,7 @@ export function PuzzleLibraryPage() {
       }
       return true;
     });
-  }, [rows, kind, status, quest, q]);
+  }, [rows, published, kind, status, quest, q]);
 
   useEffect(() => {
     setPage(1);
@@ -214,12 +216,14 @@ export function PuzzleLibraryPage() {
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length);
 
-  const draftCount = rows.filter((r) => r.kind === 'draft').length;
+  const publishedKeys = new Set(published.map((row) => row.puzzleKey));
+  const draftCount = drafts.length;
+  const allCount = published.length + drafts.filter((row) => !row.puzzleKey || !publishedKeys.has(row.puzzleKey)).length;
   const publishedCount = rows.filter((r) => r.kind === 'published').length;
   const filtersActive = kind !== 'all' || status !== 'all' || quest !== 'all' || q.trim() !== '';
 
   const tabs: Array<{ id: KindFilter; label: string; count: number }> = [
-    { id: 'all', label: 'All', count: rows.length },
+    { id: 'all', label: 'All', count: allCount },
     { id: 'draft', label: 'Drafts', count: draftCount },
     { id: 'published', label: 'Published', count: publishedCount },
   ];

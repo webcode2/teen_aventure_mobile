@@ -64,7 +64,7 @@ const PAGE_SIZE = 12;
 const pageBtnClass =
   'rounded-none border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy cursor-pointer disabled:opacity-40';
 
-/** One LIVE + latest STAGED per matching identity. */
+/** Show the current live version, or the newest staged version before first promotion. */
 function collapsePublished(versions: PublishedRow[]): PublishedRow[] {
   const byKey = new Map<string, { live?: PublishedRow; staged?: PublishedRow }>();
   for (const v of versions) {
@@ -79,8 +79,8 @@ function collapsePublished(versions: PublishedRow[]): PublishedRow[] {
   }
   const out: PublishedRow[] = [];
   for (const slot of byKey.values()) {
-    if (slot.live) out.push(slot.live);
-    if (slot.staged) out.push(slot.staged);
+    const current = slot.live ?? slot.staged;
+    if (current) out.push(current);
   }
   return out.sort((a, b) => {
     const ta = new Date(a.updatedAt || a.liveAt || a.stagedAt || 0).getTime();

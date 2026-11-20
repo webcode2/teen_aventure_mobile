@@ -8,6 +8,7 @@ import '../../models/matching_controller.dart';
 import '../../services/content_service.dart';
 import '../../theme.dart';
 import 'week_quest_flow.dart';
+import 'widgets/game_timeout_dialog.dart';
 import 'widgets/puzzle_status_cards.dart';
 import 'widgets/puzzle_win_dialog.dart';
 import '../../models/api_models.dart' show TeenQuest;
@@ -30,16 +31,18 @@ class _MatchingScreenState extends State<MatchingScreen> {
   Timer? _clock;
   bool _handledWin = false;
   bool _leaving = false;
+  bool _showingTimeout = false;
 
   @override
   void initState() {
     super.initState();
     _game = MatchingController();
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+    _clock = Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (mounted &&
           _game.screenState == MatchingScreenState.ready &&
-          !_game.isComplete) {
+          !_game.isComplete && !_game.undosExhausted) {
         setState(() {});
+        if (_game.timedOut && !_showingTimeout) unawaited(_showRoundResult());
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,6 +67,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
         if (mounted && !_leaving) _onWin();
       });
     }
+    if (_game.undosExhausted && !_showingTimeout && !_leaving) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_showingTimeout && !_leaving) unawaited(_showRoundResult());
+      });
+    }
   }
 
   void _ensureKeys() {
@@ -78,6 +86,33 @@ class _MatchingScreenState extends State<MatchingScreen> {
     }
     if (_rightKeys.length > _game.rightDisplay.length) {
       _rightKeys.removeRange(_game.rightDisplay.length, _rightKeys.length);
+    }
+  }
+
+  Future<void> _showRoundResult() async {
+    _showingTimeout = true;
+    _game.cancelDrag();
+    final score = _game.roundScore(WeekQuestFlow.defaultGamePoints(context));
+    final award = score.passed
+        ? await WeekQuestFlow.recordGamePass(
+            context, score: score, versionId: _game.versionId, matching: true,
+          )
+        : null;
+    if (!mounted) return;
+    final retry = await showGameTimeoutDialog(
+      context,
+      gameTitle: _game.title,
+      score: score,
+      itemLabel: 'pair',
+      endReason: _game.undosExhausted ? 'you ran out of undos' : 'time ran out',
+      award: award,
+    );
+    if (!mounted) return;
+    if (retry == true) {
+      _game.retry();
+      _showingTimeout = false;
+    } else {
+      Navigator.pop(context);
     }
   }
 
@@ -212,7 +247,8 @@ class _MatchingScreenState extends State<MatchingScreen> {
         break;
     }
 
-    final elapsedLabel = GameController.formatPuzzleElapsed(_game.elapsed);
+    final remaining = _game.remaining;
+    final elapsedLabel = GameController.formatPuzzleElapsed(remaining ?? _game.elapsed);
     final progress = _game.totalPairs == 0 ? 0.0 : _game.solvedCount / _game.totalPairs;
 
     return Scaffold(
@@ -249,6 +285,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         fontSize: 13,
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    Text(
+                      remaining == null ? 'elapsed' : 'left',
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
                     const SizedBox(width: 8),
                   ],
                 ),
@@ -269,6 +310,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         ),
                       ),
                     ),
+                    Text(
+                      'Undos left: ${_game.undosRemaining}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       '${_game.solvedCount}/${_game.totalPairs}',
                       style: const TextStyle(
@@ -403,30 +449,37 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           },
                         ),
                       ),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _game.canUndo ? _game.undoLastMatch : null,
+                          icon: const Icon(Icons.undo),
+                          label: const Text('Undo last match'),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: _game.isComplete
-                            ? FilledButton(
-                                onPressed: _goHome,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.navy,
-                                  foregroundColor: AppColors.cream,
-                                  minimumSize: const Size.fromHeight(48),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                ),
-                                child: const Text('Well done', style: TextStyle(fontWeight: FontWeight.w700)),
-                              )
-                            : Text(
-                                _game.selectedLeft != null
-                                    ? 'Tap a word on the right — or drag a line across.'
-                                    : 'Drag from a left word to its match on the right.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            _game.isComplete
+                                ? 'Well done! You matched every pair.'
+                                : _game.wrongFlash.isNotEmpty
+                                    ? _game.undosRemaining > 0
+                                        ? 'That pair doesn’t match. Use Undo last match to change it.'
+                                        : 'No undos left. Connect any remaining pairs.'
+                                    : _game.selectedLeft != null
+                                        ? 'Tap a word on the right or drag a line across.'
+                                        : 'Drag from a left word to its match on the right.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: _game.wrongFlash.isNotEmpty
+                                  ? Theme.of(context).colorScheme.error
+                                  : AppColors.textMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

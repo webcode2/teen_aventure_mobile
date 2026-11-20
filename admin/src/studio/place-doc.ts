@@ -124,7 +124,9 @@ function envelopeMeta(raw: Record<string, unknown>) {
     id: typeof raw.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
     title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Untitled puzzle',
     scripture: typeof raw.scripture === 'string' && raw.scripture.trim() ? raw.scripture : '—',
-    rewards: { points: typeof rewards.points === 'number' ? rewards.points : 40 },
+    ...(typeof raw.hintGems === 'number' ? { hintGems: raw.hintGems } : {}),
+    ...(typeof raw.timeLimitSeconds === 'number' ? { timeLimitSeconds: raw.timeLimitSeconds } : {}),
+    rewards: { points: typeof rewards.points === 'number' ? rewards.points : undefined },
   };
 }
 
@@ -199,6 +201,8 @@ function toChainDoc(doc: StudioDoc) {
     title: doc.title.trim() || 'Untitled puzzle',
     scripture: doc.scripture.trim() || '—',
     rewards: doc.rewards,
+    timeLimitSeconds: doc.timeLimitSeconds,
+    hintGems: doc.hintGems,
     data: {
       steps: doc.data.steps.map((step) => ({
         id: step.id,
@@ -242,6 +246,8 @@ export function toPublishDoc(doc: StudioDoc) {
       title: doc.title.trim() || 'Untitled puzzle',
       scripture: doc.scripture.trim() || '—',
       rewards: doc.rewards,
+      timeLimitSeconds: doc.timeLimitSeconds,
+      hintGems: doc.hintGems,
       data: {
         entries: meaningful.map((step) => ({
           id: step.id,
@@ -264,6 +270,8 @@ export function toPublishDoc(doc: StudioDoc) {
     title: doc.title.trim() || 'Untitled puzzle',
     scripture: doc.scripture.trim() || '—',
     rewards: doc.rewards,
+    timeLimitSeconds: doc.timeLimitSeconds,
+    hintGems: doc.hintGems,
     data: {
       steps: meaningful.map((step) => ({
         id: step.id,

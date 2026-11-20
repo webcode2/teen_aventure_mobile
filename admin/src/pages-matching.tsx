@@ -1,3 +1,4 @@
+import { TimeLimitInput } from './studio/TimeLimitInput';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { prepareMatchingPublish, type MatchingEnvelope } from '@askhub/puzzle-contracts';
@@ -33,8 +34,9 @@ function blankDoc(): MatchingEnvelope {
     id: `match-${crypto.randomUUID().slice(0, 8)}`,
     title: 'Untitled match',
     scripture: '',
-    rewards: { points: 3 },
+    rewards: {},
     type: 'MATCHING',
+    undoLimit: 2,
     data: {
       prompt: 'Draw a line from each word on the left to its match on the right.',
       ref: '',
@@ -513,6 +515,36 @@ export function MatchingStudioPage() {
               }}
             />
           </label>
+          <div className="flex flex-wrap gap-4">
+            <TimeLimitInput
+              value={doc.timeLimitSeconds}
+              disabled={busy}
+              onChange={(timeLimitSeconds) => {
+                setDoc((current) => ({ ...current, timeLimitSeconds }));
+                setVersion((version) => version + 1);
+              }}
+            />
+            <label className="flex w-fit flex-col gap-1 text-xs font-semibold text-navy">
+              Connection undos
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={1}
+                disabled={busy}
+                className="w-32 rounded border border-border bg-cream px-3 py-2 text-sm font-normal"
+                value={doc.undoLimit ?? ''}
+                placeholder="2"
+                onChange={(event) => {
+                  const { value, valueAsNumber } = event.currentTarget;
+                  if (value !== '' && (!Number.isInteger(valueAsNumber) || valueAsNumber < 0 || valueAsNumber > 10)) return;
+                  setDoc((current) => ({ ...current, undoLimit: value === '' ? undefined : valueAsNumber }));
+                  setVersion((version) => version + 1);
+                }}
+              />
+              <span className="font-normal text-muted">How many times a player can undo their most recent connection in a round.</span>
+            </label>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs font-semibold text-navy">
               Scripture

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'game_time_limit.dart';
 import 'puzzle.dart';
 import 'progress_store.dart';
 import 'puzzle_contract.dart';
@@ -30,7 +31,9 @@ class GameController extends ChangeNotifier {
   PWord? activeWord;
   int cursorRow = 0;
   int cursorCol = 0;
-  int gems = 4;
+  static const defaultClueGems = 4;
+  int _roundClueGems = defaultClueGems;
+  int clueGemsRemaining = defaultClueGems;
   int score = 0;
   int streakDays = 0;
 
@@ -60,6 +63,7 @@ class GameController extends ChangeNotifier {
   bool _scoringEnabled = true;
   final PuzzleContractLoader _contractLoader;
 
+  int? _puzzleTimeLimitSeconds;
   DateTime? _puzzleStartedAt;
   Duration? _puzzleElapsedAtComplete;
 
@@ -72,9 +76,25 @@ class GameController extends ChangeNotifier {
     return DateTime.now().difference(started);
   }
 
+  Duration? get puzzleRemaining => remainingGameTime(_puzzleTimeLimitSeconds, puzzleElapsed);
+  bool get puzzleTimedOut => !isPuzzleComplete && puzzleRemaining == Duration.zero;
+
+  void retryTimedPuzzle() {
+    if (!puzzleTimedOut) return;
+    for (final word in episode.words) {
+      word.isSolved = false;
+    }
+    loadEpisode(episode, timeLimitSeconds: _puzzleTimeLimitSeconds, hintGems: _roundClueGems);
+    _saveProgress();
+    beginPuzzleTimer();
+  }
+
   /// Starts the stopwatch the first time the player opens [PuzzleScreen].
   void beginPuzzleTimer() {
-    if (_puzzleElapsedAtComplete != null || _puzzleStartedAt != null) return;
+    if (puzzleScreenState != PuzzleScreenState.ready ||
+        _puzzleElapsedAtComplete != null || _puzzleStartedAt != null) {
+      return;
+    }
     _puzzleStartedAt = DateTime.now();
     notifyListeners();
   }
@@ -133,7 +153,8 @@ class GameController extends ChangeNotifier {
     final canKeepBoard = keepUnchangedBoard &&
         requestedId == boundPuzzleId &&
         puzzleScreenState == PuzzleScreenState.ready &&
-        isLoadedFromDb;
+        isLoadedFromDb &&
+        puzzleRemaining == null;
     if (requestedId != null && requestedId.isNotEmpty) {
       boundPuzzleId = requestedId;
     }
@@ -204,7 +225,11 @@ class GameController extends ChangeNotifier {
         switch (data) {
           case CrosswordData():
             try {
-              loadEpisode(crosswordToEpisode(envelope, data));
+              loadEpisode(
+                crosswordToEpisode(envelope, data),
+                timeLimitSeconds: envelope.timeLimitSeconds,
+                hintGems: envelope.hintGems,
+              );
               puzzleScreenState = PuzzleScreenState.ready;
               puzzleStatusMessage = null;
               unsupportedPuzzle = null;
@@ -247,7 +272,6 @@ class GameController extends ChangeNotifier {
   void completeVideoPart(int partIndex) {
     if (partIndex < 0) return;
     if (!_watchedVideoParts.add(partIndex)) return;
-    gems += 1;
     notifyListeners();
     _persistLocalWeek();
   }
@@ -380,10 +404,14 @@ class GameController extends ChangeNotifier {
         watchedIndexes: Set<int>.of(_watchedVideoParts),
       );
 
-  void loadEpisode(PuzzleEpisode ep) {
+  void loadEpisode(PuzzleEpisode ep, {int? timeLimitSeconds, int? hintGems}) {
     episode = ep;
     newlySolvedWord = null;
-    _puzzleStartedAt = DateTime.now();
+    _puzzleTimeLimitSeconds = timeLimitSeconds;
+    _roundClueGems = hintGems ?? defaultClueGems;
+    clueGemsRemaining = _roundClueGems;
+    _puzzleStartedAt = null;
+    activeWord = null;
     _puzzleElapsedAtComplete = null;
     _buildGrid();
     if (episode.words.isNotEmpty) {
@@ -428,11 +456,30 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  GameRoundScore roundScore(int? defaultPoints) {
+    final answers = <String?>[];
+    var correct = 0;
+    for (final word in episode.words) {
+      final cells = [
+        for (var i = 0; i < word.answer.length; i++)
+          grid[word.startRow + (word.direction == Direction.down ? i : 0)]
+              [word.startCol + (word.direction == Direction.across ? i : 0)].userLetter,
+      ];
+      final answer = cells.every((letter) => RegExp(r'^[A-Z]$').hasMatch(letter))
+          ? cells.join()
+          : null;
+      answers.add(answer);
+      if (answer == word.answer.toUpperCase()) correct++;
+    }
+    return GameRoundScore(correct: correct, answers: answers, maxPoints: defaultPoints);
+  }
+
   int get totalWords => episode.words.length;
   int get solvedWordsCount => episode.words.where((w) => w.isSolved).length;
   bool get isPuzzleComplete => solvedWordsCount == totalWords && totalWords > 0;
 
   void selectCell(int r, int c) {
+    if (puzzleTimedOut) return;
     final cell = grid[r][c];
     if (!cell.isLetterCell) return;
 
@@ -459,6 +506,7 @@ class GameController extends ChangeNotifier {
   }
 
   void selectWord(PWord word) {
+    if (puzzleTimedOut) return;
     activeWord = word;
     cursorRow = word.startRow;
     cursorCol = word.startCol;
@@ -469,6 +517,7 @@ class GameController extends ChangeNotifier {
   }
 
   void typeLetter(String char) {
+    if (puzzleTimedOut) return;
     if (activeWord == null) return;
     final cell = grid[cursorRow][cursorCol];
     if (!cell.isLetterCell) return;
@@ -492,6 +541,7 @@ class GameController extends ChangeNotifier {
   }
 
   void backspace() {
+    if (puzzleTimedOut) return;
     if (activeWord == null) return;
     final cell = grid[cursorRow][cursorCol];
     if (cell.userLetter.isNotEmpty && !cell.isSolved) {
@@ -508,7 +558,8 @@ class GameController extends ChangeNotifier {
   }
 
   void useHint() {
-    if (activeWord == null || gems < 1 || activeWord!.isSolved) return;
+    if (puzzleTimedOut) return;
+    if (activeWord == null || clueGemsRemaining < 1 || activeWord!.isSolved) return;
 
     // Find first empty or wrong letter in activeWord
     final len = activeWord!.answer.length;
@@ -518,7 +569,7 @@ class GameController extends ChangeNotifier {
       final cell = grid[r][c];
 
       if (cell.userLetter != cell.targetLetter) {
-        gems -= 1;
+        clueGemsRemaining -= 1;
         cell.userLetter = cell.targetLetter;
         cursorRow = r;
         cursorCol = c;
@@ -549,7 +600,6 @@ class GameController extends ChangeNotifier {
 
     if (allCorrect && !word.isSolved) {
       word.isSolved = true;
-      gems += 1;
 
       for (int i = 0; i < len; i++) {
         final r = word.direction == Direction.down ? word.startRow + i : word.startRow;

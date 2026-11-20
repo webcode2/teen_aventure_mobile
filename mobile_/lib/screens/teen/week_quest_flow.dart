@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/api_models.dart';
 import '../../models/auth_session.dart';
 import '../../models/game_controller.dart';
+import '../../models/game_time_limit.dart';
 import '../../models/matching_controller.dart';
 import '../../models/video_lesson.dart';
 import '../../models/week_quest_progress.dart';
@@ -137,84 +138,62 @@ class WeekQuestFlow {
     if (context.mounted) await recordPuzzleIfSolved(context);
   }
 
-  /// Saves the week's puzzle on the server once the local grid is fully solved.
-  /// Retries after the first finish are practice only — no step/reward claims.
-  static Future<int> recordPuzzleIfSolved(BuildContext context) async {
-    final game = context.read<GameController>();
-    if (!game.isPuzzleComplete && !game.weekPuzzleDone) return 0;
+  static int? defaultGamePoints(BuildContext context) =>
+      _current(context)?.puzzlePoints;
 
+  // A graded result is recorded by the reward API for the specific game and week.
+  static Future<ActivityAward> recordGamePass(
+    BuildContext context, {
+    required GameRoundScore score,
+    required String? versionId,
+    required bool matching,
+  }) async {
+    if (!score.passed) return ActivityAward.failed;
+    final game = context.read<GameController>();
     final provider = _provider(context);
-    final content = context.read<ContentService>();
+    if (provider?.current?.puzzleDone == true || provider?.current?.tracked != true) {
+      game.completeWeekPuzzle();
+      return const ActivityAward(ok: true, points: 0, alreadyAwarded: true, gamePassed: true);
+    }
+    if (versionId == null || versionId.isEmpty) return ActivityAward.failed;
+
     String? childId;
     try {
       childId = context.read<AuthSession>().effectiveChildId;
     } catch (_) {}
-    final serverDone = provider?.current?.puzzleDone == true;
+    final content = context.read<ContentService>();
+    final award = matching
+        ? await content.claimMatchingReward(versionId, childId: childId, answers: score.answers)
+        : await content.claimPuzzleReward(versionId, childId: childId, answers: score.answers);
+    if (!context.mounted || award.gamePassed != true) return ActivityAward.failed;
 
-    if (serverDone) {
-      game.completeWeekPuzzle();
-      return 0;
-    }
-
-    var points = 0;
-    if (provider?.current?.tracked == true) {
-      points = await provider!.completeStep('PUZZLE');
-      if (game.activePuzzleVersionId != null) {
-        try {
-          final award = await content.claimPuzzleReward(
-            game.activePuzzleVersionId!,
-            childId: childId,
-          );
-          if (award.awardedFresh) points += award.points;
-        } catch (_) {}
-      }
-    }
-    if (points > 0) game.applyActivityPoints(points);
+    if (award.awardedFresh) game.applyActivityPoints(award.points);
     game.completeWeekPuzzle();
-    return points;
+    await provider!.refresh();
+    return award;
   }
 
-  /// Marks the week's game step done after a match game is fully solved.
-  /// Records a solved match and returns the points newly awarded (0 when none).
-  static Future<int> recordMatchingIfSolved(
-    BuildContext context,
-    MatchingController match,
-  ) async {
-    if (!match.isComplete) return 0;
-    var earned = 0;
-
+  static Future<int> recordPuzzleIfSolved(BuildContext context) async {
     final game = context.read<GameController>();
-    final provider = _provider(context);
-    final content = context.read<ContentService>();
-    String? childId;
-    try {
-      childId = context.read<AuthSession>().effectiveChildId;
-    } catch (_) {}
-    final serverDone = provider?.current?.puzzleDone == true;
+    if (!game.isPuzzleComplete) return 0;
+    final award = await recordGamePass(
+      context,
+      score: game.roundScore(defaultGamePoints(context)),
+      versionId: game.activePuzzleVersionId,
+      matching: false,
+    );
+    return award.points;
+  }
 
-    if (serverDone) {
-      game.completeWeekPuzzle();
-      return 0;
-    }
-
-    if (provider?.current?.tracked == true) {
-      await provider!.completeStep('PUZZLE');
-      final versionId = match.versionId;
-      if (versionId != null && versionId.isNotEmpty) {
-        try {
-          final award = await content.claimMatchingReward(
-            versionId,
-            childId: childId,
-          );
-          if (award.awardedFresh) {
-            game.applyActivityPoints(award.points);
-            earned = award.points;
-          }
-        } catch (_) {}
-      }
-    }
-    game.completeWeekPuzzle();
-    return earned;
+  static Future<int> recordMatchingIfSolved(BuildContext context, MatchingController match) async {
+    if (!match.isComplete) return 0;
+    final award = await recordGamePass(
+      context,
+      score: match.roundScore(defaultGamePoints(context)),
+      versionId: match.versionId,
+      matching: true,
+    );
+    return award.points;
   }
 
   static Future<void> openNext(

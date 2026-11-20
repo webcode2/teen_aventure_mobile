@@ -12,6 +12,8 @@ class PuzzleWinDialog extends StatefulWidget {
       {super.key,
       required this.elapsed,
       this.wordsSolved,
+    this.gameName,
+    this.scriptureReference,
       this.points,
       this.title,
       this.message,
@@ -19,6 +21,8 @@ class PuzzleWinDialog extends StatefulWidget {
 
   final Duration elapsed;
   final int? wordsSolved;
+  final String? gameName;
+  final String? scriptureReference;
   final int? points;
 
   /// Overrides for games other than the crossword (e.g. Match).
@@ -110,6 +114,10 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                         color: AppColors.textMuted,
                       ),
                     ),
+                    if (widget.gameName case final name? when name.trim().isNotEmpty)
+                      Text(name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    if (widget.scriptureReference case final reference? when reference.trim().isNotEmpty)
+                      Text(reference, textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
@@ -148,7 +156,7 @@ class _PuzzleWinDialogState extends State<PuzzleWinDialog>
                       ),
                     ),
                     if (widget.wordsSolved != null)
-                      Text('${widget.wordsSolved} words solved'),
+                      Text('Words solved: ${widget.wordsSolved} / ${widget.wordsSolved}'),
                     if (widget.points != null) ...[
                       const SizedBox(height: 10),
                       Text(

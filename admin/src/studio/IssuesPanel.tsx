@@ -31,6 +31,8 @@ function toChainForValidate(doc: StudioDoc) {
     title: doc.title,
     scripture: doc.scripture,
     rewards: doc.rewards,
+    timeLimitSeconds: doc.timeLimitSeconds,
+    hintGems: doc.hintGems,
     data: {
       steps: doc.data.steps.map((s) => ({
         id: s.id,
