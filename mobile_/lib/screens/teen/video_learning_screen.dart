@@ -194,6 +194,7 @@ class _VideoLearningScreenState extends State<VideoLearningScreen> {
           });
           if (success) {
             await _checkDownloadStatus();
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${widget.lesson.title} downloaded for offline viewing!'),

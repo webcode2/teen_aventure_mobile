@@ -275,12 +275,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    final families = context.read<FamilyService>();
+    final session = context.read<AuthSession>();
     try {
-      final result = await context.read<FamilyService>().deleteGroup(
+      final result = await families.deleteGroup(
             kind: item['kind'] as String,
             id: item['id'] as String,
           );
-      await context.read<AuthSession>().refreshProfile();
+      await session.refreshProfile();
       await _load();
       if (!mounted) return;
       if (Navigator.canPop(context)) Navigator.pop(context);
@@ -312,9 +314,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
       );
       return;
     }
+    final families = context.read<FamilyService>();
+    final session = context.read<AuthSession>();
     try {
-      await context.read<FamilyService>().cancelDeletion();
-      await context.read<AuthSession>().refreshProfile();
+      await families.cancelDeletion();
+      await session.refreshProfile();
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -350,12 +354,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
       ),
     );
     if (confirmed != true || !mounted) return false;
+    final families = context.read<FamilyService>();
+    final session = context.read<AuthSession>();
     try {
-      await context.read<FamilyService>().leaveMembership(
+      await families.leaveMembership(
             kind: item['kind'] as String,
             id: item['id'] as String,
           );
-      await context.read<AuthSession>().refreshProfile();
+      await session.refreshProfile();
       await _load();
       return true;
     } catch (e) {

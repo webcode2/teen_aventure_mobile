@@ -100,6 +100,8 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
     });
     try {
       final session = context.read<AuthSession>();
+      final content = context.read<ContentService>();
+      final engagement = widget.canNudge ? context.read<EngagementService>() : null;
       if (_classId == null) {
         _classId = widget.classId;
         final classes = session.allAssignedClasses;
@@ -109,11 +111,11 @@ class _GroupStandingBoardState extends State<GroupStandingBoard> {
       if (_classId == null) {
         _rows = const [];
       } else {
-        _rows = await context.read<ContentService>().getClassLeaderboard(_classId!);
+        _rows = await content.getClassLeaderboard(_classId!);
       }
-      if (widget.canNudge) {
+      if (engagement != null) {
         try {
-          _cheers = await context.read<EngagementService>().getNudgeTemplates(
+          _cheers = await engagement.getNudgeTemplates(
                 classId: _classId ?? widget.classId,
               );
         } catch (_) {
