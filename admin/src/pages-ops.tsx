@@ -3476,16 +3476,13 @@ export function ScoringPage() {
       <div role="tabpanel" id="scoring-panel-awards" aria-labelledby="scoring-tab-awards" hidden={activeTab !== 'awards'}>
         <form className="flex flex-col gap-3" onSubmit={saveAwards}>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-extrabold tracking-tight text-navy">Award milestones</h2>
-                {awards ? (
-                  <span className="rounded-full bg-teal-tint px-2 py-0.5 text-[10px] font-bold tabular-nums text-teal">
-                    {awards.length}/{MAX_QUEST_AWARDS}
-                  </span>
-                ) : null}
-              </div>
-              <p className="m-0 mt-0.5 text-xs text-muted">Weeks to finish this badge before the next one starts.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="m-0 text-xs text-muted">Weeks to finish this badge before the next one starts.</p>
+              {awards ? (
+                <span className="rounded-full bg-teal-tint px-2 py-0.5 text-[10px] font-bold tabular-nums text-teal">
+                  {awards.length}/{MAX_QUEST_AWARDS}
+                </span>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -3666,12 +3663,7 @@ export function ScoringPage() {
       <div role="tabpanel" id="scoring-panel-ledger" aria-labelledby="scoring-tab-ledger" hidden={activeTab !== 'ledger'}>
         <form className="flex flex-col gap-4" onSubmit={save}>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-extrabold tracking-tight text-navy">Completion ledger</h2>
-              <p className="m-0 mt-0.5 text-xs text-muted">
-                One amount per finished activity.
-              </p>
-            </div>
+            <p className="m-0 text-xs text-muted">One amount per finished activity.</p>
             <Button type="submit"
              
               disabled={busy}>

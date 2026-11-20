@@ -127,6 +127,7 @@ describe('Teen Bible Adventures Admin', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Quest points' }));
     const awardsTab = await screen.findByRole('tab', { name: 'Award milestones', selected: true });
     expect(screen.getByRole('tabpanel', { name: 'Award milestones' })).toBeTruthy();
+    expect(screen.getAllByText('Award milestones')).toHaveLength(1);
     expect(screen.queryByRole('spinbutton', { name: 'Quiz points' })).toBeNull();
     expect(screen.queryByText(/full week/i)).toBeNull();
     awardsTab.focus();
@@ -150,6 +151,7 @@ describe('Teen Bible Adventures Admin', () => {
     expect(screen.queryByText('DEVOTIONAL')).toBeNull();
     expect(screen.getByRole('button', { name: 'Save quest points' })).toBeTruthy();
     expect(screen.getByRole('tabpanel', { name: 'Completion ledger' })).toBeTruthy();
+    expect(screen.getAllByText('Completion ledger')).toHaveLength(1);
     expect(screen.getByText('Claimable daily')).toBeTruthy();
     await userEvent.click(awardsTab);
     expect(screen.getByRole('tabpanel', { name: 'Award milestones' })).toBeTruthy();
