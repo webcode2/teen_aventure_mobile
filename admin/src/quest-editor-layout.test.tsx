@@ -13,13 +13,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 function open() { return render(<MemoryRouter initialEntries={['/app/dashboard/quests/1']}><Routes><Route path="/app/dashboard/quests/:week" element={<QuestEditorPage />} /></Routes></MemoryRouter>); }
-it('shows a focused writing area and accessible week details', async () => {
+it('shows the active week details without a teaching field', async () => {
   open();
   await screen.findByRole('heading', { name: week.title });
-  expect(screen.getByRole('textbox', { name: 'Teaching & reflection' }).getAttribute('rows')).toBe('15');
+  expect(screen.queryByRole('textbox', { name: 'Teaching & reflection' })).toBeNull();
   expect(screen.getByRole('textbox', { name: 'Lesson title' })).toBeTruthy();
-  expect(within(screen.getByRole('complementary', { name: 'Week details' })).getByRole('spinbutton', { name: 'Week number' })).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Lesson' }).getAttribute('aria-current')).toBe('step');
+  expect(within(screen.getByRole('region', { name: 'Week details' })).getByRole('spinbutton', { name: 'Week number' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Details' }).getAttribute('aria-current')).toBe('step');
   expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
   if (process.env.QUEST_EDITOR_PREVIEW_DIR) {
     fs.mkdirSync(process.env.QUEST_EDITOR_PREVIEW_DIR, { recursive: true });
@@ -29,12 +29,12 @@ it('shows a focused writing area and accessible week details', async () => {
     fs.writeFileSync(`${process.env.QUEST_EDITOR_PREVIEW_DIR}/body.html`, document.body.innerHTML);
   }
 });
-it('keeps edited lesson content when moving between steps and saving a draft', async () => {
+it('keeps the edited declaration when moving between steps and saving a draft', async () => {
   open(); await screen.findByRole('heading', { name: week.title });
-  await userEvent.type(screen.getByRole('textbox', { name: 'Teaching & reflection' }), '\nMy new reflection.');
+  await userEvent.type(screen.getByRole('textbox', { name: 'Word declaration' }), ' A new declaration.');
   await userEvent.click(screen.getByRole('button', { name: /Next: Videos/ }));
   expect(screen.getByRole('button', { name: 'Videos' }).getAttribute('aria-current')).toBe('step');
   await userEvent.click(screen.getByRole('button', { name: 'Back' }));
-  expect((screen.getByRole('textbox', { name: 'Teaching & reflection' }) as HTMLTextAreaElement).value).toContain('My new reflection.');
-  await waitFor(() => expect(localStorage.getItem('tba-quest-draft:1')).toContain('My new reflection.'));
+  expect((screen.getByRole('textbox', { name: 'Word declaration' }) as HTMLTextAreaElement).value).toContain('A new declaration.');
+  await waitFor(() => expect(localStorage.getItem('tba-quest-draft:1')).toContain('A new declaration.'));
 });

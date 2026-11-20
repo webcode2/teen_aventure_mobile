@@ -53,7 +53,6 @@ type QuestFormState = {
   weekNumber: number;
   title: string;
   scripture: string;
-  content: string;
   declarationText: string;
 };
 
@@ -156,8 +155,6 @@ export function QuestEditorPage() {
     weekNumber: 1,
     title: 'Be Strong and Courageous',
     scripture: 'Joshua 1:9',
-    content:
-      'Have I not commanded you? Be strong and courageous. Do not be afraid; do not be discouraged, for the LORD your God will be with you wherever you go.',
     declarationText: 'I declare: I am strong and courageous. The Lord my God is with me wherever I go.',
   });
 
@@ -398,7 +395,6 @@ export function QuestEditorPage() {
           weekNumber: nextNum,
           title: '',
           scripture: '',
-          content: '',
           declarationText: 'I declare: I am a child of God, walking in faith and obedience to His Word.',
         });
         setVideos(defaultVideosForWeek(nextNum));
@@ -493,7 +489,6 @@ export function QuestEditorPage() {
         weekNumber: number;
         title: string;
         scripture: string;
-        content: string;
         declarationText?: string;
         videos?: QuestVideo[];
         objectiveQuiz?: unknown;
@@ -509,7 +504,6 @@ export function QuestEditorPage() {
         weekNumber: week.weekNumber,
         title: week.title,
         scripture: week.scripture,
-        content: week.content,
         declarationText: (week.declarationText ?? '').trim(),
       });
 
@@ -598,7 +592,6 @@ export function QuestEditorPage() {
       weekNumber: nextNum,
       title: '',
       scripture: '',
-      content: '',
       declarationText: 'I declare: I am a child of God, walking in faith and obedience to His Word.',
     });
     setVideos(defaultVideosForWeek(nextNum));
@@ -672,7 +665,6 @@ export function QuestEditorPage() {
           weekNumber: Number(form.weekNumber),
           title: form.title,
           scripture: form.scripture,
-          content: form.content,
           declarationText: form.declarationText.trim(),
           videos: cleanVideos,
           objectiveQuiz,
@@ -695,13 +687,12 @@ export function QuestEditorPage() {
   }
 
   const totalPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0);
-  const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0;
 
   if (!ready) {
     return <Spinner label="Opening the quest editor…" />;
   }
 
-  const steps = ['Lesson', 'Videos', 'Quiz', questGameStepLabel(gameType), 'Review'] as const;
+  const steps = ['Details', 'Videos', 'Quiz', questGameStepLabel(gameType), 'Review'] as const;
 
   return (
     <div className="quest-editor mx-auto flex max-w-6xl flex-col gap-6 pb-12">
@@ -732,32 +723,23 @@ export function QuestEditorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Column: Authoring Sections */}
           <div className={step === 4 ? 'hidden' : 'lg:col-span-12 flex flex-col gap-6'}>
-            <section id="section-declaration" className={step === 0 ? 'quest-lesson-layout' : 'hidden'} aria-label="Lesson editor">
-              <div className="quest-lesson-writing">
-                <div className="quest-lesson-section-heading">
-                  <h2>Lesson</h2>
-                  <span>{wordCount} {wordCount === 1 ? 'word' : 'words'} · {Math.max(1, Math.ceil(wordCount / 130))} min read</span>
-                </div>
+            <section id="section-declaration" className={step === 0 ? 'quest-lesson-layout' : 'hidden'} aria-label="Week details">
+              <div className="quest-lesson-field">
                 <label htmlFor="quest-lesson-title">Lesson title</label>
                 <input id="quest-lesson-title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Be Strong and Courageous" required />
-                <label htmlFor="quest-lesson-body">Teaching &amp; reflection</label>
-                <textarea id="quest-lesson-body" className="quest-lesson-body" rows={15} value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} placeholder="Write the weekly teaching and scripture reflection…" required />
               </div>
-              <aside className="quest-lesson-details" aria-label="Week details">
-                <h2>Week details</h2>
-                <div className="quest-lesson-field">
-                  <label htmlFor="quest-week-number">Week number</label>
-                  <input id="quest-week-number" className="quest-week-number" type="number" min={1} value={form.weekNumber} onChange={e => setForm({ ...form, weekNumber: Number(e.target.value) })} required />
-                </div>
-                <div className="quest-lesson-field">
-                  <label htmlFor="quest-scripture">Scripture reading</label>
-                  <textarea id="quest-scripture" rows={3} value={form.scripture} onChange={e => setForm({ ...form, scripture: e.target.value })} placeholder="e.g. Genesis 1–8" required />
-                </div>
-                <div className="quest-lesson-field quest-declaration-field">
-                  <label htmlFor="quest-declaration">Word declaration</label>
-                  <textarea id="quest-declaration" rows={6} value={form.declarationText} onChange={e => setForm({ ...form, declarationText: e.target.value })} placeholder="I declare: I am strong and courageous…" required />
-                </div>
-              </aside>
+              <div className="quest-lesson-field">
+                <label htmlFor="quest-week-number">Week number</label>
+                <input id="quest-week-number" className="quest-week-number" type="number" min={1} value={form.weekNumber} onChange={e => setForm({ ...form, weekNumber: Number(e.target.value) })} required />
+              </div>
+              <div className="quest-lesson-field">
+                <label htmlFor="quest-scripture">Scripture reading</label>
+                <textarea id="quest-scripture" rows={3} value={form.scripture} onChange={e => setForm({ ...form, scripture: e.target.value })} placeholder="e.g. Genesis 1–8" required />
+              </div>
+              <div className="quest-lesson-field">
+                <label htmlFor="quest-declaration">Word declaration</label>
+                <textarea id="quest-declaration" rows={4} value={form.declarationText} onChange={e => setForm({ ...form, declarationText: e.target.value })} placeholder="I declare: I am strong and courageous…" required />
+              </div>
             </section>
 
             {/* Section 2: Exactly 3 Weekly Video Lessons */}
@@ -1165,12 +1147,6 @@ export function QuestEditorPage() {
                   <span className="text-muted">Word declaration</span>
                   <span className={`font-semibold ${form.declarationText.trim() ? 'text-forest' : 'text-orange'}`}>
                     {form.declarationText.trim() ? 'Written' : 'Missing'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-muted">Lesson body</span>
-                  <span className="font-semibold text-navy">
-                    {wordCount > 0 ? `${wordCount} words` : <span className="text-orange">Required</span>}
                   </span>
                 </div>
               </div>
