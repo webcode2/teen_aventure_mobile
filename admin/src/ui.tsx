@@ -301,6 +301,7 @@ export function Drawer({
 }
 
 export const PAGE_SIZE = 40;
+export const LIBRARY_PAGE_SIZE = 20;
 
 export function slicePage<T>(items: readonly T[], page: number, size = PAGE_SIZE) {
   const total = items.length;

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { api } from './api';
 import { askConfirm } from './prompt-dialog';
-import { Alert, Button, Spinner } from './ui';
+import { Alert, Button, LIBRARY_PAGE_SIZE, Pager, Spinner, slicePage } from './ui';
 import { ObjectiveQuizQuestions, normalizeQuestion, serializeQuizQuestions, type ObjQuestion } from './objective-quiz-questions';
 
 const quizPath = '/api/teen-quest/admin/quizzes';
@@ -30,6 +30,8 @@ function useQuizLibrary() {
 
 export function ObjectiveQuizzesPage() {
   const { quizzes, setQuizzes, error: libraryError, loading } = useQuizLibrary();
+  const [page, setPage] = useState(1);
+  const pageQuizzes = slicePage(quizzes, page, LIBRARY_PAGE_SIZE);
   const [editor, setEditor] = useState<QuizDocument | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -120,6 +122,7 @@ export function ObjectiveQuizzesPage() {
       });
       setEditor({ ...saved, questions: saved.questions.map(normalizeQuestion) });
       setQuizzes((items) => [{ id: saved.id, title: saved.title, questionCount: saved.questions.length, quests: items.find((item) => item.id === saved.id)?.quests }, ...items.filter((item) => item.id !== saved.id)]);
+      setPage(1);
       setMessage('Quiz saved.');
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : 'Could not save quiz');
@@ -173,37 +176,40 @@ export function ObjectiveQuizzesPage() {
           </fieldset>
         </form>
       ) : loading ? <Spinner /> : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-          {quizzes.length ? quizzes.map((quiz) => (
-            <li key={quiz.id} className="flex flex-col gap-2 px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <button type="button" disabled={busy || Boolean(assigningQuiz)} onClick={() => void openQuiz(quiz.id)}
-                  className="text-left text-sm font-semibold text-navy hover:underline">
-                  {quiz.title}
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">{quiz.questionCount} questions</span>
-                  <Button size="sm" variant="outline" disabled={busy || Boolean(assigningQuiz)}
-                    aria-label={`Assign ${quiz.title} to a quest`} onClick={() => void openAssignment(quiz)}>Assign to quest</Button>
+        <>
+          <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+            {pageQuizzes.rows.length ? pageQuizzes.rows.map((quiz) => (
+              <li key={quiz.id} className="flex flex-col gap-2 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button type="button" disabled={busy || Boolean(assigningQuiz)} onClick={() => void openQuiz(quiz.id)}
+                    className="text-left text-sm font-semibold text-navy hover:underline">
+                    {quiz.title}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted">{quiz.questionCount} questions</span>
+                    <Button size="sm" variant="outline" disabled={busy || Boolean(assigningQuiz)}
+                      aria-label={`Assign ${quiz.title} to a quest`} onClick={() => void openAssignment(quiz)}>Assign to quest</Button>
+                  </div>
                 </div>
-              </div>
-              {quiz.quests?.length ? (
-                <ul className="flex flex-wrap gap-2">
-                  {quiz.quests.map((quest) => (
-                    <li key={quest.id} className="flex items-center gap-2 rounded-lg border border-border bg-cream px-2 py-1 text-xs">
-                      <Link to={`/app/dashboard/quests/${quest.weekNumber}?step=quiz`} className="font-semibold text-teal hover:underline">
-                        Week {quest.weekNumber} · {quest.title}
-                      </Link>
-                      <button type="button" disabled={busy || Boolean(assigningQuiz)} aria-label={`Detach from Week ${quest.weekNumber}`}
-                        className="text-muted hover:text-error disabled:opacity-50"
-                        onClick={() => void changeAssignment({ ...quest, objectiveQuizId: quiz.id }, null)}>Detach</button>
-                    </li>
-                  ))}
-                </ul>
-              ) : <span className="text-xs text-muted">Unassigned</span>}
-            </li>
-          )) : <li className="p-4 text-sm text-muted">No saved quizzes yet.</li>}
-        </ul>
+                {quiz.quests?.length ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {quiz.quests.map((quest) => (
+                      <li key={quest.id} className="flex items-center gap-2 rounded-lg border border-border bg-cream px-2 py-1 text-xs">
+                        <Link to={`/app/dashboard/quests/${quest.weekNumber}?step=quiz`} className="font-semibold text-teal hover:underline">
+                          Week {quest.weekNumber} · {quest.title}
+                        </Link>
+                        <button type="button" disabled={busy || Boolean(assigningQuiz)} aria-label={`Detach from Week ${quest.weekNumber}`}
+                          className="text-muted hover:text-error disabled:opacity-50"
+                          onClick={() => void changeAssignment({ ...quest, objectiveQuizId: quiz.id }, null)}>Detach</button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <span className="text-xs text-muted">Unassigned</span>}
+              </li>
+            )) : <li className="p-4 text-sm text-muted">No saved quizzes yet.</li>}
+          </ul>
+          <Pager page={pageQuizzes.page} total={pageQuizzes.total} onPage={setPage} pageSize={LIBRARY_PAGE_SIZE} />
+        </>
       )}
     </div>
   );

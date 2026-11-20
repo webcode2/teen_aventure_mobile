@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { api } from './api';
 import { parseWeekNumber } from './pages-puzzles';
 import { askConfirm } from './prompt-dialog';
-import { Alert, Button, Empty, Spinner } from './ui';
+import { Alert, Button, Empty, Spinner, LIBRARY_PAGE_SIZE } from './ui';
 
 type QuestVideo = {
   id?: string;
@@ -303,7 +303,6 @@ export function QuestsPage() {
     });
   }, [matchedWeeks, puzzlesByWeek, status]);
 
-  const pageSize = 12;
 
   useEffect(() => {
     if (loading) return;
@@ -318,7 +317,7 @@ export function QuestsPage() {
     setStatus('all');
     setQuery('');
     const index = [...weeks].sort((a, b) => a.weekNumber - b.weekNumber).findIndex((w) => w.id === week.id);
-    if (index >= 0) setPage(Math.floor(index / pageSize) + 1);
+    if (index >= 0) setPage(Math.floor(index / LIBRARY_PAGE_SIZE) + 1);
     void openWeek(week);
     setFlashWeek(weekNumber);
     setSearchParams({}, { replace: true });
@@ -377,11 +376,11 @@ export function QuestsPage() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(visibleWeeks.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(visibleWeeks.length / LIBRARY_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageWeeks = visibleWeeks.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const rangeStart = visibleWeeks.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(safePage * pageSize, visibleWeeks.length);
+  const pageWeeks = visibleWeeks.slice((safePage - 1) * LIBRARY_PAGE_SIZE, safePage * LIBRARY_PAGE_SIZE);
+  const rangeStart = visibleWeeks.length === 0 ? 0 : (safePage - 1) * LIBRARY_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * LIBRARY_PAGE_SIZE, visibleWeeks.length);
 
   const shown = detail ?? selected;
   const videos = Array.isArray(shown?.videos) ? shown.videos : [];
@@ -510,7 +509,7 @@ export function QuestsPage() {
             </ul>
           )}
 
-          {visibleWeeks.length > pageSize ? (
+          {visibleWeeks.length > LIBRARY_PAGE_SIZE ? (
             <div className="flex items-center justify-between gap-3 pt-1 text-xs text-muted">
               <span>
                 {rangeStart}–{rangeEnd} of {visibleWeeks.length}

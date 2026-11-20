@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useNavigate } from 'react-router';
 import { api } from './api';
 import { askConfirm } from './prompt-dialog';
-import { Alert, Button, Badge, Empty, Spinner } from './ui';
+import { Alert, Button, Badge, Empty, Spinner, LIBRARY_PAGE_SIZE } from './ui';
 
 type PublishedRow = {
   id: string;
@@ -60,7 +60,6 @@ function rowClass(selected: boolean) {
 const filterSelectClass =
   'rounded-none border border-border bg-surface px-3 py-2 text-xs font-semibold text-navy focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/25';
 
-const PAGE_SIZE = 12;
 const pageBtnClass =
   'rounded-none border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-navy cursor-pointer disabled:opacity-40';
 
@@ -145,11 +144,11 @@ export function MatchingLibraryPage({ embedded = false }: { embedded?: boolean }
     setPage(1);
   }, [status, quest, q]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LIBRARY_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(safePage * PAGE_SIZE, filtered.length);
+  const pageRows = filtered.slice((safePage - 1) * LIBRARY_PAGE_SIZE, safePage * LIBRARY_PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * LIBRARY_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * LIBRARY_PAGE_SIZE, filtered.length);
   const filtersActive = status !== 'all' || quest !== 'all' || q.trim() !== '';
 
   function openUpdate(r: PublishedRow) {
@@ -405,7 +404,7 @@ export function MatchingLibraryPage({ embedded = false }: { embedded?: boolean }
             </tbody>
           </DataTableShell>
 
-          {filtered.length > PAGE_SIZE ? (
+          {filtered.length > LIBRARY_PAGE_SIZE ? (
             <div className="flex items-center justify-between gap-3 pt-1 text-xs text-muted">
               <span>
                 {rangeStart}–{rangeEnd} of {filtered.length}

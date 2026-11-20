@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router';
 import { api } from './api';
 import { MatchingLibraryPage } from './pages-matching-library';
 import { PuzzleLibraryPage } from './pages-puzzle-library';
+import { ObjectiveQuizzesPage } from './pages-objective-quizzes';
+import { QuestsPage } from './pages-quest-list';
 
 vi.mock('./api', () => ({ api: vi.fn() }));
 afterEach(cleanup);
@@ -41,4 +43,35 @@ it.each([
     expect(screen.getByText('Testing Time')).toBeTruthy();
     expect(screen.queryByText(/\bv37\b/)).toBeNull();
   }
+});
+
+it.each([
+  { name: 'quiz', path: '/api/teen-quest/admin/quizzes', Page: ObjectiveQuizzesPage },
+  { name: 'quest', path: '/api/teen-quest/weeks', Page: QuestsPage },
+  { name: 'matching', path: '/api/matchings', Page: MatchingLibraryPage },
+  { name: 'puzzle', path: '/api/puzzles', Page: PuzzleLibraryPage },
+])('paginates the $name library at 20 items', async ({ name, path, Page }) => {
+  const entries = Array.from({ length: 21 }, (_, index) => ({
+    id: `entry-${index + 1}`,
+    title: `Library entry ${index + 1}`,
+    weekNumber: index + 1,
+    questionCount: 1,
+    [`${name}Id`]: `game-${index + 1}`,
+    [`${name}Key`]: `game-${index + 1}`,
+    version: 1,
+    status: 'LIVE',
+    updatedAt: '2026-11-20T07:00:00Z',
+  }));
+  vi.mocked(api).mockImplementation(async (url) => {
+    if (url !== path) return url === '/api/puzzle-drafts' ? [] : { versions: [] };
+    return name === 'quiz' || name === 'quest' ? entries : { versions: entries };
+  });
+
+  render(<MemoryRouter><Page /></MemoryRouter>);
+  expect(await screen.findAllByText(/^Library entry \d+$/)).toHaveLength(20);
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(screen.getAllByText(/^Library entry \d+$/)).toHaveLength(1);
+  expect(screen.getByText(/^(Showing )?21–21 of 21$/)).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: /^(Prev|Previous)$/ }));
+  expect(screen.getAllByText(/^Library entry \d+$/)).toHaveLength(20);
 });
