@@ -854,11 +854,14 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
           )
         else
           for (var i = 0; i < kids.length; i++) ...[
-            _ChildCard(
-              child: kids[i],
+            _ExplorerCard(
+              name: kids[i]['name'] as String? ?? 'Explorer',
+              ageLabel: kids[i]['isAdult'] == true
+                  ? 'Adult'
+                  : kids[i]['ageBand'] == 'TEEN' ? 'Teen' : 'Explorer',
               color: _avatarPalette[i % _avatarPalette.length],
-              askScore: _scoreFor(kids[i]['id'] as String)?.askScore ?? 0,
-              streakDays: _scoreFor(kids[i]['id'] as String)?.streak ?? 0,
+              score: _scoreFor(kids[i]['id'] as String),
+              tracksPoints: true,
               cheers: _cheers,
               onCheer: (key) => _nudge(kids[i]['id'] as String, key),
               onPin: kids[i]['independentLogin'] != true && kids[i]['transitionedToUserId'] == null
@@ -877,22 +880,21 @@ class _ParentHomePanelState extends State<ParentHomePanel> {
             ),
             const SizedBox(height: 12),
           ],
-        for (final adult in otherAdults)
-          if (adult['user'] case final Map user)
-            ListTile(
-              title: Text(user['name'] as String? ?? 'Explorer'),
-              subtitle: const Text('Adult'),
-              trailing: canAddAdmin && adult['userId'] is String && adult['userId'] != userId
-                  ? IconButton(
-                      tooltip: 'Remove ${user['name'] ?? 'explorer'} from family',
-                      onPressed: () => _removeMember(
+        for (final (index, adult) in otherAdults.indexed)
+          if (adult['user'] case final Map user) ...[
+            _ExplorerCard(
+              name: user['name'] as String? ?? 'Explorer',
+              ageLabel: 'Adult',
+              color: _avatarPalette[(kids.length + index) % _avatarPalette.length],
+              onRemove: canAddAdmin && adult['userId'] is String && adult['userId'] != userId
+                  ? () => _removeMember(
                         user['name'] as String? ?? 'this adult',
                         userId: adult['userId'] as String,
-                      ),
-                      icon: const Icon(Icons.person_remove_outlined),
-                    )
+                      )
                   : null,
             ),
+            const SizedBox(height: 12),
+          ],
         if (ownsFamily)
           for (final child in pending.whereType<Map>())
             ListTile(
@@ -1116,36 +1118,38 @@ class _CircleStatCell extends StatelessWidget {
   }
 }
 
-class _ChildCard extends StatelessWidget {
-  const _ChildCard({
-    required this.child,
+class _ExplorerCard extends StatelessWidget {
+  const _ExplorerCard({
+    required this.name,
+    required this.ageLabel,
     required this.color,
-    required this.onCheer,
+    this.onCheer,
     this.cheers = const [],
     this.onPin,
     this.onManageTeen,
     this.onRequestDeletion,
     this.onRemove,
-    this.askScore = 0,
-    this.streakDays = 0,
+    this.score,
+    this.tracksPoints = false,
   });
 
-  final Map<String, dynamic> child;
+  final String name;
+  final String ageLabel;
   final VoidCallback? onRemove;
   final Color color;
-  final ValueChanged<String> onCheer;
+  final ValueChanged<String>? onCheer;
   final List<NudgeTemplate> cheers;
   final VoidCallback? onPin;
   final VoidCallback? onManageTeen;
   final VoidCallback? onRequestDeletion;
-  final int askScore;
-  final int streakDays;
+  final FamilyChildScore? score;
+  final bool tracksPoints;
 
   Future<void> _pickCheer(BuildContext context) async {
     final id = await showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text('Send cheers to ${child['name'] ?? 'explorer'}'),
+        title: Text('Send cheers to $name'),
         children: [
           for (final n in cheers)
             SimpleDialogOption(
@@ -1155,7 +1159,7 @@ class _ChildCard extends StatelessWidget {
         ],
       ),
     );
-    if (id != null) onCheer(id);
+    if (id != null) onCheer?.call(id);
   }
 
   void _onAction(BuildContext context, _ExplorerAction action) {
@@ -1175,10 +1179,8 @@ class _ChildCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = child['name'] as String? ?? 'Explorer';
-    final ageBand = child['ageBand'] as String? ?? 'CHILD';
     final initial = name.isEmpty ? '?' : name[0].toUpperCase();
-    final ageLabel = child['isAdult'] == true ? 'Adult' : ageBand == 'TEEN' ? 'Teen' : 'Explorer';
+    final canCheer = onCheer != null && cheers.isNotEmpty;
 
     return _Surface(
       padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
@@ -1217,48 +1219,52 @@ class _ChildCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${pointsLabel(askScore)} · $streakDays day streak',
+                      tracksPoints
+                          ? '${pointsLabel(score?.askScore ?? 0)} · ${score?.streak ?? 0} day streak'
+                          : 'No points tracked in this family',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textMuted),
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<_ExplorerAction>(
-                tooltip: 'Options for $name',
-                icon: const Icon(Icons.more_vert, color: AppColors.navy),
-                onSelected: (action) => _onAction(context, action),
-                itemBuilder: (_) => [
-                  if (cheers.isNotEmpty)
-                    const PopupMenuItem(
-                      value: _ExplorerAction.cheer,
-                      child: _MenuRow(icon: Icons.favorite_outline, label: 'Send cheers'),
-                    ),
-                  if (onPin != null)
-                    const PopupMenuItem(
-                      value: _ExplorerAction.pin,
-                      child: _MenuRow(icon: Icons.pin, label: 'Set PIN'),
-                    ),
-                  if (onManageTeen != null)
-                    const PopupMenuItem(
-                      value: _ExplorerAction.access,
-                      child: _MenuRow(icon: Icons.manage_accounts_outlined, label: 'Access'),
-                    ),
-                  if (onRequestDeletion != null) ...[
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: _ExplorerAction.delete,
-                      child: _MenuRow(icon: Icons.delete_outline, label: 'Request deletion', danger: true),
-                    ),
+              if (canCheer || onPin != null || onManageTeen != null || onRequestDeletion != null || onRemove != null)
+                PopupMenuButton<_ExplorerAction>(
+                  tooltip: 'Options for $name',
+                  icon: const Icon(Icons.more_vert, color: AppColors.navy),
+                  onSelected: (action) => _onAction(context, action),
+                  itemBuilder: (_) => [
+                    if (canCheer)
+                      const PopupMenuItem(
+                        value: _ExplorerAction.cheer,
+                        child: _MenuRow(icon: Icons.favorite_outline, label: 'Send cheers'),
+                      ),
+                    if (onPin != null)
+                      const PopupMenuItem(
+                        value: _ExplorerAction.pin,
+                        child: _MenuRow(icon: Icons.pin, label: 'Set PIN'),
+                      ),
+                    if (onManageTeen != null)
+                      const PopupMenuItem(
+                        value: _ExplorerAction.access,
+                        child: _MenuRow(icon: Icons.manage_accounts_outlined, label: 'Access'),
+                      ),
+                    if (onRequestDeletion != null) ...[
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: _ExplorerAction.delete,
+                        child: _MenuRow(icon: Icons.delete_outline, label: 'Request deletion', danger: true),
+                      ),
+                    ],
+                    if (onRemove != null) ...[
+                      if (canCheer || onPin != null || onManageTeen != null || onRequestDeletion != null)
+                        const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: _ExplorerAction.remove,
+                        child: _MenuRow(icon: Icons.person_remove_outlined, label: 'Remove from family', danger: true),
+                      ),
+                    ],
                   ],
-                  if (onRemove != null) ...[
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: _ExplorerAction.remove,
-                      child: _MenuRow(icon: Icons.person_remove_outlined, label: 'Remove from family', danger: true),
-                    ),
-                  ],
-                ],
-              ),
+                ),
             ],
           ),
         ],
