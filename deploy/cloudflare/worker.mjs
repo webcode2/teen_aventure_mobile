@@ -1,6 +1,6 @@
 const KEY = 'published/site-content.json';
 // Matches applicationId in mobile_/android/app/build.gradle.kts.
-const ANDROID_PACKAGE = 'com.elasctroclud.teen_aventure';
+const ANDROID_PACKAGE = 'com.tba.askadonai';
 const PLAY_STORE = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 const JOIN_LINK = /^\/join\/(church|class)\/([A-Za-z0-9]{4,12})\/?$/;
 

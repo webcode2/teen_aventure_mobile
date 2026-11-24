@@ -8,7 +8,7 @@
 PRODUCT_NAME = teen_aventure
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.elasctroclud.teenAventure
+PRODUCT_BUNDLE_IDENTIFIER = com.tba.askadonai
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.elasctroclud. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.tba. All rights reserved.

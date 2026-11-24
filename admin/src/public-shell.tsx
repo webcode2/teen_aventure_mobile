@@ -197,7 +197,7 @@ export function GooglePlayIcon({ className = "w-5 h-5" }: { className?: string }
 }
 
 /** Matches applicationId in mobile_/android/app/build.gradle.kts. */
-export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.elasctroclud.teen_aventure";
+export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tba.askadonai";
 
 export function GooglePlayButton({
   href = PLAY_STORE_URL,

@@ -3,17 +3,17 @@
         "platforms": {
             "android": {
                 "default": {
-                    "projectId": "tbadventure-f712a",
-                    "appId": "1:171803564695:android:4da5eef8e4fca702d767d2",
+                    "projectId": "tbaapplication",
+                    "appId": "1:907465215093:android:9e91668271c51bb363bc3c",
                     "fileOutput": "android/app/google-services.json"
                 }
             },
             "dart": {
                 "lib/firebase_options.dart": {
-                    "projectId": "tbadventure-f712a",
+                    "projectId": "tbaapplication",
                     "configurations": {
-                        "android": "1:171803564695:android:4da5eef8e4fca702d767d2",
-                        "ios": "1:171803564695:ios:1e4195d5c4ee0b6bd767d2"
+                        "android": "1:907465215093:android:9e91668271c51bb363bc3c",
+                        "ios": "1:907465215093:ios:88c72224ba10c32463bc3c"
                     }
                 }
             }

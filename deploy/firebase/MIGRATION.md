@@ -1,6 +1,6 @@
 # Firestore migration ledger
 
-Last reviewed: 20 October 2026. Target: `tbadventure-f712a`, `(default)`, Madrid `europe-southwest1`.
+Last reviewed: 20 October 2026. Target updated 24 November 2026: `tbaapplication` (client account, previously `tbadventure-f712a`), `(default)`, Madrid `europe-southwest1`.
 
 **The deployed runtime is Prisma on PostgreSQL.** `deploy/google/target.json` records `orm: prisma` and `runtimeDatabase: postgresql`. The Cloud Function entry calls `buildServer`. Local `npm run dev` is the same SQL server. The notes below are the unfinished Firestore experiment; they are not the deployment spec.
 

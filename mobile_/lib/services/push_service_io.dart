@@ -63,13 +63,34 @@ Future<void> startPush({
   });
 
   // Initial token (onTokenRefresh only fires on rotation).
+  final token = await _fcmToken();
+  final handler = _onToken;
+  if (handler != null && token != null && token.isNotEmpty) {
+    unawaited(handler(token));
+  }
+}
+
+/// FCM token, or null while it is not available yet.
+///
+/// On iOS, [FirebaseMessaging.getToken] throws until Apple has handed the app
+/// its APNs token, so wait briefly for that first. Callers already retry.
+Future<String?> _fcmToken() async {
   try {
-    final token = await FirebaseMessaging.instance.getToken();
-    final handler = _onToken;
-    if (handler != null && token != null && token.isNotEmpty) {
-      unawaited(handler(token));
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      String? apns;
+      for (var attempt = 0; attempt < 5 && apns == null; attempt++) {
+        apns = await FirebaseMessaging.instance.getAPNSToken();
+        if (apns == null) {
+          await Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+        }
+      }
+      if (apns == null) return null;
     }
-  } catch (_) {}
+    return await FirebaseMessaging.instance.getToken();
+  } catch (e) {
+    if (kDebugMode) debugPrint('PushService: no FCM token yet: $e');
+    return null;
+  }
 }
 
 PushNotice _notice(RemoteMessage message) => PushNotice.fromParts(
@@ -93,5 +114,5 @@ Future<void> logoutPush() async {
 
 Future<String?> currentPushSubscriptionId() async {
   if (Firebase.apps.isEmpty) return null;
-  return FirebaseMessaging.instance.getToken();
+  return _fcmToken();
 }

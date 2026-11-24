@@ -4,7 +4,7 @@ Read [the current readiness audit](audit-2026-10-18.md). The app is not yet read
 
 ## Release preparation
 
-- [ ] Confirm package ID `com.elasctroclud.teen_aventure` against the Play app before first upload; preserve existing identity.
+- [ ] Confirm package ID `com.tba.askadonai` in the client's Play Console before first upload. This is a new listing: the old `com.elasctroclud.teen_aventure` app does not receive it as an update.
 - [ ] Restore/configure the correct upload keystore in `mobile_/android/key.properties`. Keep passwords and keystores out of Git. Release tasks now fail when signing is absent; do not use a debug key.
 - [ ] Set an unused version code in `mobile_/pubspec.yaml`.
 - [ ] Verify the production HTTPS API and dashboard-controlled legal pages from an external network. The source default is not an offline sample-only release.

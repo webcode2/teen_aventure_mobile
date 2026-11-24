@@ -1,4 +1,4 @@
-package com.elasctroclud.teen_aventure
+package com.tba.askadonai
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

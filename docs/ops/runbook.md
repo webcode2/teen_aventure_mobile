@@ -79,7 +79,7 @@ The API refuses to start when `NODE_ENV=production` and `JWT_SECRET` is shorter 
 
    1. Create or open a project (same one for API + app).
    2. Project settings (gear) → **General** → **Your apps** → **Add app** → Android.  
-      Package name: `com.elasctroclud.teen_aventure`. Register the app.
+      Package name: `com.tba.askadonai`. Register the app.
    3. From that Android app card, copy into Flutter `--dart-define` / `mobile_/.env.example`:
       - **API Key** → `FIREBASE_API_KEY`
       - **App ID** (`1:…:android:…`) → `FIREBASE_APP_ID`

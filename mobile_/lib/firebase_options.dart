@@ -50,18 +50,18 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB4ZjcB37dsCVXblp3_1eoV-WKpL6DpZLU',
-    appId: '1:171803564695:android:4da5eef8e4fca702d767d2',
-    messagingSenderId: '171803564695',
-    projectId: 'tbadventure-f712a',
-    storageBucket: 'tbadventure-f712a.firebasestorage.app',
+    apiKey: 'AIzaSyBmHZXe-Atp0OZtYIzUv5s4QHp8AlIf1xU',
+    appId: '1:907465215093:android:9e91668271c51bb363bc3c',
+    messagingSenderId: '907465215093',
+    projectId: 'tbaapplication',
+    storageBucket: 'tbaapplication.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBIAgJQuOnw7c7s5AeKumRN6ORdsmjidlA',
-    appId: '1:171803564695:ios:1e4195d5c4ee0b6bd767d2',
-    messagingSenderId: '171803564695',
-    projectId: 'tbadventure-f712a',
-    storageBucket: 'tbadventure-f712a.firebasestorage.app',
-    iosBundleId: 'com.elasctroclud.teenAventure',
+    apiKey: 'AIzaSyAQ55Gsxuy9tptzOJheyjP_7rTa-ZLXNN4',
+    appId: '1:907465215093:ios:88c72224ba10c32463bc3c',
+    messagingSenderId: '907465215093',
+    projectId: 'tbaapplication',
+    storageBucket: 'tbaapplication.firebasestorage.app',
+    iosBundleId: 'com.tba.askadonai',
   );
 }

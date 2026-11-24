@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateRuntime } from './preflight.mjs';
-const valid = { NODE_ENV:'production',DATABASE:'postgres',PRIVATE_UPLOAD_DRIVER:'r2',ALLOW_PUZZLE_STAGING_HEADER:'false',FIREBASE_PROJECT_ID:'tbadventure-f712a',R2_ACCOUNT_ID:'configured-account',R2_BUCKET:'private-bucket',R2_PUBLIC_BUCKET:'public-bucket',R2_PUBLIC_BASE_URL:'https://media.example.com',ADMIN_PUBLIC_URL:'https://app.example.com',CORS_ORIGINS:'https://app.example.com,https://admin.example.com' };
+const valid = { NODE_ENV:'production',DATABASE:'postgres',PRIVATE_UPLOAD_DRIVER:'r2',ALLOW_PUZZLE_STAGING_HEADER:'false',FIREBASE_PROJECT_ID:'tbaapplication',R2_ACCOUNT_ID:'configured-account',R2_BUCKET:'private-bucket',R2_PUBLIC_BUCKET:'public-bucket',R2_PUBLIC_BASE_URL:'https://media.example.com',ADMIN_PUBLIC_URL:'https://app.example.com',CORS_ORIGINS:'https://app.example.com,https://admin.example.com' };
 test('accepts explicit PostgreSQL with private R2 and HTTPS origins',() => assert.deepEqual(validateRuntime(valid),[]));
 test('blocks accidental Firestore selection, open origins and staging headers',() => {
   const errors = validateRuntime({ ...valid,DATABASE:'firestore',CORS_ORIGINS:'*',ALLOW_PUZZLE_STAGING_HEADER:true });

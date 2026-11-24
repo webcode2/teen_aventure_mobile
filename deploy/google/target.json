@@ -3,7 +3,7 @@
   "database": "postgresql",
   "runtimeDatabase": "postgresql",
   "orm": "prisma",
-  "project": "tbadventure-f712a",
+  "project": "tbaapplication",
   "region": "europe-southwest1",
   "schedulerRegion": "europe-west1",
   "frontendOrigin": "https://tba.elastrocloud.com",

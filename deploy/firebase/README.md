@@ -63,7 +63,7 @@ npx tsx src/firestore/seed-cli.ts --project=demo-teen-firestore-tests
 
 Do not apply that plan to a live project from this repository. The Firestore emulator and its test suite have been removed.
 
-Confirmed deployment target for the product API remains Prisma on PostgreSQL. `.firebaserc` in this directory records `tbadventure-f712a` for Firebase CLI rules only.
+Confirmed deployment target for the product API remains Prisma on PostgreSQL. `.firebaserc` in this directory records `tbaapplication` for Firebase CLI rules only.
 
 `backend/src/firestore/server.ts` now provides native Firestore `/api` and `/api/v1` routes for:
 

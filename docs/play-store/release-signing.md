@@ -1,6 +1,6 @@
 # Android release signing
 
-The app retains package ID `com.elasctroclud.teen_aventure` and its existing upload keystore. Never replace that key merely to resolve a password mismatch.
+The app uses package ID `com.tba.askadonai` (changed from `com.elasctroclud.teen_aventure` on 24 November 2026 when the app moved to the client's account). Never replace the upload key merely to resolve a password mismatch.
 
 `mobile_/android/key.properties` points to the private signing configuration outside the repository. Password values use Java properties syntax (no surrounding quotes). The configured password must match the existing keystore; build changes cannot recover a forgotten password.
 

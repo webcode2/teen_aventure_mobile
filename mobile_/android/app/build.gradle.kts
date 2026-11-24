@@ -30,7 +30,7 @@ val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPas
 }
 
 android {
-    namespace = "com.elasctroclud.teen_aventure"
+    namespace = "com.tba.askadonai"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -40,7 +40,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.elasctroclud.teen_aventure"
+        applicationId = "com.tba.askadonai"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode

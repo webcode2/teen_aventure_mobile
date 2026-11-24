@@ -55,7 +55,7 @@ The inventory counts route-module registrations and both `/api` and `/api/v1` al
 
 ## Deployment and final data tasks
 
-- [ ] Project is **`tbadventure-f712a`**, Firestore database **`(default)`**, Madrid **`europe-southwest1`**. Do not deploy to the separate similarly named `tbadventure` project.
+- [ ] Project is **`tbaapplication`** (client account), Firestore database **`(default)`**, Madrid **`europe-southwest1`**. Do not deploy to the old personal-account project `tbadventure-f712a`.
 - [ ] `deploy/google/target.json` is the Prisma PostgreSQL function. Do not set the runtime database back to Cloud Firestore.
 - [ ] Complete/review indexes and index exclusions, then deploy rules/indexes to the explicit selected project and verify staging queries. Emulator success does not validate production composite indexes or IAM.
 - [ ] Attach runtime ADC service-account permissions for Firestore/FCM; configure email/R2 secrets, production origins and public URLs. Do not bundle private Firebase keys or retain emulator host variables in production. Keep the lifecycle function private with Scheduler OIDC.

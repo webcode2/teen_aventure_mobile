@@ -52,7 +52,7 @@ services:
     volumes:
       - ../backend/private-uploads:/app/backend/private-uploads
       # Firebase Admin SDK JSON (same file referenced by backend/.env on the host).
-      - ../backend/tbadventure-f712a-firebase-adminsdk-fbsvc-b7ed721544.json:/run/secrets/firebase-admin.json:ro
+      - ../backend/tbaapplication-firebase-adminsdk-fbsvc-762772dffa.json:/run/secrets/firebase-admin.json:ro
     healthcheck:
       test:
         [
