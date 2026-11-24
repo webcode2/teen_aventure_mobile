@@ -2,6 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Flutter phone (Android/iOS)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/mobile_",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--dart-define-from-file=.env"]
+    },
+    {
       "name": "Flutter Chrome",
       "type": "dart",
       "request": "launch",

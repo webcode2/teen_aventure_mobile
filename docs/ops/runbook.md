@@ -58,8 +58,9 @@ Flutter (debug Chrome): launch **Flutter Chrome** (port 7357). Student UI uses s
 Flutter (Play AAB):
 
 ```bash
-cd mobile
-flutter build appbundle --release --dart-define=API_BASE_URL=https://YOUR_API_HOST --dart-define=FIREBASE_API_KEY=YOUR_KEY --dart-define=FIREBASE_APP_ID=YOUR_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=YOUR_SENDER --dart-define=FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
+cd mobile_
+# .env holds the Firebase API keys (see mobile_/.env.example); git ignores it.
+flutter build appbundle --release --dart-define-from-file=.env --dart-define=API_BASE_URL=https://YOUR_API_HOST
 ```
 
 ## Production
@@ -80,8 +81,9 @@ The API refuses to start when `NODE_ENV=production` and `JWT_SECRET` is shorter 
    1. Create or open a project (same one for API + app).
    2. Project settings (gear) → **General** → **Your apps** → **Add app** → Android.  
       Package name: `com.tba.askadonai`. Register the app.
-   3. From that Android app card, copy into Flutter `--dart-define` / `mobile_/.env.example`:
-      - **API Key** → `FIREBASE_API_KEY`
+   3. From that Android app card, copy into `mobile_/.env` (template: `mobile_/.env.example`; git ignores `.env`):
+      - **API Key** → `FIREBASE_ANDROID_API_KEY` (and `FIREBASE_API_KEY`). The iOS app card's key goes in `FIREBASE_IOS_API_KEY`.
+        `lib/firebase_options.dart` keeps no keys in source; builds read them with `--dart-define-from-file=.env`.
       - **App ID** (`1:…:android:…`) → `FIREBASE_APP_ID`
       - **Sender ID** (also under Cloud Messaging) → `FIREBASE_MESSAGING_SENDER_ID`
       - **Project ID** → `FIREBASE_PROJECT_ID`
@@ -93,12 +95,11 @@ The API refuses to start when `NODE_ENV=production` and `JWT_SECRET` is shorter 
    Example Flutter run:
 
    ```bash
-   flutter run \
-     --dart-define=FIREBASE_API_KEY=... \
-     --dart-define=FIREBASE_APP_ID=... \
-     --dart-define=FIREBASE_MESSAGING_SENDER_ID=... \
-     --dart-define=FIREBASE_PROJECT_ID=...
+   cd mobile_
+   flutter run --dart-define-from-file=.env
    ```
+
+   Without the keys the app still runs, but push stays off.
 
    Without the service account, push rows stay `PENDING` in the outbox. iOS can wait.
 

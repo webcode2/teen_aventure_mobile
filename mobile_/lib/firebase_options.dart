@@ -15,6 +15,13 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  // API keys are not kept in source. They come from mobile_/.env at build time:
+  //   flutter run --dart-define-from-file=.env
+  // Without them, push stays off (see PushService) instead of failing.
+  static const String _androidApiKey =
+      String.fromEnvironment('FIREBASE_ANDROID_API_KEY');
+  static const String _iosApiKey = String.fromEnvironment('FIREBASE_IOS_API_KEY');
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       throw UnsupportedError(
@@ -50,14 +57,14 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBmHZXe-Atp0OZtYIzUv5s4QHp8AlIf1xU',
+    apiKey: _androidApiKey,
     appId: '1:907465215093:android:9e91668271c51bb363bc3c',
     messagingSenderId: '907465215093',
     projectId: 'tbaapplication',
     storageBucket: 'tbaapplication.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAQ55Gsxuy9tptzOJheyjP_7rTa-ZLXNN4',
+    apiKey: _iosApiKey,
     appId: '1:907465215093:ios:88c72224ba10c32463bc3c',
     messagingSenderId: '907465215093',
     projectId: 'tbaapplication',

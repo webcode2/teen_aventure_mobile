@@ -20,7 +20,11 @@ class PushService {
   /// Prefer build-time dart-defines; fall back to [DefaultFirebaseOptions] so
   /// `flutter install` / `flutter run` without defines still register for push.
   FirebaseOptions? get _options {
-    if (StoreConfig.firebaseConfigured) {
+    // The FIREBASE_* overrides hold the Android app's values (build_apk.sh),
+    // so never apply them to iOS.
+    if (StoreConfig.firebaseConfigured &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android) {
       return const FirebaseOptions(
         apiKey: StoreConfig.firebaseApiKey,
         appId: StoreConfig.firebaseAppId,
@@ -30,7 +34,9 @@ class PushService {
     }
     if (kIsWeb) return null;
     try {
-      return DefaultFirebaseOptions.currentPlatform;
+      final options = DefaultFirebaseOptions.currentPlatform;
+      // No key means the build skipped --dart-define-from-file=.env.
+      return options.apiKey.isEmpty ? null : options;
     } catch (_) {
       return null;
     }

@@ -27,7 +27,7 @@ usage() {
 Build APK and copy to project root.
 
 Loads FIREBASE_* dart-defines from android/app/google-services.json.
-Optional .env overrides: FIREBASE_API_KEY, FIREBASE_APP_ID,
+Optional .env overrides: FIREBASE_ANDROID_API_KEY, FIREBASE_API_KEY, FIREBASE_APP_ID,
 FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID, API_BASE_URL, WEB_BASE_URL.
 
 Options:
@@ -211,6 +211,8 @@ BUILD_ARGS+=(
   --dart-define="FIREBASE_APP_ID=${FIREBASE_APP_ID}"
   --dart-define="FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}"
   --dart-define="FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}"
+  # firebase_options.dart keeps no keys in source; the Android key matches google-services.json.
+  --dart-define="FIREBASE_ANDROID_API_KEY=${FIREBASE_ANDROID_API_KEY:-$FIREBASE_API_KEY}"
 )
 if [[ -n "${API_BASE_URL:-}" ]]; then
   BUILD_ARGS+=(--dart-define="API_BASE_URL=${API_BASE_URL}")
